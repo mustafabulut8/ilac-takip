@@ -1,0 +1,46 @@
+# Bağımlılıklar
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Üretilen yerel klasörler (Continuous Native Generation)
+app/ios/
+app/android/
+.kotlin/
+
+# Metro
+.metro-health-check*
+
+# Ortam değişkenleri ve gizli bilgiler
+.env
+.env.*
+!.env.example
+
+# İmzalama anahtarları ve sertifikalar
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# Supabase CLI yerel dosyaları
+supabase/.branches/
+supabase/.temp/
+
+# Günlükler
+*.log
+
+# TypeScript
+*.tsbuildinfo
+
+# İşletim sistemi ve araçlar
+.DS_Store
+Thumbs.db
+*.orig.*
+.claude/settings.local.json
