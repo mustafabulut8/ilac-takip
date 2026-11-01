@@ -9,6 +9,7 @@ const STATUS: Record<DoseStatus, { label: string; color: string }> = {
   bekliyor: { label: 'Bekliyor', color: Colors.pending },
   alindi: { label: 'Alındı', color: Colors.success },
   kacirildi: { label: 'Kaçırıldı', color: Colors.danger },
+  yarin: { label: 'Yarın başlıyor', color: Colors.primary },
 };
 
 export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void }) {
@@ -18,6 +19,7 @@ export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void })
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${dose.medication.name}, saat ${dose.time}, ${status.label}`}
+      disabled={dose.status === 'yarin'}
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <Image

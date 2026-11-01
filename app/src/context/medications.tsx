@@ -16,6 +16,9 @@ type MedicationsContextValue = {
   doseLogs: DoseLog[];
   addMedication: (input: NewMedication) => Promise<void>;
   confirmDose: (medicationId: string, date: string, time: string) => Promise<void>;
+  /** Ana ekranda kısa süre gösterilen mesaj. */
+  notice: string | null;
+  clearNotice: () => void;
 };
 
 const MedicationsContext = createContext<MedicationsContextValue | null>(null);
@@ -24,6 +27,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([loadMedications(), loadDoseLogs()])
@@ -31,22 +35,43 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
         setMedications(storedMedications);
         setDoseLogs(storedLogs);
         // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
-        syncNotifications(storedMedications).catch(() => {});
+        syncNotifications(storedMedications).catch((error) => {
+          console.error('Bildirimler eşitlenemedi:', error);
+        });
       })
+      .catch((error) => console.error('Kayıtlı veriler okunamadı:', error))
       .finally(() => setIsLoaded(true));
   }, []);
 
   const addMedication = async ({ photoSourceUri, ...input }: NewMedication) => {
     const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    const photoFile = await savePhoto(photoSourceUri, id);
-    const medication: Medication = { ...input, id, photoFile, createdAt: new Date().toISOString() };
 
+    let photoFile: string;
+    try {
+      photoFile = await savePhoto(photoSourceUri, id);
+    } catch (error) {
+      console.error('Fotoğraf kopyalanamadı:', error);
+      throw new Error('Fotoğraf kaydedilemedi. Lütfen fotoğrafı yeniden seçip tekrar deneyin.');
+    }
+
+    const medication: Medication = { ...input, id, photoFile, createdAt: new Date().toISOString() };
     const updated = [...medications, medication];
-    await saveMedications(updated);
+    try {
+      await saveMedications(updated);
+    } catch (error) {
+      console.error('İlaç AsyncStorage’a yazılamadı:', error);
+      throw new Error('İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.');
+    }
     setMedications(updated);
 
-    // Bildirim planlanamasa da ilaç kaydı korunur; izin ana ekranda istenir.
-    await scheduleMedication(medication).catch(() => {});
+    // Bildirim planlanamasa da ilaç kaydı korunur, ama kullanıcı bunu öğrenir.
+    try {
+      await scheduleMedication(medication);
+      setNotice('İlaç kaydedildi');
+    } catch (error) {
+      console.error('Bildirim planlanamadı:', error);
+      setNotice('İlaç kaydedildi, ancak hatırlatma kurulamadı. Bildirim iznini kontrol edin.');
+    }
   };
 
   const confirmDose = async (medicationId: string, date: string, time: string) => {
@@ -69,7 +94,15 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
 
   return (
     <MedicationsContext.Provider
-      value={{ isLoaded, medications, doseLogs, addMedication, confirmDose }}>
+      value={{
+        isLoaded,
+        medications,
+        doseLogs,
+        addMedication,
+        confirmDose,
+        notice,
+        clearNotice: () => setNotice(null),
+      }}>
       {children}
     </MedicationsContext.Provider>
   );

@@ -1,6 +1,6 @@
 import type { DoseLog, Medication } from '../types';
 
-export type DoseStatus = 'bekliyor' | 'alindi' | 'kacirildi';
+export type DoseStatus = 'bekliyor' | 'alindi' | 'kacirildi' | 'yarin';
 
 export type Dose = {
   medication: Medication;
@@ -38,8 +38,11 @@ export function getTodayDoses(medications: Medication[], logs: DoseLog[], now: D
 
     for (const time of medication.times) {
       const scheduledAt = atTime(now, time);
-      // İlaç eklenmeden önceki saatler bugün için kaçırılmış sayılmaz.
-      if (scheduledAt < createdAt) continue;
+      // İlaç eklenmeden önceki saatler kaçırılmış sayılmaz; takip yarın başlar.
+      if (scheduledAt < createdAt) {
+        doses.push({ medication, date, time, status: 'yarin' });
+        continue;
+      }
 
       let status: DoseStatus = 'bekliyor';
       if (takenIds.has(doseLogId(medication.id, date, time))) {

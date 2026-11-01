@@ -15,9 +15,10 @@ import {
 } from '@/lib/notifications';
 
 const REFRESH_INTERVAL_MS = 30 * 1000;
+const NOTICE_DURATION_MS = 5 * 1000;
 
 export default function HomeScreen() {
-  const { medications, doseLogs } = useMedications();
+  const { medications, doseLogs, notice, clearNotice } = useMedications();
   const [now, setNow] = useState(() => new Date());
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [testMessage, setTestMessage] = useState<string | null>(null);
@@ -40,6 +41,13 @@ export default function HomeScreen() {
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(clearNotice, NOTICE_DURATION_MS);
+    return () => clearTimeout(timer);
+    // clearNotice her çizimde yenilenir; süre yalnızca mesaj değişince başlamalı.
+  }, [notice]);
+
   const doses = getTodayDoses(medications, doseLogs, now);
 
   const sendTestNotification = async () => {
@@ -47,7 +55,7 @@ export default function HomeScreen() {
       (dose) => dose.status === 'bekliyor',
     );
     if (!nextDose) {
-      setTestMessage('Test için bekleyen doz yok. Önce ilaç veya yeni bir saat ekleyin.');
+      setTestMessage('Bugün bekleyen doz yok. Test için şu andan sonraki bir saatle ilaç ekleyin.');
       return;
     }
     try {
@@ -67,6 +75,11 @@ export default function HomeScreen() {
           </Text>
           <BigButton label="Ayarları Aç" color={Colors.danger} onPress={() => Linking.openSettings()} />
         </View>
+      )}
+      {notice && (
+        <Text style={styles.notice} accessibilityLiveRegion="polite">
+          {notice}
+        </Text>
       )}
       <FlatList
         style={styles.list}
@@ -133,6 +146,14 @@ const styles = StyleSheet.create({
     fontSize: FontSize.small,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  notice: {
+    backgroundColor: Colors.success,
+    color: Colors.textOnColor,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    textAlign: 'center',
+    padding: Spacing.three,
   },
   warning: {
     gap: Spacing.two,
