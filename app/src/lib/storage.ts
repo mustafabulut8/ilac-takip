@@ -21,3 +21,11 @@ export function loadDoseLogs() {
 export function saveMedications(medications: Medication[]) {
   return AsyncStorage.setItem(MEDICATIONS_KEY, JSON.stringify(medications));
 }
+
+/** Doz kaydı ve stok birlikte yazılır; biri yazılıp diğeri kaybolmasın. */
+export function saveDoseConfirmation(medications: Medication[], logs: DoseLog[]) {
+  return AsyncStorage.multiSet([
+    [MEDICATIONS_KEY, JSON.stringify(medications)],
+    [DOSE_LOGS_KEY, JSON.stringify(logs)],
+  ]);
+}

@@ -32,6 +32,11 @@ async function ensureChannel() {
   });
 }
 
+/** iOS bildirim tarihini saniye, Android milisaniye olarak verir. */
+export function notificationDate(timestamp: number) {
+  return new Date(timestamp < 1e12 ? timestamp * 1000 : timestamp);
+}
+
 export async function hasNotificationPermission() {
   const { granted } = await Notifications.getPermissionsAsync();
   return granted;

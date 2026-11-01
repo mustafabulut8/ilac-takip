@@ -73,7 +73,17 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContent}
         data={doses}
         keyExtractor={(dose) => `${dose.medication.id}_${dose.time}`}
-        renderItem={({ item }) => <DoseCard dose={item} />}
+        renderItem={({ item }) => (
+          <DoseCard
+            dose={item}
+            onPress={() =>
+              router.push({
+                pathname: '/aldim/[id]',
+                params: { id: item.medication.id, time: item.time, date: item.date },
+              })
+            }
+          />
+        )}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {medications.length === 0

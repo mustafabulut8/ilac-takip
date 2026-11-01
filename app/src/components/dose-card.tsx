@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import type { Dose, DoseStatus } from '@/lib/doses';
@@ -11,11 +11,15 @@ const STATUS: Record<DoseStatus, { label: string; color: string }> = {
   kacirildi: { label: 'Kaçırıldı', color: Colors.danger },
 };
 
-export function DoseCard({ dose }: { dose: Dose }) {
+export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void }) {
   const status = STATUS[dose.status];
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${dose.medication.name}, saat ${dose.time}, ${status.label}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <Image
         source={photoUri(dose.medication.photoFile)}
         style={styles.photo}
@@ -27,7 +31,7 @@ export function DoseCard({ dose }: { dose: Dose }) {
         <Text style={styles.time}>{dose.time}</Text>
         <Text style={[styles.status, { backgroundColor: status.color }]}>{status.label}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -40,6 +44,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Spacing.three,
     backgroundColor: Colors.background,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   photo: {
     width: 110,
