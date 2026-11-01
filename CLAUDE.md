@@ -10,6 +10,7 @@ Sprint 1 (issues #1–#4) is implemented; see `docs/sprint1-plan.md` for its dec
 
 ## Project Rules
 
+- Oturum başında `docs/ilerleme.md`'yi oku.
 - Bu bir bitirme projesidir: yaşlılar için yapay zekâ destekli ilaç takip ve aile bilgilendirme uygulaması.
 - Arayüz metinleri Türkçe olsun.
 - Yaşlı kullanıcı ekranlarında yazılar büyük (en az 22-24pt), butonlar en az 64px yüksekliğinde, yüksek kontrastlı olsun.
