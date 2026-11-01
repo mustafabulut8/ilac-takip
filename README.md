@@ -2,7 +2,7 @@
 
 Yaşlı bireylerin ilaçlarını zamanında ve doğru şekilde kullanmasına yardımcı olan, aile üyelerini de ilaç kullanım durumu hakkında bilgilendiren bir mobil uygulama. Bu depo, bitirme projesinin kaynak kodunu ve belgelerini içerir.
 
-> **Proje durumu:** Yalnızca proje iskeleti kuruldu. Aşağıdaki özellikler henüz geliştirilmedi; uygulamada şu an Expo'nun varsayılan başlangıç ekranları bulunur.
+> **Proje durumu:** Sprint 1 geliştirildi: ilaç ekleme, günlük yerel bildirimler ve tam ekran "ALDIM" sayfası. Veriler şimdilik yalnızca cihazda tutulur; aile bilgilendirme ve yapay zekâ özellikleri sonraki sprintlerde gelecek.
 
 ## Planlanan Özellikler
 
@@ -28,12 +28,12 @@ Yaşlı bireylerin ilaçlarını zamanında ve doğru şekilde kullanmasına yar
 ilac-takip/
 ├── app/                # Expo mobil uygulaması
 │   ├── assets/         # Görseller ve simgeler
-│   ├── scripts/        # Yardımcı betikler
 │   ├── src/
 │   │   ├── app/        # Expo Router ekranları
 │   │   ├── components/ # Ortak arayüz bileşenleri
 │   │   ├── constants/  # Tema ve sabitler
-│   │   └── hooks/      # React kancaları
+│   │   ├── context/    # Uygulama verisinin yönetimi
+│   │   └── lib/        # Depolama, doz hesabı, bildirim ve fotoğraf işlemleri
 │   ├── app.json        # Expo yapılandırması
 │   └── package.json
 ├── docs/               # Raporlar ve diyagramlar
@@ -76,4 +76,3 @@ ilac-takip/
    - **Telefon:** Terminaldeki QR kodu Expo Go ile okutun
    - **iOS simülatörü:** `i` tuşuna basın
    - **Android emülatörü:** `a` tuşuna basın
-   - **Web tarayıcısı:** `w` tuşuna basın
