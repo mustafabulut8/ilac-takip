@@ -77,6 +77,34 @@ export async function scheduleMedication(medication: Medication) {
   await Promise.all(medication.times.map((time) => scheduleDailyDose(medication, time)));
 }
 
+/**
+ * Cihazdaki plan kayıtlı veriyle eşitlenir; ağ gerektirmez.
+ * Bekleyen test bildirimine dokunulmaz, uygulama yeniden açılsa da gelir.
+ */
+export async function syncNotifications(medications: Medication[]) {
+  await ensureChannel();
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const scheduledIds = new Set(scheduled.map((request) => request.identifier));
+  const expectedIds = new Set(
+    medications.flatMap((medication) =>
+      medication.times.map((time) => `${medication.id}-${time}`),
+    ),
+  );
+
+  await Promise.all(
+    [...scheduledIds]
+      .filter((id) => !expectedIds.has(id) && !id.startsWith('test-'))
+      .map((id) => Notifications.cancelScheduledNotificationAsync(id)),
+  );
+  await Promise.all(
+    medications.flatMap((medication) =>
+      medication.times
+        .filter((time) => !scheduledIds.has(`${medication.id}-${time}`))
+        .map((time) => scheduleDailyDose(medication, time)),
+    ),
+  );
+}
+
 export async function scheduleTestNotification({ medication, time }: Dose) {
   await ensureChannel();
   await Notifications.scheduleNotificationAsync({

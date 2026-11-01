@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
 import { doseLogId } from '@/lib/doses';
-import { scheduleMedication } from '@/lib/notifications';
+import { scheduleMedication, syncNotifications } from '@/lib/notifications';
 import { savePhoto } from '@/lib/photos';
 import { loadDoseLogs, loadMedications, saveDoseConfirmation, saveMedications } from '@/lib/storage';
 import type { DoseLog, Medication } from '@/types';
@@ -30,6 +30,8 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
       .then(([storedMedications, storedLogs]) => {
         setMedications(storedMedications);
         setDoseLogs(storedLogs);
+        // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
+        syncNotifications(storedMedications).catch(() => {});
       })
       .finally(() => setIsLoaded(true));
   }, []);
