@@ -21,5 +21,14 @@
 
 ## Yarın Yapılacaklar
 
-1. **#3 uçak modu testini yap:** Uçak modunda hatırlatmanın geldiğini doğrula. Uygulama tamamen kapalıyken bildirime dokununca sayfanın açılıp açılmadığını da dene; Expo Go kodu Mac'ten yüklediği için açılmayabilir.
-2. **#3'ü sonuçlandır:** Test geçerse issue'yu elle kapat ve panoda Bitti'ye taşı. Push'ta otomatik kapanmaz, çünkü ilgili commit zaten gönderildi.
+1. **#3 uçak modu testi:** Testi yap, sonra issue'yu elle kapat. Uygulama tamamen kapalıyken bildirime dokunmayı da dene; Expo Go kodu Mac'ten yüklediği için sayfa açılmayabilir.
+2. **İlaç silme ve düzeltme.**
+3. **İlaç formu desteği (#22):**
+   - Formlar: tablet, kapsül, şurup, damla, krem/merhem, iğne, sprey/inhaler.
+   - Forma göre doz birimi: adet, ml, damla, ince tabaka + bölge, ünite, puf.
+   - Kullanım notu: aç/tok karnına.
+   - Sayılamayan formlarda (krem, damla) stok yerine "Bitmek üzere" butonu.
+   - ALDIM butonu forma göre: SÜRDÜM, DAMLATTIM, YAPTIM.
+4. **Dokümanlar:** Literatür taraması (#14) ve gereksinim analizi (#15).
+5. **Sistem mimarisi diyagramı.**
+6. **Salı 10:00 hoca görüşmesi:** 5-7 slaytlık sunum ve demo provası.
