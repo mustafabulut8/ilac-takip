@@ -16,6 +16,7 @@ Only the skeleton exists. `app/` still shows the Expo starter screens, `docs/` a
 - `.env` dosyası asla commit edilmez; API anahtarları ve şifreler koda yazılmaz.
 - Her değişiklikten sonra `tsc --noEmit` ile kontrol et.
 - Commit mesajları kısa ve Türkçe olsun.
+- Commit mesajlarına Co-Authored-By veya Claude imzası eklenmez.
 - Yaptığın önemli değişiklikleri kullanıcıya kısaca açıkla; bu kodu hocasına savunması gerekecek.
 
 ## Commands
