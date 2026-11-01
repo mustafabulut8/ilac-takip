@@ -83,6 +83,7 @@ export default function HomeScreen() {
       )}
       <FlatList
         style={styles.list}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.listContent}
         data={doses}
         keyExtractor={(dose) => `${dose.medication.id}_${dose.time}`}

@@ -143,6 +143,7 @@ export default function AddMedicationScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.five }]}
         // iOS'ta klavye yüksekliği kadar kaydırma alanı ekler; boş yere dokununca klavye kapanır.
         automaticallyAdjustKeyboardInsets
+        contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag">
         <View style={styles.field} onLayout={(e) => rememberPosition('name')(e.nativeEvent.layout.y)}>
