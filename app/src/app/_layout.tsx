@@ -4,13 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { Colors, FontSize } from '@/constants/theme';
+import { MedicationsProvider, useMedications } from '@/context/medications';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function AppStack() {
+  const { isLoaded } = useMedications();
+
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (isLoaded) SplashScreen.hideAsync();
+  }, [isLoaded]);
 
   return (
     <>
@@ -22,7 +25,16 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: Colors.background },
         }}>
         <Stack.Screen name="index" options={{ title: 'Bugünkü İlaçlarım' }} />
+        <Stack.Screen name="ilac-ekle" options={{ title: 'İlaç Ekle' }} />
       </Stack>
     </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <MedicationsProvider>
+      <AppStack />
+    </MedicationsProvider>
   );
 }

@@ -26,6 +26,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "İlacınızın fotoğrafını çekmek için kamera izni gerekir.",
+          "photosPermission": "İlacınızın fotoğrafını seçmek için galeri izni gerekir.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

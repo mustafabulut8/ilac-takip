@@ -1,11 +1,17 @@
+import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { BigButton } from '@/components/big-button';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { useMedications } from '@/context/medications';
 
 export default function HomeScreen() {
+  const { medications } = useMedications();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>İlaç Takip</Text>
+      <Text style={styles.text}>Kayıtlı ilaç sayısı: {medications.length}</Text>
+      <BigButton label="İlaç Ekle" onPress={() => router.push('/ilac-ekle')} />
     </View>
   );
 }
@@ -13,13 +19,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.four,
+    gap: Spacing.three,
+    padding: Spacing.three,
   },
-  title: {
+  text: {
     color: Colors.text,
-    fontSize: FontSize.title,
-    fontWeight: '700',
+    fontSize: FontSize.body,
+    textAlign: 'center',
   },
 });
