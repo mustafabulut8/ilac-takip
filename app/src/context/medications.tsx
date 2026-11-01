@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
+import { scheduleMedication } from '@/lib/notifications';
 import { savePhoto } from '@/lib/photos';
 import { loadDoseLogs, loadMedications, saveMedications } from '@/lib/storage';
 import type { DoseLog, Medication } from '@/types';
@@ -39,6 +40,9 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
     const updated = [...medications, medication];
     await saveMedications(updated);
     setMedications(updated);
+
+    // Bildirim planlanamasa da ilaç kaydı korunur; izin ana ekranda istenir.
+    await scheduleMedication(medication).catch(() => {});
   };
 
   return (
