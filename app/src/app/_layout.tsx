@@ -1,18 +1,28 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { Colors, FontSize } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{
+          headerTintColor: Colors.text,
+          headerTitleStyle: { fontSize: FontSize.body, fontWeight: '700' },
+          contentStyle: { backgroundColor: Colors.background },
+        }}>
+        <Stack.Screen name="index" options={{ title: 'Bugünkü İlaçlarım' }} />
+      </Stack>
+    </>
   );
 }

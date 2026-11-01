@@ -1,65 +1,33 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
+ * Yaşlı kullanıcılar için tek, yüksek kontrastlı tema.
+ * Yazılar en az 22pt, butonlar en az 64px yüksekliğindedir.
  */
 
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+  text: '#000000',
+  textOnColor: '#FFFFFF',
+  background: '#FFFFFF',
+  surface: '#F2F2F2',
+  border: '#000000',
+  primary: '#0B3D91',
+  success: '#0B6B2E',
+  danger: '#A80000',
+  pending: '#7A4B00',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const FontSize = {
+  small: 22,
+  body: 24,
+  title: 32,
+  huge: 44,
+} as const;
 
 export const Spacing = {
-  half: 2,
   one: 4,
   two: 8,
   three: 16,
   four: 24,
   five: 32,
-  six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const MinButtonHeight = 64;
