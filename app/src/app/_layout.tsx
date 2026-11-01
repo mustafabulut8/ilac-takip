@@ -42,6 +42,8 @@ function AppStack() {
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
+          // Renk verilmezse başlık iOS'ta saydam olur ve ekranın üstünü kapatır.
+          headerStyle: { backgroundColor: Colors.background },
           headerTintColor: Colors.text,
           headerTitleStyle: { fontSize: FontSize.body, fontWeight: '700' },
           contentStyle: { backgroundColor: Colors.background },
