@@ -1,0 +1,41 @@
+# Her push ve pull request'te uygulamanın tip, lint ve test kontrolü.
+name: Kontrol
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      - name: Tip kontrolü (tsc)
+        run: npm run typecheck
+
+      - name: Lint ve biçim kontrolü
+        run: npm run lint
+
+      - name: Testler ve kapsam
+        run: npm test
+
+      - name: Kapsam raporunu sakla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kapsam-raporu
+          path: app/coverage/
+          if-no-files-found: ignore
