@@ -7,7 +7,7 @@ import { BigButton } from '@/components/big-button';
 import { DoseCard } from '@/components/dose-card';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useMedications } from '@/context/medications';
-import { getTodayDoses } from '@/lib/doses';
+import { doseService } from '@/services';
 import {
   hasNotificationPermission,
   requestNotificationPermission,
@@ -48,12 +48,12 @@ export default function HomeScreen() {
     // clearNotice her çizimde yenilenir; süre yalnızca mesaj değişince başlamalı.
   }, [notice]);
 
-  const doses = getTodayDoses(medications, doseLogs, now);
+  const doses = doseService.getTodayDoses(medications, doseLogs, now);
 
   const sendTestNotification = async () => {
-    const nextDose = getTodayDoses(medications, doseLogs, new Date()).find(
-      (dose) => dose.status === 'bekliyor',
-    );
+    const nextDose = doseService
+      .getTodayDoses(medications, doseLogs, new Date())
+      .find((dose) => dose.status === 'bekliyor');
     if (!nextDose) {
       setTestMessage('Bugün bekleyen doz yok. Test için şu andan sonraki bir saatle ilaç ekleyin.');
       return;

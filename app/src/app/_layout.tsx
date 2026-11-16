@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors, FontSize } from '@/constants/theme';
 import { MedicationsProvider, useMedications } from '@/context/medications';
-import { formatDate } from '@/lib/doses';
+import { formatDate } from '@/utils/date';
 import { notificationDate, type DoseNotificationData } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync();

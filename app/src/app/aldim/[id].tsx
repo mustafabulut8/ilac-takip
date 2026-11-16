@@ -8,7 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BigButton } from '@/components/big-button';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useMedications } from '@/context/medications';
-import { doseLogId, formatDate } from '@/lib/doses';
+import { doseService } from '@/services';
+import { formatDate } from '@/utils/date';
 import { photoUri } from '@/lib/photos';
 
 function goHome() {
@@ -43,7 +44,7 @@ export default function TakeDoseScreen() {
     );
   }
 
-  const isTaken = doseLogs.some((log) => log.id === doseLogId(medication.id, date, time));
+  const isTaken = doseService.isTaken(doseLogs, medication.id, date, time);
 
   const confirm = async () => {
     // Hızlı çift dokunuş stoğu iki kez düşürmesin.

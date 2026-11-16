@@ -1,11 +1,10 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
 import { logger } from '@/utils/logger';
-import { doseLogId } from '@/lib/doses';
 import { scheduleMedication, syncNotifications } from '@/lib/notifications';
 import { savePhoto } from '@/lib/photos';
 import { userMessageOf } from '@/errors';
-import { storage } from '@/services';
+import { doseService, storage } from '@/services';
 import { DEFAULT_FORM_KIND, type DoseLog, type Medication, type NewMedication } from '@/models';
 
 type MedicationsContextValue = {
@@ -95,21 +94,10 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
   };
 
   const confirmDose = async (medicationId: string, date: string, time: string) => {
-    const id = doseLogId(medicationId, date, time);
-    if (doseLogs.some((log) => log.id === id)) return;
-
-    const updatedLogs = [
-      ...doseLogs,
-      { id, medicationId, date, time, takenAt: new Date().toISOString() },
-    ];
-    const updatedMedications = medications.map((medication) =>
-      medication.id === medicationId
-        ? { ...medication, stock: Math.max(medication.stock - 1, 0) }
-        : medication,
-    );
-    await storage.saveDoseConfirmation(updatedMedications, updatedLogs);
-    setDoseLogs(updatedLogs);
-    setMedications(updatedMedications);
+    const next = await doseService.confirmDose({ medications, doseLogs }, medicationId, date, time);
+    if (!next) return;
+    setDoseLogs(next.doseLogs);
+    setMedications(next.medications);
   };
 
   return (
