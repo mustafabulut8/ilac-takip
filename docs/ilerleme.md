@@ -4,7 +4,7 @@
 
 ## Bugün Tamamlananlar
 
-- **Modüler yapıya geçiş (refactor):** Kod katmanlara ayrıldı: ekranlar, kancalar, durum, servis sınıfları, modeller, doğrulama, hata sınıfları ve saf fonksiyonlar. Uygulamanın görünümü ve davranışı değişmedi. Önceki hali `v0.1-sprint1` etiketinde; çalışma `refactor/moduler-yapi` dalında, main'e henüz birleştirilmedi.
+- **Modüler yapıya geçiş (refactor):** Kod katmanlara ayrıldı: ekranlar, kancalar, durum, servis sınıfları, modeller, doğrulama, hata sınıfları ve saf fonksiyonlar. Uygulamanın görünümü ve davranışı değişmedi. Önceki hali `v0.1-sprint1` etiketinde. Simülatörde test edildi ve `refactor/moduler-yapi` dalı main'e birleştirildi.
 - **OOP:** `MedicationService`, `DoseService`, `NotificationService`, `PhotoService` ve `IStorage` arayüzünü uygulayan `AsyncStorageService` yazıldı. Bağımlılıklar constructor ile veriliyor.
 - **İlaç formu altyapısı:** Soyut `MedicationForm` ve `Tablet`, `Şurup`, `Damla`, `Krem` sınıfları. ALDIM butonu metni `form.confirmLabel()` ile geliyor. Arayüzde form seçimi henüz yok; tüm ilaçlar Tablet.
 - **Savunmacı programlama:** Bozuk kayıtlı veri uygulamayı çökertmiyor; yedekleniyor ve ana ekranda Türkçe uyarı gösteriliyor. Kayıtlı veriye sürüm numarası ve göç yapısı eklendi. İlaç girdileri ayrı modülde doğrulanıyor. Stok negatife düşmüyor. Çöken ekran için "Yeniden dene" sayfası var.
@@ -14,7 +14,6 @@
 
 ## Bilinen Eksikler
 
-- Refactor telefonda/simülatörde henüz denenmedi. Main'e birleştirmeden önce elle test edilmeli.
 - İlaç silme ve düzeltme ekranı yok (servis hazır).
 - İlaç formu seçimi arayüzde yok.
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
@@ -22,7 +21,7 @@
 
 ## Yarın Yapılacaklar
 
-1. **Refactor testi:** Simülatör ve telefonda elle test; sorun yoksa `refactor/moduler-yapi` dalını main'e birleştir.
+1. **Refactor'ı gerçek telefonda dene:** Simülatörde geçti; mevcut ilaçların kaybolmadığını telefonda da doğrula.
 2. **#3 uçak modu testi:** Testi yap, sonra issue'yu elle kapat. Uygulama tamamen kapalıyken bildirime dokunmayı da dene.
 3. **İlaç silme ve düzeltme ekranı:** `MedicationService.update/remove` hazır.
 4. **İlaç formu desteği (#22):** Form seçimi, forma göre doz birimi, aç/tok notu, sayılamayan formlarda "Bitmek üzere" butonu. Kapsül, iğne ve sprey için yeni `MedicationForm` alt sınıfları.
