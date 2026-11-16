@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
+import { logger } from '@/utils/logger';
 import { doseLogId } from '@/lib/doses';
 import { scheduleMedication, syncNotifications } from '@/lib/notifications';
 import { savePhoto } from '@/lib/photos';
@@ -37,10 +38,10 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
         setDoseLogs(storedLogs);
         // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
         syncNotifications(storedMedications).catch((error) => {
-          console.error('Bildirimler eşitlenemedi:', error);
+          logger.error('Bildirimler eşitlenemedi:', error);
         });
       })
-      .catch((error) => console.error('Kayıtlı veriler okunamadı:', error))
+      .catch((error) => logger.error('Kayıtlı veriler okunamadı:', error))
       .finally(() => setIsLoaded(true));
   }, []);
 
@@ -55,7 +56,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
     try {
       photoFile = await savePhoto(photoSourceUri, id);
     } catch (error) {
-      console.error('Fotoğraf kopyalanamadı:', error);
+      logger.error('Fotoğraf kopyalanamadı:', error);
       throw new Error('Fotoğraf kaydedilemedi. Lütfen fotoğrafı yeniden seçip tekrar deneyin.');
     }
 
@@ -70,7 +71,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
     try {
       await saveMedications(updated);
     } catch (error) {
-      console.error('İlaç AsyncStorage’a yazılamadı:', error);
+      logger.error('İlaç AsyncStorage’a yazılamadı:', error);
       throw new Error('İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.');
     }
     setMedications(updated);
@@ -80,7 +81,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
       await scheduleMedication(medication);
       setNotice('İlaç kaydedildi');
     } catch (error) {
-      console.error('Bildirim planlanamadı:', error);
+      logger.error('Bildirim planlanamadı:', error);
       setNotice('İlaç kaydedildi, ancak hatırlatma kurulamadı. Bildirim iznini kontrol edin.');
     }
   };

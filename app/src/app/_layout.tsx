@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors, FontSize } from '@/constants/theme';
 import { MedicationsProvider, useMedications } from '@/context/medications';
 import { formatDate } from '@/lib/doses';
@@ -62,8 +63,10 @@ function AppStack() {
 
 export default function RootLayout() {
   return (
-    <MedicationsProvider>
-      <AppStack />
-    </MedicationsProvider>
+    <ErrorBoundary>
+      <MedicationsProvider>
+        <AppStack />
+      </MedicationsProvider>
+    </ErrorBoundary>
   );
 }
