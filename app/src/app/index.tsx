@@ -18,7 +18,7 @@ const REFRESH_INTERVAL_MS = 30 * 1000;
 const NOTICE_DURATION_MS = 5 * 1000;
 
 export default function HomeScreen() {
-  const { medications, doseLogs, notice, clearNotice } = useMedications();
+  const { medications, doseLogs, notice, clearNotice, storageWarnings } = useMedications();
   const [now, setNow] = useState(() => new Date());
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [testMessage, setTestMessage] = useState<string | null>(null);
@@ -68,6 +68,15 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {storageWarnings.length > 0 && (
+        <View style={styles.warning} accessibilityLiveRegion="polite">
+          {storageWarnings.map((warning) => (
+            <Text key={warning} style={styles.warningText}>
+              {warning}
+            </Text>
+          ))}
+        </View>
+      )}
       {permissionDenied && (
         <View style={styles.warning}>
           <Text style={styles.warningText}>

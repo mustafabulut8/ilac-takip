@@ -4,12 +4,8 @@ import { logger } from '@/utils/logger';
 import { doseLogId } from '@/lib/doses';
 import { scheduleMedication, syncNotifications } from '@/lib/notifications';
 import { savePhoto } from '@/lib/photos';
-import {
-  loadDoseLogs,
-  loadMedications,
-  saveDoseConfirmation,
-  saveMedications,
-} from '@/lib/storage';
+import { userMessageOf } from '@/errors';
+import { storage } from '@/services';
 import { DEFAULT_FORM_KIND, type DoseLog, type Medication, type NewMedication } from '@/models';
 
 type MedicationsContextValue = {
@@ -21,6 +17,8 @@ type MedicationsContextValue = {
   /** Ana ekranda kısa süre gösterilen mesaj. */
   notice: string | null;
   clearNotice: () => void;
+  /** Kayıtlı veri okunurken çıkan sorunlar; ana ekranda uyarı olarak gösterilir. */
+  storageWarnings: string[];
 };
 
 const MedicationsContext = createContext<MedicationsContextValue | null>(null);
@@ -30,18 +28,26 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [storageWarnings, setStorageWarnings] = useState<string[]>([]);
 
   useEffect(() => {
-    Promise.all([loadMedications(), loadDoseLogs()])
-      .then(([storedMedications, storedLogs]) => {
+    storage
+      .load()
+      .then(({ medications: storedMedications, doseLogs: storedLogs, warnings }) => {
         setMedications(storedMedications);
         setDoseLogs(storedLogs);
+        setStorageWarnings(warnings);
         // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
         syncNotifications(storedMedications).catch((error) => {
           logger.error('Bildirimler eşitlenemedi:', error);
         });
       })
-      .catch((error) => logger.error('Kayıtlı veriler okunamadı:', error))
+      .catch((error) => {
+        logger.error('Kayıtlı veriler okunamadı:', error);
+        setStorageWarnings([
+          userMessageOf(error, 'Kayıtlı veriler okunamadı. Lütfen uygulamayı yeniden açın.'),
+        ]);
+      })
       .finally(() => setIsLoaded(true));
   }, []);
 
@@ -69,10 +75,12 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
     };
     const updated = [...medications, medication];
     try {
-      await saveMedications(updated);
+      await storage.saveMedications(updated);
     } catch (error) {
       logger.error('İlaç AsyncStorage’a yazılamadı:', error);
-      throw new Error('İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.');
+      throw new Error(
+        userMessageOf(error, 'İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.'),
+      );
     }
     setMedications(updated);
 
@@ -99,7 +107,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
         ? { ...medication, stock: Math.max(medication.stock - 1, 0) }
         : medication,
     );
-    await saveDoseConfirmation(updatedMedications, updatedLogs);
+    await storage.saveDoseConfirmation(updatedMedications, updatedLogs);
     setDoseLogs(updatedLogs);
     setMedications(updatedMedications);
   };
@@ -114,6 +122,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
         confirmDose,
         notice,
         clearNotice: () => setNotice(null),
+        storageWarnings,
       }}>
       {children}
     </MedicationsContext.Provider>
