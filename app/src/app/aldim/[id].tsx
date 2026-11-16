@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BigButton } from '@/components/big-button';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
-import { useMedications } from '@/context/medications';
+import { useMedications } from '@/hooks/useMedications';
+import { getMedicationForm } from '@/models';
 import { doseService, photoService } from '@/services';
 import { formatDate } from '@/utils/date';
 
@@ -44,6 +45,8 @@ export default function TakeDoseScreen() {
   }
 
   const isTaken = doseService.isTaken(doseLogs, medication.id, date, time);
+  // Çok biçimlilik: form türüne bakılmadan aynı metotlar çağrılır (tablet için "ALDIM").
+  const form = getMedicationForm(medication.form);
 
   const confirm = async () => {
     // Hızlı çift dokunuş stoğu iki kez düşürmesin.
@@ -82,7 +85,7 @@ export default function TakeDoseScreen() {
       {isTaken ? (
         <View style={styles.confirmed} accessibilityLiveRegion="polite">
           <Text style={styles.confirmedTitle}>
-            {justConfirmed ? '✓ Aldınız, teşekkürler!' : '✓ Bu doz alındı'}
+            ✓ {justConfirmed ? form.confirmedMessage() : form.alreadyConfirmedMessage()}
           </Text>
           <Text style={styles.info}>Kalan stok: {medication.stock}</Text>
           <BigButton label="Ana Ekrana Dön" onPress={goHome} />
@@ -90,10 +93,10 @@ export default function TakeDoseScreen() {
       ) : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${medication.name} ilacını aldım`}
+          accessibilityLabel={form.confirmAccessibilityLabel(medication.name)}
           onPress={confirm}
           style={({ pressed }) => [styles.takeButton, pressed && styles.takeButtonPressed]}>
-          <Text style={styles.takeButtonLabel}>ALDIM</Text>
+          <Text style={styles.takeButtonLabel}>{form.confirmLabel()}</Text>
         </Pressable>
       )}
     </SafeAreaView>

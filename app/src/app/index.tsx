@@ -1,54 +1,26 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { AppState, FlatList, Linking, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BigButton } from '@/components/big-button';
 import { DoseCard } from '@/components/dose-card';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
-import { useMedications } from '@/context/medications';
-import { doseService, notificationService } from '@/services';
-
-const REFRESH_INTERVAL_MS = 30 * 1000;
-const NOTICE_DURATION_MS = 5 * 1000;
+import { useMedications } from '@/hooks/useMedications';
+import { useNotice } from '@/hooks/useNotice';
+import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useTodayDoses } from '@/hooks/useTodayDoses';
+import { notificationService } from '@/services';
 
 export default function HomeScreen() {
-  const { medications, doseLogs, notice, clearNotice, storageWarnings } = useMedications();
-  const [now, setNow] = useState(() => new Date());
-  const [permissionDenied, setPermissionDenied] = useState(false);
+  const { medications, storageWarnings } = useMedications();
+  const { doses, findNextPendingDose } = useTodayDoses();
+  const permissionDenied = useNotificationPermission();
+  const notice = useNotice();
   const [testMessage, setTestMessage] = useState<string | null>(null);
 
-  // Bekleyen doz, ekran açıkken de "kaçırıldı" durumuna geçebilsin.
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), REFRESH_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    notificationService.requestPermission().then((granted) => setPermissionDenied(!granted));
-
-    // Kullanıcı Ayarlar'dan dönünce izin durumu ve saat güncellensin.
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state !== 'active') return;
-      setNow(new Date());
-      notificationService.hasPermission().then((granted) => setPermissionDenied(!granted));
-    });
-    return () => subscription.remove();
-  }, []);
-
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(clearNotice, NOTICE_DURATION_MS);
-    return () => clearTimeout(timer);
-    // clearNotice her çizimde yenilenir; süre yalnızca mesaj değişince başlamalı.
-  }, [notice]);
-
-  const doses = doseService.getTodayDoses(medications, doseLogs, now);
-
   const sendTestNotification = async () => {
-    const nextDose = doseService
-      .getTodayDoses(medications, doseLogs, new Date())
-      .find((dose) => dose.status === 'bekliyor');
+    const nextDose = findNextPendingDose();
     if (!nextDose) {
       setTestMessage('Bugün bekleyen doz yok. Test için şu andan sonraki bir saatle ilaç ekleyin.');
       return;

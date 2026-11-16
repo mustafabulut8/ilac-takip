@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors, FontSize } from '@/constants/theme';
-import { MedicationsProvider, useMedications } from '@/context/medications';
+import { MedicationsProvider } from '@/context/medications';
+import { useMedications } from '@/hooks/useMedications';
 import { notificationService } from '@/services';
 
 SplashScreen.preventAutoHideAsync();
