@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { FlatList, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,29 +8,15 @@ import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useMedications } from '@/hooks/useMedications';
 import { useNotice } from '@/hooks/useNotice';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useTestNotification } from '@/hooks/useTestNotification';
 import { useTodayDoses } from '@/hooks/useTodayDoses';
-import { notificationService } from '@/services';
 
 export default function HomeScreen() {
   const { medications, storageWarnings } = useMedications();
   const { doses, findNextPendingDose } = useTodayDoses();
   const permissionDenied = useNotificationPermission();
   const notice = useNotice();
-  const [testMessage, setTestMessage] = useState<string | null>(null);
-
-  const sendTestNotification = async () => {
-    const nextDose = findNextPendingDose();
-    if (!nextDose) {
-      setTestMessage('Bugün bekleyen doz yok. Test için şu andan sonraki bir saatle ilaç ekleyin.');
-      return;
-    }
-    try {
-      await notificationService.scheduleTest(nextDose);
-      setTestMessage(`${nextDose.medication.name} için bildirim 1 dakika sonra gelecek.`);
-    } catch {
-      setTestMessage('Test bildirimi planlanamadı. Bildirim iznini kontrol edin.');
-    }
-  };
+  const { testMessage, sendTestNotification } = useTestNotification(findNextPendingDose);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>

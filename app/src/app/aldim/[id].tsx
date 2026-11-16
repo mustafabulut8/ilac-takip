@@ -7,9 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BigButton } from '@/components/big-button';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
-import { useMedications } from '@/hooks/useMedications';
+import { useDose } from '@/hooks/useDose';
+import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
 import { getMedicationForm } from '@/models';
-import { doseService, photoService } from '@/services';
 import { formatDate } from '@/utils/date';
 
 function goHome() {
@@ -27,14 +27,14 @@ export default function TakeDoseScreen() {
     time: string;
     date?: string;
   }>();
-  const { isLoaded, medications, doseLogs, confirmDose } = useMedications();
+  const { isLoaded, medication, isTaken, confirm: confirmDose } = useDose(id, date, time);
+  const photoUri = useMedicationPhoto(medication?.photoFile ?? '');
   const isConfirming = useRef(false);
   const [justConfirmed, setJustConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isLoaded) return null;
 
-  const medication = medications.find((item) => item.id === id);
   if (!medication || !time) {
     return (
       <SafeAreaView style={styles.message}>
@@ -44,7 +44,6 @@ export default function TakeDoseScreen() {
     );
   }
 
-  const isTaken = doseService.isTaken(doseLogs, medication.id, date, time);
   // Çok biçimlilik: form türüne bakılmadan aynı metotlar çağrılır (tablet için "ALDIM").
   const form = getMedicationForm(medication.form);
 
@@ -53,7 +52,7 @@ export default function TakeDoseScreen() {
     if (isConfirming.current) return;
     isConfirming.current = true;
     try {
-      await confirmDose(medication.id, date, time);
+      await confirmDose();
       setJustConfirmed(true);
       setError(null);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -68,7 +67,7 @@ export default function TakeDoseScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.details}>
         <Image
-          source={photoService.photoUri(medication.photoFile)}
+          source={photoUri}
           style={styles.photo}
           contentFit="contain"
           accessibilityLabel={`${medication.name} fotoğrafı`}

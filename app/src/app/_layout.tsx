@@ -8,11 +8,8 @@ import { Colors, FontSize } from '@/constants/theme';
 import { MedicationsProvider } from '@/context/medications';
 import { useDoseNotificationTaps } from '@/hooks/useDoseNotificationTaps';
 import { useMedications } from '@/hooks/useMedications';
-import { notificationService } from '@/services';
 
 SplashScreen.preventAutoHideAsync();
-// Uygulama açıkken gelen bildirim de gösterilsin.
-notificationService.configure();
 
 function AppStack() {
   const { isLoaded } = useMedications();

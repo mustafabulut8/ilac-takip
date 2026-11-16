@@ -31,4 +31,6 @@ export const storage: IStorage = new AsyncStorageService(AsyncStorage);
 export const doseService = new DoseService(storage);
 export const photoService = new PhotoService();
 export const notificationService = new NotificationService();
+// Uygulama açıkken gelen bildirim de gösterilsin. Uygulama açılırken bir kez çalışır.
+notificationService.configure();
 export const medicationService = new MedicationService(storage, photoService, notificationService);
