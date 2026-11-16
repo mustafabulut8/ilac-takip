@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { DoseLog, Medication } from '@/types';
+import type { DoseLog, Medication } from '@/models';
 
 const MEDICATIONS_KEY = 'medications';
 const DOSE_LOGS_KEY = 'doseLogs';

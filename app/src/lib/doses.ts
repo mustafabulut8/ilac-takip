@@ -1,13 +1,4 @@
-import type { DoseLog, Medication } from '../types';
-
-export type DoseStatus = 'bekliyor' | 'alindi' | 'kacirildi' | 'yarin';
-
-export type Dose = {
-  medication: Medication;
-  date: string;
-  time: string;
-  status: DoseStatus;
-};
+import type { Dose, DoseLog, DoseStatus, Medication } from '@/models';
 
 /** Bu süre geçip onay yoksa doz kaçırılmış sayılır (#7 ile aynı kural). */
 const MISSED_AFTER_MS = 30 * 60 * 1000;

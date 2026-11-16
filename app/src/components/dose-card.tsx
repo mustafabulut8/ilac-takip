@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, FontSize, Spacing } from '@/constants/theme';
-import type { Dose, DoseStatus } from '@/lib/doses';
+import type { Dose, DoseStatus } from '@/models';
 import { photoUri } from '@/lib/photos';
 
 const STATUS: Record<DoseStatus, { label: string; color: string }> = {

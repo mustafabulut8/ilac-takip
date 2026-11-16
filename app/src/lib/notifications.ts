@@ -1,8 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import type { Dose } from '@/lib/doses';
-import type { Medication } from '@/types';
+import type { Dose, Medication } from '@/models';
 
 const CHANNEL_ID = 'ilac-hatirlatma';
 const TEST_DELAY_SECONDS = 60;

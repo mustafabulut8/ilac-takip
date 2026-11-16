@@ -9,11 +9,7 @@ import {
   saveDoseConfirmation,
   saveMedications,
 } from '@/lib/storage';
-import type { DoseLog, Medication } from '@/types';
-
-export type NewMedication = Pick<Medication, 'name' | 'dose' | 'times' | 'stock'> & {
-  photoSourceUri: string;
-};
+import { DEFAULT_FORM_KIND, type DoseLog, type Medication, type NewMedication } from '@/models';
 
 type MedicationsContextValue = {
   isLoaded: boolean;
@@ -48,7 +44,11 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoaded(true));
   }, []);
 
-  const addMedication = async ({ photoSourceUri, ...input }: NewMedication) => {
+  const addMedication = async ({
+    photoSourceUri,
+    form = DEFAULT_FORM_KIND,
+    ...input
+  }: NewMedication) => {
     const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
     let photoFile: string;
@@ -59,7 +59,13 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
       throw new Error('Fotoğraf kaydedilemedi. Lütfen fotoğrafı yeniden seçip tekrar deneyin.');
     }
 
-    const medication: Medication = { ...input, id, photoFile, createdAt: new Date().toISOString() };
+    const medication: Medication = {
+      ...input,
+      form,
+      id,
+      photoFile,
+      createdAt: new Date().toISOString(),
+    };
     const updated = [...medications, medication];
     try {
       await saveMedications(updated);
