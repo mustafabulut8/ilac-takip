@@ -31,7 +31,11 @@ function AppStack() {
     router.push({
       pathname: '/aldim/[id]',
       // Doz, açılış gününe değil bildirimin geldiği güne yazılır.
-      params: { id: medicationId, time, date: formatDate(notificationDate(response.notification.date)) },
+      params: {
+        id: medicationId,
+        time,
+        date: formatDate(notificationDate(response.notification.date)),
+      },
     });
     // Temizlenmezse aynı sayfa uygulama her açıldığında yeniden gelir.
     Notifications.clearLastNotificationResponseAsync();

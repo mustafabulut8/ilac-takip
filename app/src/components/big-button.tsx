@@ -10,7 +10,13 @@ type BigButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function BigButton({ label, onPress, color = Colors.primary, disabled, style }: BigButtonProps) {
+export function BigButton({
+  label,
+  onPress,
+  color = Colors.primary,
+  disabled,
+  style,
+}: BigButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"

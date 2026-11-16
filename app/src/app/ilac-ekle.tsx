@@ -146,7 +146,9 @@ export default function AddMedicationScreen() {
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag">
-        <View style={styles.field} onLayout={(e) => rememberPosition('name')(e.nativeEvent.layout.y)}>
+        <View
+          style={styles.field}
+          onLayout={(e) => rememberPosition('name')(e.nativeEvent.layout.y)}>
           <Text style={styles.label}>İlacın adı</Text>
           <TextInput
             style={[styles.input, errors.name && styles.inputInvalid]}
@@ -161,7 +163,9 @@ export default function AddMedicationScreen() {
           <FieldError message={errors.name} />
         </View>
 
-        <View style={styles.field} onLayout={(e) => rememberPosition('dose')(e.nativeEvent.layout.y)}>
+        <View
+          style={styles.field}
+          onLayout={(e) => rememberPosition('dose')(e.nativeEvent.layout.y)}>
           <Text style={styles.label}>Doz</Text>
           <TextInput
             style={[styles.input, errors.dose && styles.inputInvalid]}
@@ -176,7 +180,9 @@ export default function AddMedicationScreen() {
           <FieldError message={errors.dose} />
         </View>
 
-        <View style={styles.field} onLayout={(e) => rememberPosition('photo')(e.nativeEvent.layout.y)}>
+        <View
+          style={styles.field}
+          onLayout={(e) => rememberPosition('photo')(e.nativeEvent.layout.y)}>
           <Text style={styles.label}>Fotoğraf</Text>
           {photoUri && (
             <Image
@@ -191,9 +197,16 @@ export default function AddMedicationScreen() {
           <FieldError message={errors.photo} />
         </View>
 
-        <View style={styles.field} onLayout={(e) => rememberPosition('times')(e.nativeEvent.layout.y)}>
+        <View
+          style={styles.field}
+          onLayout={(e) => rememberPosition('times')(e.nativeEvent.layout.y)}>
           <Text style={styles.label}>Günlük saatler</Text>
-          <TimeStepper hour={hour} minute={minute} onHourChange={setHour} onMinuteChange={setMinute} />
+          <TimeStepper
+            hour={hour}
+            minute={minute}
+            onHourChange={setHour}
+            onMinuteChange={setMinute}
+          />
           <BigButton label={`${formatTime(hour, minute)} Saatini Ekle`} onPress={addTime} />
           {times.map((time) => (
             <View key={time} style={styles.timeRow}>
@@ -208,7 +221,9 @@ export default function AddMedicationScreen() {
           <FieldError message={errors.times} />
         </View>
 
-        <View style={styles.field} onLayout={(e) => rememberPosition('stock')(e.nativeEvent.layout.y)}>
+        <View
+          style={styles.field}
+          onLayout={(e) => rememberPosition('stock')(e.nativeEvent.layout.y)}>
           <Text style={styles.label}>Stok adedi</Text>
           <TextInput
             style={[styles.input, errors.stock && styles.inputInvalid]}

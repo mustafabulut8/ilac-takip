@@ -17,7 +17,11 @@ function goHome() {
 }
 
 export default function TakeDoseScreen() {
-  const { id, time, date = formatDate(new Date()) } = useLocalSearchParams<{
+  const {
+    id,
+    time,
+    date = formatDate(new Date()),
+  } = useLocalSearchParams<{
     id: string;
     time: string;
     date?: string;

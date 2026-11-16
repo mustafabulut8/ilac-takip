@@ -73,7 +73,11 @@ export default function HomeScreen() {
           <Text style={styles.warningText}>
             Bildirim izni kapalı. İzin vermezseniz ilaç saatinde hatırlatma alamazsınız.
           </Text>
-          <BigButton label="Ayarları Aç" color={Colors.danger} onPress={() => Linking.openSettings()} />
+          <BigButton
+            label="Ayarları Aç"
+            color={Colors.danger}
+            onPress={() => Linking.openSettings()}
+          />
         </View>
       )}
       {notice && (
@@ -113,7 +117,11 @@ export default function HomeScreen() {
           </Text>
         )}
         <BigButton label="İlaç Ekle" onPress={() => router.push('/ilac-ekle')} />
-        <BigButton label="1 Dakika Sonra Test Bildirimi" color={Colors.pending} onPress={sendTestNotification} />
+        <BigButton
+          label="1 Dakika Sonra Test Bildirimi"
+          color={Colors.pending}
+          onPress={sendTestNotification}
+        />
       </View>
     </SafeAreaView>
   );

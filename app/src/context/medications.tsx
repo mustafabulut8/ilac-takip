@@ -3,7 +3,12 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from '
 import { doseLogId } from '@/lib/doses';
 import { scheduleMedication, syncNotifications } from '@/lib/notifications';
 import { savePhoto } from '@/lib/photos';
-import { loadDoseLogs, loadMedications, saveDoseConfirmation, saveMedications } from '@/lib/storage';
+import {
+  loadDoseLogs,
+  loadMedications,
+  saveDoseConfirmation,
+  saveMedications,
+} from '@/lib/storage';
 import type { DoseLog, Medication } from '@/types';
 
 export type NewMedication = Pick<Medication, 'name' | 'dose' | 'times' | 'stock'> & {

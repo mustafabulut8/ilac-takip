@@ -86,9 +86,7 @@ export async function syncNotifications(medications: Medication[]) {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const scheduledIds = new Set(scheduled.map((request) => request.identifier));
   const expectedIds = new Set(
-    medications.flatMap((medication) =>
-      medication.times.map((time) => `${medication.id}-${time}`),
-    ),
+    medications.flatMap((medication) => medication.times.map((time) => `${medication.id}-${time}`)),
   );
 
   await Promise.all(
