@@ -2,6 +2,7 @@ import { AppError, StorageError, userMessageOf } from '@/errors';
 import { DEFAULT_FORM_KIND, type Medication, type NewMedication } from '@/models';
 import { createId } from '@/utils/id';
 import { logger } from '@/utils/logger';
+import { assertValidNewMedication } from '@/validation/medication-input';
 import { sanitizeStock } from '@/validation/stored-records';
 
 import type { NotificationService } from './NotificationService';
@@ -59,6 +60,7 @@ export class MedicationService {
   }
 
   async add(current: Medication[], input: NewMedication): Promise<AddMedicationResult> {
+    assertValidNewMedication(input);
     const { photoSourceUri, form = DEFAULT_FORM_KIND, ...fields } = input;
     const id = createId(this.now());
     const photoFile = await this.copyPhoto(photoSourceUri, id);
