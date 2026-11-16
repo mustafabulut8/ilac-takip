@@ -2,7 +2,7 @@
 
 Yaşlı bireylerin ilaçlarını zamanında ve doğru şekilde kullanmasına yardımcı olan, aile üyelerini de ilaç kullanım durumu hakkında bilgilendiren bir mobil uygulama. Bu depo, bitirme projesinin kaynak kodunu ve belgelerini içerir.
 
-> **Proje durumu:** Sprint 1 geliştirildi: ilaç ekleme, günlük yerel bildirimler ve tam ekran "ALDIM" sayfası. Veriler şimdilik yalnızca cihazda tutulur; aile bilgilendirme ve yapay zekâ özellikleri sonraki sprintlerde gelecek.
+> **Proje durumu:** Sprint 1 geliştirildi: ilaç ekleme, günlük yerel bildirimler ve tam ekran "ALDIM" sayfası. Veriler şimdilik yalnızca cihazda tutulur; aile bilgilendirme ve yapay zekâ özellikleri sonraki sprintlerde gelecek. Kod, modüler ve nesne yönelimli bir yapıya geçirildi; birim testleri ve CI eklendi.
 
 ## Planlanan Özellikler
 
@@ -26,21 +26,31 @@ Yaşlı bireylerin ilaçlarını zamanında ve doğru şekilde kullanmasına yar
 
 ```text
 ilac-takip/
-├── app/                # Expo mobil uygulaması
-│   ├── assets/         # Görseller ve simgeler
+├── app/                    # Expo mobil uygulaması
+│   ├── assets/             # Görseller ve simgeler
 │   ├── src/
-│   │   ├── app/        # Expo Router ekranları
-│   │   ├── components/ # Ortak arayüz bileşenleri
-│   │   ├── constants/  # Tema ve sabitler
-│   │   ├── context/    # Uygulama verisinin yönetimi
-│   │   └── lib/        # Depolama, doz hesabı, bildirim ve fotoğraf işlemleri
-│   ├── app.json        # Expo yapılandırması
+│   │   ├── app/            # Ekranlar (Expo Router); ince tutulur
+│   │   ├── components/     # Arayüz bileşenleri ve ErrorBoundary
+│   │   ├── hooks/          # useMedications, useTodayDoses gibi kancalar
+│   │   ├── context/        # Uygulama verisinin React durumu
+│   │   ├── services/       # İş mantığı sınıfları: depolama, ilaç, doz, bildirim, fotoğraf
+│   │   ├── models/         # Tipler ve ilaç formu sınıfları (Tablet, Şurup, Damla, Krem)
+│   │   ├── validation/     # Girdi ve kayıtlı veri doğrulama
+│   │   ├── errors/         # Hata sınıfları
+│   │   ├── utils/          # Saf fonksiyonlar (tarih, saat, JSON) ve logger
+│   │   ├── constants/      # Tema
+│   │   └── config.ts       # Ortam değişkenleri
+│   ├── .env.example        # Ortam değişkeni şablonu
+│   ├── app.json            # Expo yapılandırması
 │   └── package.json
-├── docs/               # Raporlar ve diyagramlar
-├── supabase/           # Veritabanı ve sunucu fonksiyonları (ileride)
+├── docs/                   # Raporlar, kararlar ve mimari (moduler-yapi.md)
+├── supabase/               # Veritabanı ve sunucu fonksiyonları (ileride)
+├── .github/workflows/      # CI: her push ve PR'da kontrol
 ├── .gitignore
 └── README.md
 ```
+
+Mimari, OOP ilkeleri ve diyagramlar için [docs/moduler-yapi.md](docs/moduler-yapi.md)'ye bakın.
 
 ## Kurulum
 
@@ -76,3 +86,26 @@ ilac-takip/
    - **Telefon:** Terminaldeki QR kodu Expo Go ile okutun
    - **iOS simülatörü:** `i` tuşuna basın
    - **Android emülatörü:** `a` tuşuna basın
+
+## Kontrol ve Testler
+
+Her değişiklikten sonra `app/` klasöründe:
+
+```bash
+npm run kontrol
+```
+
+Bu komut sırayla tip kontrolünü (`tsc --noEmit`), ESLint ve Prettier kontrolünü ve testleri çalıştırır. Aynı kontrol GitHub Actions'ta her push ve pull request'te otomatik çalışır.
+
+Yalnızca testler için:
+
+```bash
+npm test             # Jest birim testleri ve kapsam raporu
+npx jest DoseService # tek bir test dosyası
+```
+
+Kapsam raporu `app/coverage/lcov-report/index.html` dosyasında açılabilir. Bildirim, kamera ve titreşim yalnızca gerçek telefonda test edilebilir.
+
+## Ortam Değişkenleri
+
+`app/.env.example` dosyasını `app/.env` adıyla kopyalayın. `.env` asla commit edilmez. Claude API anahtarı uygulamaya hiç girmez; yalnızca Supabase Edge Function'da tutulur.

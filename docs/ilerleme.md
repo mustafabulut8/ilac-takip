@@ -1,34 +1,31 @@
 # İlerleme
 
-**Son güncelleme:** 1 Kasım 2026
+**Son güncelleme:** 16 Kasım 2026
 
 ## Bugün Tamamlananlar
 
-- **Proje altyapısı:** Expo, TypeScript ve expo-router iskeleti kuruldu, kod GitHub'a gönderildi. Scrum panosu, issue'lar ve milestone'lar hazırlandı.
-- **#4 İlaç ekleme:** Ad, doz, fotoğraf (kamera veya galeri), birden fazla günlük saat ve stok adedi kaydediliyor. Veriler cihazda tutuluyor.
-- **Ana ekran:** Bugünkü dozlar fotoğraf, ad, saat ve durumla listeleniyor.
-- **#1 Bildirim:** Her ilaç saati için günlük yerel bildirim planlanıyor. Ana ekranda "1 dakika sonra test bildirimi" butonu var.
-- **#2 ALDIM sayfası:** Bildirime dokununca tam ekran sayfa açılıyor. ALDIM butonu titreşim ve onay veriyor, stoğu bir azaltıyor.
-- **iPhone düzeltmeleri:** İlaç ekleme ekranındaki kaydırma ve klavye sorunları giderildi, eksik alan uyarıları ve kaydetme hata mesajları eklendi.
-
-İlaç kaydı, kaydırma, test bildirimi ve ALDIM ekranı iPhone'da (iOS 27.2, Expo Go) test edildi ve çalışıyor.
+- **Modüler yapıya geçiş (refactor):** Kod katmanlara ayrıldı: ekranlar, kancalar, durum, servis sınıfları, modeller, doğrulama, hata sınıfları ve saf fonksiyonlar. Uygulamanın görünümü ve davranışı değişmedi. Önceki hali `v0.1-sprint1` etiketinde; çalışma `refactor/moduler-yapi` dalında, main'e henüz birleştirilmedi.
+- **OOP:** `MedicationService`, `DoseService`, `NotificationService`, `PhotoService` ve `IStorage` arayüzünü uygulayan `AsyncStorageService` yazıldı. Bağımlılıklar constructor ile veriliyor.
+- **İlaç formu altyapısı:** Soyut `MedicationForm` ve `Tablet`, `Şurup`, `Damla`, `Krem` sınıfları. ALDIM butonu metni `form.confirmLabel()` ile geliyor. Arayüzde form seçimi henüz yok; tüm ilaçlar Tablet.
+- **Savunmacı programlama:** Bozuk kayıtlı veri uygulamayı çökertmiyor; yedekleniyor ve ana ekranda Türkçe uyarı gösteriliyor. Kayıtlı veriye sürüm numarası ve göç yapısı eklendi. İlaç girdileri ayrı modülde doğrulanıyor. Stok negatife düşmüyor. Çöken ekran için "Yeniden dene" sayfası var.
+- **Kod kalitesi:** ESLint, Prettier, Jest (131 test, mantık katmanlarında yaklaşık %92 kapsam), GitHub Actions CI ve `npm run kontrol` komutu.
+- **İlaç silme ve güncelleme:** Servis tarafı yazıldı ve test edildi; ekranı henüz yok.
+- **Dokümanlar:** `docs/moduler-yapi.md` (mimari, OOP ve sınıf diyagramları), `docs/kararlar.md` 2. karar.
 
 ## Bilinen Eksikler
 
-- İlaç silme ve düzeltme yok.
-- İlaç formu desteği yok.
+- Refactor telefonda/simülatörde henüz denenmedi. Main'e birleştirmeden önce elle test edilmeli.
+- İlaç silme ve düzeltme ekranı yok (servis hazır).
+- İlaç formu seçimi arayüzde yok.
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
+- Kullanılmayan paketler henüz kaldırılmadı (`moduler-yapi.md` → Temizlenecek paketler).
 
 ## Yarın Yapılacaklar
 
-1. **#3 uçak modu testi:** Testi yap, sonra issue'yu elle kapat. Uygulama tamamen kapalıyken bildirime dokunmayı da dene; Expo Go kodu Mac'ten yüklediği için sayfa açılmayabilir.
-2. **İlaç silme ve düzeltme.**
-3. **İlaç formu desteği (#22):**
-   - Formlar: tablet, kapsül, şurup, damla, krem/merhem, iğne, sprey/inhaler.
-   - Forma göre doz birimi: adet, ml, damla, ince tabaka + bölge, ünite, puf.
-   - Kullanım notu: aç/tok karnına.
-   - Sayılamayan formlarda (krem, damla) stok yerine "Bitmek üzere" butonu.
-   - ALDIM butonu forma göre: SÜRDÜM, DAMLATTIM, YAPTIM.
-4. **Dokümanlar:** Literatür taraması (#14) ve gereksinim analizi (#15).
-5. **Sistem mimarisi diyagramı.**
-6. **Salı 10:00 hoca görüşmesi:** 5-7 slaytlık sunum ve demo provası.
+1. **Refactor testi:** Simülatör ve telefonda elle test; sorun yoksa `refactor/moduler-yapi` dalını main'e birleştir.
+2. **#3 uçak modu testi:** Testi yap, sonra issue'yu elle kapat. Uygulama tamamen kapalıyken bildirime dokunmayı da dene.
+3. **İlaç silme ve düzeltme ekranı:** `MedicationService.update/remove` hazır.
+4. **İlaç formu desteği (#22):** Form seçimi, forma göre doz birimi, aç/tok notu, sayılamayan formlarda "Bitmek üzere" butonu. Kapsül, iğne ve sprey için yeni `MedicationForm` alt sınıfları.
+5. **Arayüz tasarımı.**
+6. **Dokümanlar:** Literatür taraması (#14) ve gereksinim analizi (#15).
+7. **Salı 10:00 hoca görüşmesi:** 5-7 slaytlık sunum ve demo provası; `moduler-yapi.md` diyagramları kullanılabilir.
