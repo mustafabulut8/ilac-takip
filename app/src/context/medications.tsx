@@ -1,15 +1,29 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
-import { logger } from '@/utils/logger';
 import { userMessageOf } from '@/errors';
-import { doseService, notificationService, photoService, storage } from '@/services';
-import { DEFAULT_FORM_KIND, type DoseLog, type Medication, type NewMedication } from '@/models';
+import type { DoseLog, Medication, NewMedication } from '@/models';
+import {
+  doseService as defaultDoseService,
+  medicationService as defaultMedicationService,
+  type DoseService,
+  type MedicationChanges,
+  type MedicationService,
+} from '@/services';
+import { logger } from '@/utils/logger';
+
+/** Sağlayıcıya verilebilen servisler; testte sahteleri verilebilir. */
+export type MedicationsServices = {
+  medications: MedicationService;
+  doses: DoseService;
+};
 
 type MedicationsContextValue = {
   isLoaded: boolean;
   medications: Medication[];
   doseLogs: DoseLog[];
   addMedication: (input: NewMedication) => Promise<void>;
+  updateMedication: (id: string, changes: MedicationChanges) => Promise<void>;
+  removeMedication: (id: string) => Promise<void>;
   confirmDose: (medicationId: string, date: string, time: string) => Promise<void>;
   /** Ana ekranda kısa süre gösterilen mesaj. */
   notice: string | null;
@@ -20,7 +34,22 @@ type MedicationsContextValue = {
 
 const MedicationsContext = createContext<MedicationsContextValue | null>(null);
 
-export function MedicationsProvider({ children }: { children: ReactNode }) {
+const DEFAULT_SERVICES: MedicationsServices = {
+  medications: defaultMedicationService,
+  doses: defaultDoseService,
+};
+
+/**
+ * Uygulama verisinin React durumu. İş kuralı burada değil servislerdedir;
+ * bu bileşen yalnızca servisleri çağırıp sonucu duruma yazar.
+ */
+export function MedicationsProvider({
+  children,
+  services = DEFAULT_SERVICES,
+}: {
+  children: ReactNode;
+  services?: MedicationsServices;
+}) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
@@ -28,71 +57,44 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
   const [storageWarnings, setStorageWarnings] = useState<string[]>([]);
 
   useEffect(() => {
-    storage
+    services.medications
       .load()
-      .then(({ medications: storedMedications, doseLogs: storedLogs, warnings }) => {
-        setMedications(storedMedications);
-        setDoseLogs(storedLogs);
-        setStorageWarnings(warnings);
-        // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
-        notificationService.sync(storedMedications).catch((error) => {
-          logger.error('Bildirimler eşitlenemedi:', error);
-        });
+      .then((data) => {
+        setMedications(data.medications);
+        setDoseLogs(data.doseLogs);
+        setStorageWarnings(data.warnings);
       })
       .catch((error) => {
+        // Sessizce boş liste gösterilmez; kullanıcı verinin okunamadığını öğrenir.
         logger.error('Kayıtlı veriler okunamadı:', error);
         setStorageWarnings([
           userMessageOf(error, 'Kayıtlı veriler okunamadı. Lütfen uygulamayı yeniden açın.'),
         ]);
       })
       .finally(() => setIsLoaded(true));
-  }, []);
+  }, [services]);
 
-  const addMedication = async ({
-    photoSourceUri,
-    form = DEFAULT_FORM_KIND,
-    ...input
-  }: NewMedication) => {
-    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const addMedication = async (input: NewMedication) => {
+    const result = await services.medications.add(medications, input);
+    setMedications(result.medications);
+    setNotice(result.notice);
+  };
 
-    let photoFile: string;
-    try {
-      photoFile = await photoService.savePhoto(photoSourceUri, id);
-    } catch (error) {
-      logger.error('Fotoğraf kopyalanamadı:', error);
-      throw new Error('Fotoğraf kaydedilemedi. Lütfen fotoğrafı yeniden seçip tekrar deneyin.');
-    }
+  const updateMedication = async (id: string, changes: MedicationChanges) => {
+    setMedications(await services.medications.update(medications, id, changes));
+  };
 
-    const medication: Medication = {
-      ...input,
-      form,
-      id,
-      photoFile,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...medications, medication];
-    try {
-      await storage.saveMedications(updated);
-    } catch (error) {
-      logger.error('İlaç AsyncStorage’a yazılamadı:', error);
-      throw new Error(
-        userMessageOf(error, 'İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.'),
-      );
-    }
-    setMedications(updated);
-
-    // Bildirim planlanamasa da ilaç kaydı korunur, ama kullanıcı bunu öğrenir.
-    try {
-      await notificationService.scheduleMedication(medication);
-      setNotice('İlaç kaydedildi');
-    } catch (error) {
-      logger.error('Bildirim planlanamadı:', error);
-      setNotice('İlaç kaydedildi, ancak hatırlatma kurulamadı. Bildirim iznini kontrol edin.');
-    }
+  const removeMedication = async (id: string) => {
+    setMedications(await services.medications.remove(medications, id));
   };
 
   const confirmDose = async (medicationId: string, date: string, time: string) => {
-    const next = await doseService.confirmDose({ medications, doseLogs }, medicationId, date, time);
+    const next = await services.doses.confirmDose(
+      { medications, doseLogs },
+      medicationId,
+      date,
+      time,
+    );
     if (!next) return;
     setDoseLogs(next.doseLogs);
     setMedications(next.medications);
@@ -105,6 +107,8 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
         medications,
         doseLogs,
         addMedication,
+        updateMedication,
+        removeMedication,
         confirmDose,
         notice,
         clearNotice: () => setNotice(null),

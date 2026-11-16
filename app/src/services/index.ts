@@ -1,11 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { DoseService } from './DoseService';
+import { MedicationService } from './MedicationService';
 import { NotificationService } from './NotificationService';
 import { PhotoService } from './PhotoService';
 import { AsyncStorageService, type IStorage } from './StorageService';
 
 export { DoseService, type DoseState } from './DoseService';
+export {
+  MedicationService,
+  type AddMedicationResult,
+  type MedicationChanges,
+  type PhotoStore,
+  type ReminderScheduler,
+} from './MedicationService';
 export {
   NotificationService,
   type DoseNotificationData,
@@ -23,3 +31,4 @@ export const storage: IStorage = new AsyncStorageService(AsyncStorage);
 export const doseService = new DoseService(storage);
 export const photoService = new PhotoService();
 export const notificationService = new NotificationService();
+export const medicationService = new MedicationService(storage, photoService, notificationService);

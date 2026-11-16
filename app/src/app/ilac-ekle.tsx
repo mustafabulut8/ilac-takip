@@ -17,6 +17,7 @@ import { BigButton } from '@/components/big-button';
 import { TimeStepper } from '@/components/time-stepper';
 import { Colors, FontSize, MinButtonHeight, Spacing } from '@/constants/theme';
 import { useMedications } from '@/context/medications';
+import { userMessageOf } from '@/errors';
 
 const PICKER_OPTIONS: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.7 };
 
@@ -127,7 +128,7 @@ export default function AddMedicationScreen() {
       });
       router.back();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'İlaç kaydedilemedi.');
+      setSaveError(userMessageOf(error, 'İlaç kaydedilemedi.'));
       setIsSaving(false);
       scrollView.current?.scrollToEnd({ animated: true });
     }
