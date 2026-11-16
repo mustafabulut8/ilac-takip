@@ -51,7 +51,7 @@ Refactor öncesi (`v0.1-sprint1`) kod `app/src/` altında yaklaşık 1300 satır
 
 ```text
 app/src/
-├── app/                    # Ekranlar (Expo Router). İnce: sadece kanca ve servis çağırır
+├── app/                    # Ekranlar (Expo Router). İnce: yalnızca kanca çağırır
 │   ├── _layout.tsx         # Kök Stack, ErrorBoundary, bildirime dokununca yönlendirme
 │   ├── index.tsx           # Bugünkü dozlar
 │   ├── ilac-ekle.tsx       # İlaç ekleme formu
@@ -95,11 +95,24 @@ Ekran dosyaları küçüldü: `ilac-ekle.tsx` 289 satırdan 126 satıra indi. Ka
 
 Bağımlılık yönü tek yönlüdür: üst katman alttakini bilir, alttaki üsttekini bilmez.
 
+**Kural: Ekranlar servislere yalnızca kancalar üzerinden erişir.** `src/app/` ve `src/components/` altındaki dosyalar `@/services`'i, `expo-notifications`'ı veya depolamayı doğrudan import etmez. Servis çağrısı gereken her yer için `src/hooks/` altında bir kanca yazılır:
+
+| Kanca | Arkasındaki servis | Kullanan |
+| --- | --- | --- |
+| `useMedications` | context → `MedicationService`, `DoseService` | Tüm ekranlar |
+| `useTodayDoses` | `DoseService.getTodayDoses` | `index.tsx` |
+| `useDose` | `DoseService.isTaken`, doz onayı | `aldim/[id].tsx` |
+| `useMedicationPhoto` | `PhotoService.photoUri` | `aldim/[id].tsx`, `DoseCard` |
+| `useTestNotification` | `NotificationService.scheduleTest` | `index.tsx` |
+| `useNotificationPermission` | `NotificationService` izin metotları | `index.tsx` |
+| `useDoseNotificationTaps` | `NotificationService.subscribeToDoseTaps` | `_layout.tsx` |
+
+Gerekçe: Ekranlar yalnızca görünümle ilgilenir. Bir servis değişirse (örneğin Supabase'e geçişte) sadece kanca güncellenir. Bildirim kütüphanesi değişirse yalnızca `NotificationService` etkilenir. Bildirimin genel ayarı (`notificationService.configure()`) da ekranda değil, bağımlılıkların kurulduğu `services/index.ts`'de yapılır.
+
 ```mermaid
 flowchart TD
   UI["Ekranlar<br/>app/*.tsx, components/"] --> Hooks["Kancalar<br/>hooks/"]
   Hooks --> Ctx["Durum<br/>context/medications.tsx"]
-  UI --> Svc
   Ctx --> Svc["Servisler<br/>services/*Service.ts"]
   Svc --> Val["Doğrulama<br/>validation/"]
   Svc --> Models["Modeller ve formlar<br/>models/"]
@@ -170,7 +183,7 @@ export class DoseService {
 - `IStorage` (`services/StorageService.ts`): `load`, `saveMedications`, `saveDoseConfirmation`. Servisler ve context yalnızca bu arayüzü bilir; `AsyncStorageService` bugünkü uygulamasıdır, Supabase sınıfı aynı arayüzü uygulayacak.
 - `KeyValueStore`: AsyncStorage'ın kullandığımız üç metodu. Testte `MemoryKeyValueStore` verilir.
 - `PhotoStore`, `ReminderScheduler`, `NotificationsApi`, `LogSink`: servislerin dış dünyadan beklediği en küçük arayüzler.
-- Ekranlar servis sınıfını değil kancaları (`useMedications`, `useTodayDoses`) çağırır.
+- Ekranlar servis sınıfını hiç bilmez; yalnızca kancaları (`useMedications`, `useTodayDoses`, `useDose` ...) çağırır. Bkz. Katmanlar bölümündeki kural.
 
 ### Kalıtım
 
@@ -244,6 +257,7 @@ classDiagram
     +normalizeDate()$
     +scheduleMedication()
     +sync()
+    +subscribeToDoseTaps()
     +doseTargetFromResponse()
   }
   class PhotoService {
