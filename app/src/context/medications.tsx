@@ -2,9 +2,8 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from '
 
 import { logger } from '@/utils/logger';
 import { scheduleMedication, syncNotifications } from '@/lib/notifications';
-import { savePhoto } from '@/lib/photos';
 import { userMessageOf } from '@/errors';
-import { doseService, storage } from '@/services';
+import { doseService, photoService, storage } from '@/services';
 import { DEFAULT_FORM_KIND, type DoseLog, type Medication, type NewMedication } from '@/models';
 
 type MedicationsContextValue = {
@@ -59,7 +58,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
 
     let photoFile: string;
     try {
-      photoFile = await savePhoto(photoSourceUri, id);
+      photoFile = await photoService.savePhoto(photoSourceUri, id);
     } catch (error) {
       logger.error('Fotoğraf kopyalanamadı:', error);
       throw new Error('Fotoğraf kaydedilemedi. Lütfen fotoğrafı yeniden seçip tekrar deneyin.');

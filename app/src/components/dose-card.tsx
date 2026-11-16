@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import type { Dose, DoseStatus } from '@/models';
-import { photoUri } from '@/lib/photos';
+import { photoService } from '@/services';
 
 const STATUS: Record<DoseStatus, { label: string; color: string }> = {
   bekliyor: { label: 'Bekliyor', color: Colors.pending },
@@ -23,7 +23,7 @@ export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void })
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <Image
-        source={photoUri(dose.medication.photoFile)}
+        source={photoService.photoUri(dose.medication.photoFile)}
         style={styles.photo}
         contentFit="cover"
         accessibilityLabel={`${dose.medication.name} fotoğrafı`}

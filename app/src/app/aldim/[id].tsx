@@ -8,9 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BigButton } from '@/components/big-button';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useMedications } from '@/context/medications';
-import { doseService } from '@/services';
+import { doseService, photoService } from '@/services';
 import { formatDate } from '@/utils/date';
-import { photoUri } from '@/lib/photos';
 
 function goHome() {
   if (router.canGoBack()) router.back();
@@ -66,7 +65,7 @@ export default function TakeDoseScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.details}>
         <Image
-          source={photoUri(medication.photoFile)}
+          source={photoService.photoUri(medication.photoFile)}
           style={styles.photo}
           contentFit="contain"
           accessibilityLabel={`${medication.name} fotoğrafı`}
