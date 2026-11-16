@@ -7,6 +7,8 @@ import { NotificationService, type NotificationsApi } from '../NotificationServi
 
 function fakeApi(scheduledIds: string[] = []) {
   const api = {
+    emitTap: (_response: Notifications.NotificationResponse) => {},
+    removeListener: jest.fn(),
     setNotificationHandler: jest.fn(),
     setNotificationChannelAsync: jest.fn().mockResolvedValue(null),
     getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
@@ -16,14 +18,30 @@ function fakeApi(scheduledIds: string[] = []) {
       .fn()
       .mockResolvedValue(scheduledIds.map((identifier) => ({ identifier }))),
     cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
+    getLastNotificationResponse: jest
+      .fn<Notifications.NotificationResponse | null, []>()
+      .mockReturnValue(null),
+    addNotificationResponseReceivedListener: jest.fn(),
+    clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
   };
+  api.addNotificationResponseReceivedListener.mockImplementation(
+    (listener: (response: Notifications.NotificationResponse) => void) => {
+      api.emitTap = listener;
+      return { remove: api.removeListener };
+    },
+  );
   return api as typeof api & NotificationsApi;
 }
 
-function response(date: number, data: Record<string, unknown>, action?: string) {
+function response(
+  date: number,
+  data: Record<string, unknown>,
+  action?: string,
+  identifier = 'ilac1-08:00',
+) {
   return {
     actionIdentifier: action ?? Notifications.DEFAULT_ACTION_IDENTIFIER,
-    notification: { date, request: { content: { data } } },
+    notification: { date, request: { identifier, content: { data } } },
   } as unknown as Notifications.NotificationResponse;
 }
 
@@ -143,5 +161,64 @@ describe('NotificationService planlama', () => {
     expect(api.setNotificationHandler).toHaveBeenCalledTimes(1);
     expect(await service.hasPermission()).toBe(true);
     expect(await service.requestPermission()).toBe(false);
+  });
+});
+
+describe('NotificationService.subscribeToDoseTaps', () => {
+  const sent = new Date(2026, 10, 16, 8, 0).getTime();
+  const data = { medicationId: 'ilac1', time: '08:00' };
+  const target = { medicationId: 'ilac1', time: '08:00', date: '2026-11-16' };
+
+  it('uygulama kapalıyken gelen son dokunuşu hemen bildirir ve temizler', () => {
+    const api = fakeApi();
+    api.getLastNotificationResponse.mockReturnValue(response(sent, data));
+    const onTap = jest.fn();
+
+    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+
+    expect(onTap).toHaveBeenCalledWith(target);
+    expect(api.clearLastNotificationResponseAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('uygulama açıkken gelen dokunuşu bildirir', () => {
+    const api = fakeApi();
+    const onTap = jest.fn();
+    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+
+    api.emitTap(response(sent, data));
+
+    expect(onTap).toHaveBeenCalledWith(target);
+  });
+
+  it('aynı dokunuş iki kez sayfa açmaz, ertesi günün bildirimi açar', () => {
+    const api = fakeApi();
+    api.getLastNotificationResponse.mockReturnValue(response(sent, data));
+    const onTap = jest.fn();
+    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+
+    api.emitTap(response(sent, data));
+    expect(onTap).toHaveBeenCalledTimes(1);
+
+    api.emitTap(response(sent + 24 * 60 * 60 * 1000, data));
+    expect(onTap).toHaveBeenCalledTimes(2);
+  });
+
+  it('bozuk veri veya başka eylemde sayfa açmaz ve yanıtı temizlemez', () => {
+    const api = fakeApi();
+    const onTap = jest.fn();
+    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+
+    api.emitTap(response(sent, {}));
+    api.emitTap(response(sent, data, 'ertele'));
+
+    expect(onTap).not.toHaveBeenCalled();
+    expect(api.clearLastNotificationResponseAsync).not.toHaveBeenCalled();
+  });
+
+  it('dönen fonksiyon dinlemeyi bırakır', () => {
+    const api = fakeApi();
+    const unsubscribe = new NotificationService(api, 'ios').subscribeToDoseTaps(jest.fn());
+    unsubscribe();
+    expect(api.removeListener).toHaveBeenCalledTimes(1);
   });
 });

@@ -25,6 +25,9 @@ export type NotificationsApi = Pick<
   | 'scheduleNotificationAsync'
   | 'getAllScheduledNotificationsAsync'
   | 'cancelScheduledNotificationAsync'
+  | 'getLastNotificationResponse'
+  | 'addNotificationResponseReceivedListener'
+  | 'clearLastNotificationResponseAsync'
 >;
 
 /**
@@ -38,6 +41,8 @@ export class NotificationService {
 
   private readonly api: NotificationsApi;
   private readonly platform: string;
+  /** Son işlenen dokunuş; aynı dokunuş iki kez sayfa açmasın. */
+  private lastHandledTapKey: string | null = null;
 
   constructor(api: NotificationsApi = Notifications, platform: string = Platform.OS) {
     this.api = api;
@@ -160,6 +165,29 @@ export class NotificationService {
 
     const date = formatDate(NotificationService.normalizeDate(response.notification.date));
     return { medicationId, time, date };
+  }
+
+  /**
+   * Doz bildirimine dokunuşları dinler. Uygulama kapalıyken gelen son dokunuş da
+   * hemen bildirilir. Dönen fonksiyon dinlemeyi bırakır.
+   */
+  subscribeToDoseTaps(onTap: (target: DoseTarget) => void): () => void {
+    const handle = (response: Notifications.NotificationResponse | null) => {
+      if (!response) return;
+      const key = `${response.notification.request.identifier}@${response.notification.date}`;
+      if (key === this.lastHandledTapKey) return;
+
+      const target = this.doseTargetFromResponse(response);
+      if (!target) return;
+      this.lastHandledTapKey = key;
+      onTap(target);
+      // Temizlenmezse aynı sayfa uygulama her açıldığında yeniden gelir.
+      this.api.clearLastNotificationResponseAsync();
+    };
+
+    handle(this.api.getLastNotificationResponse());
+    const subscription = this.api.addNotificationResponseReceivedListener(handle);
+    return () => subscription.remove();
   }
 
   /** Android 13 izin penceresi kanal olmadan çıkmaz; kanal ayarları sonradan değiştirilemez. */

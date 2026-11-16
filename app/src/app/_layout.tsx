@@ -1,5 +1,4 @@
-import * as Notifications from 'expo-notifications';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -7,6 +6,7 @@ import { useEffect } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors, FontSize } from '@/constants/theme';
 import { MedicationsProvider } from '@/context/medications';
+import { useDoseNotificationTaps } from '@/hooks/useDoseNotificationTaps';
 import { useMedications } from '@/hooks/useMedications';
 import { notificationService } from '@/services';
 
@@ -16,25 +16,12 @@ notificationService.configure();
 
 function AppStack() {
   const { isLoaded } = useMedications();
-  // Uygulama kapalıyken gelen dokunuşu da verir.
-  const response = Notifications.useLastNotificationResponse();
 
   useEffect(() => {
     if (isLoaded) SplashScreen.hideAsync();
   }, [isLoaded]);
 
-  useEffect(() => {
-    if (!isLoaded || !response) return;
-    const target = notificationService.doseTargetFromResponse(response);
-    if (!target) return;
-
-    router.push({
-      pathname: '/aldim/[id]',
-      params: { id: target.medicationId, time: target.time, date: target.date },
-    });
-    // Temizlenmezse aynı sayfa uygulama her açıldığında yeniden gelir.
-    Notifications.clearLastNotificationResponseAsync();
-  }, [isLoaded, response]);
+  useDoseNotificationTaps(isLoaded);
 
   return (
     <>
