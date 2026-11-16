@@ -7,10 +7,11 @@ import { useEffect } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors, FontSize } from '@/constants/theme';
 import { MedicationsProvider, useMedications } from '@/context/medications';
-import { formatDate } from '@/utils/date';
-import { notificationDate, type DoseNotificationData } from '@/lib/notifications';
+import { notificationService } from '@/services';
 
 SplashScreen.preventAutoHideAsync();
+// Uygulama açıkken gelen bildirim de gösterilsin.
+notificationService.configure();
 
 function AppStack() {
   const { isLoaded } = useMedications();
@@ -23,20 +24,12 @@ function AppStack() {
 
   useEffect(() => {
     if (!isLoaded || !response) return;
-    if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
-
-    const { medicationId, time } = response.notification.request.content
-      .data as Partial<DoseNotificationData>;
-    if (!medicationId || !time) return;
+    const target = notificationService.doseTargetFromResponse(response);
+    if (!target) return;
 
     router.push({
       pathname: '/aldim/[id]',
-      // Doz, açılış gününe değil bildirimin geldiği güne yazılır.
-      params: {
-        id: medicationId,
-        time,
-        date: formatDate(notificationDate(response.notification.date)),
-      },
+      params: { id: target.medicationId, time: target.time, date: target.date },
     });
     // Temizlenmezse aynı sayfa uygulama her açıldığında yeniden gelir.
     Notifications.clearLastNotificationResponseAsync();

@@ -7,12 +7,7 @@ import { BigButton } from '@/components/big-button';
 import { DoseCard } from '@/components/dose-card';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useMedications } from '@/context/medications';
-import { doseService } from '@/services';
-import {
-  hasNotificationPermission,
-  requestNotificationPermission,
-  scheduleTestNotification,
-} from '@/lib/notifications';
+import { doseService, notificationService } from '@/services';
 
 const REFRESH_INTERVAL_MS = 30 * 1000;
 const NOTICE_DURATION_MS = 5 * 1000;
@@ -30,13 +25,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    requestNotificationPermission().then((granted) => setPermissionDenied(!granted));
+    notificationService.requestPermission().then((granted) => setPermissionDenied(!granted));
 
     // Kullanıcı Ayarlar'dan dönünce izin durumu ve saat güncellensin.
     const subscription = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
       setNow(new Date());
-      hasNotificationPermission().then((granted) => setPermissionDenied(!granted));
+      notificationService.hasPermission().then((granted) => setPermissionDenied(!granted));
     });
     return () => subscription.remove();
   }, []);
@@ -59,7 +54,7 @@ export default function HomeScreen() {
       return;
     }
     try {
-      await scheduleTestNotification(nextDose);
+      await notificationService.scheduleTest(nextDose);
       setTestMessage(`${nextDose.medication.name} için bildirim 1 dakika sonra gelecek.`);
     } catch {
       setTestMessage('Test bildirimi planlanamadı. Bildirim iznini kontrol edin.');

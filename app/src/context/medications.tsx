@@ -1,9 +1,8 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 
 import { logger } from '@/utils/logger';
-import { scheduleMedication, syncNotifications } from '@/lib/notifications';
 import { userMessageOf } from '@/errors';
-import { doseService, photoService, storage } from '@/services';
+import { doseService, notificationService, photoService, storage } from '@/services';
 import { DEFAULT_FORM_KIND, type DoseLog, type Medication, type NewMedication } from '@/models';
 
 type MedicationsContextValue = {
@@ -36,7 +35,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
         setDoseLogs(storedLogs);
         setStorageWarnings(warnings);
         // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
-        syncNotifications(storedMedications).catch((error) => {
+        notificationService.sync(storedMedications).catch((error) => {
           logger.error('Bildirimler eşitlenemedi:', error);
         });
       })
@@ -84,7 +83,7 @@ export function MedicationsProvider({ children }: { children: ReactNode }) {
 
     // Bildirim planlanamasa da ilaç kaydı korunur, ama kullanıcı bunu öğrenir.
     try {
-      await scheduleMedication(medication);
+      await notificationService.scheduleMedication(medication);
       setNotice('İlaç kaydedildi');
     } catch (error) {
       logger.error('Bildirim planlanamadı:', error);
