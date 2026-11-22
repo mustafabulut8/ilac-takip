@@ -1,6 +1,7 @@
 import { AppError, StorageError, ValidationError } from '@/errors';
 import type { NewMedication } from '@/models';
 import { FakeStorage, makeMedication } from '@/test-utils/fakes';
+import { logger } from '@/utils/logger';
 
 import { MedicationService, type PhotoStore, type ReminderScheduler } from '../MedicationService';
 
@@ -50,6 +51,28 @@ describe('MedicationService.load', () => {
     const { reminders, service } = setup();
     reminders.sync.mockRejectedValue(new Error('izin yok'));
     await expect(service.load()).resolves.toBeDefined();
+  });
+});
+
+describe('MedicationService.syncReminders', () => {
+  it('verilen listeyi eşitler', () => {
+    const { reminders, service } = setup();
+    const medications = [makeMedication()];
+    service.syncReminders(medications);
+    expect(reminders.sync).toHaveBeenCalledTimes(1);
+    expect(reminders.sync).toHaveBeenCalledWith(medications);
+  });
+
+  it('eşitleme hatası fırlatılmaz, uyarı olarak kaydedilir', async () => {
+    const { reminders, service } = setup();
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+    const error = new Error('izin yok');
+    reminders.sync.mockRejectedValue(error);
+    expect(() => service.syncReminders([])).not.toThrow();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(warn).toHaveBeenCalledWith(expect.any(String), error);
+    warn.mockRestore();
   });
 });
 

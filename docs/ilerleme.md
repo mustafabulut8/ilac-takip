@@ -9,7 +9,7 @@
 - **Ekranlar:** Üç sekmeli alt menü, Bugün, İlaç zamanı ve başarı, 9 adımlı sihirbaz (ekleme ve düzenleme), İlaçlarım (düzenle, sil, "Bitmek üzere"), Geçmiş, Ayarlar görünümü. Görseller: `docs/ekranlar/tur1/`.
 - **Veri:** On ilaç formu, yarım tablet, sıklık ve süre, aç/tok, stok sınırı. `schemaVersion` 2 göçü; eski kayıt simülatörde denendi, alanları korundu.
 - **Hatırlatma:** Haftanın günleri, süre bitince susma, "10 dakika sonra hatırlat", uygulama öne gelince eşitleme.
-- **Test:** 255 test, mantık katmanlarında %96 kapsam.
+- **Test:** 257 test, mantık katmanlarında %96 kapsam.
 - **Kararlar:** `kararlar.md` 5. karar düzeltmesi ve 11-14. kararlar.
 
 ## Önceki Tamamlananlar (22 Kasım)
