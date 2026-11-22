@@ -140,3 +140,24 @@ Projede alınan teknik kararlar ve gerekçeleri.
 **Karar:** Logo kapsül, onay rozeti ve ilerleme yayından oluşur; özgün çizimdir.
 
 **Gerekçe:** Kapsül ilacı, rozet onaylanan dozu, yay günün ilerlemesini anlatır. Özgün olduğu için hazır görsellerin lisans sorunu yoktur.
+
+## 10. Arayüz ölçüleri ve renkleri kesinleşti
+
+**Tarih:** 23 Kasım 2026
+
+**Karar:** Stitch ekranları arasındaki farklar tek değerde toplandı.
+
+| Konu | Değer |
+| --- | --- |
+| Ana buton | `#0F6E6E` zemin, beyaz yazı; her ekranda aynı |
+| Vurgu `#3FA89A` | Yalnızca ilerleme halkası, seçili çerçeve, etiket zemini |
+| Zemin / kart | `#F7F7F5` / `#FFFFFF` |
+| Köşe | Kart 20, buton 16, etiket tam yuvarlak |
+| Gölge | Stitch'teki değerler |
+| Yazı | Gövde 18, en küçük 16, başlık 30 |
+| Dokunma | Ana buton 56, diğerleri en az 48 |
+| Amber / ikincil yazı | `#8D5100` / `#3D4947` |
+
+**Gerekçe:** Hoca butonları çok büyük buldu; 56 ve 18 ölçüleri hâlâ okunur ve kolay basılır. `#3FA89A` üzerinde beyaz yazı 2,89:1'de kalıyor, `#0F6E6E` üzerinde 6,04:1 oluyor. Stitch'in amberi ve açık grisi 4,5:1 sınırının altındaydı; yeni renkler bütün zeminlerde geçiyor.
+
+**Etkisi:** `CLAUDE.md`'deki 22-24pt ve 64px kuralı kalktı. `theme.ts` güncellendi; `theme.test.ts` kontrastı ve ölçüleri denetler.

@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import type { Dose, DoseStatus } from '@/models';
 import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
 
@@ -45,10 +45,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.three,
     padding: Spacing.three,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderRadius: Spacing.three,
-    backgroundColor: Colors.background,
+    borderRadius: Radius.card,
+    backgroundColor: Colors.card,
+    boxShadow: Shadow.card,
   },
   pressed: {
     opacity: 0.7,
@@ -76,9 +75,9 @@ const styles = StyleSheet.create({
   status: {
     fontSize: FontSize.small,
     fontWeight: '700',
-    paddingHorizontal: Spacing.two,
+    paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.pill,
     overflow: 'hidden',
   },
 });

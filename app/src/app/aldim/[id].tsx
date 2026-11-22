@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.primary,
   },
   takeButtonPressed: {
     opacity: 0.7,

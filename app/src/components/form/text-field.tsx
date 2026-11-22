@@ -20,7 +20,7 @@ export function TextField({ label, error, onLayoutY, ...inputProps }: TextFieldP
     <FormField label={label} error={error} onLayoutY={onLayoutY}>
       <TextInput
         style={[styles.input, !!error && styles.inputInvalid]}
-        placeholderTextColor={Colors.pending}
+        placeholderTextColor={Colors.textSecondary}
         {...inputProps}
       />
     </FormField>
@@ -32,6 +32,7 @@ const styles = StyleSheet.create({
     minHeight: MinButtonHeight,
     borderWidth: 2,
     borderColor: Colors.border,
+    backgroundColor: Colors.card,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     color: Colors.text,

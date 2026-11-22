@@ -8,7 +8,7 @@ import { FieldError } from '@/components/form/field-error';
 import { PhotoField } from '@/components/form/photo-field';
 import { TextField } from '@/components/form/text-field';
 import { TimesField } from '@/components/form/times-field';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { userMessageOf } from '@/errors';
 import { useFieldScroller } from '@/hooks/useFieldScroller';
 import { useMedicationDraft } from '@/hooks/useMedicationDraft';
@@ -106,7 +106,6 @@ export default function AddMedicationScreen() {
         <FieldError message={saveError} />
         <BigButton
           label={isSaving ? 'Kaydediliyor…' : 'Kaydet'}
-          color={Colors.success}
           onPress={save}
           disabled={isSaving}
         />

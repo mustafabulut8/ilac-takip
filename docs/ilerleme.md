@@ -25,8 +25,6 @@
 - İlaç silme ve düzeltme ekranı yok (servis hazır).
 - İlaç formu seçimi arayüzde yok; on formdan dördü kodda var (#22).
 - Kullanım sıklığı ve süresi yok; tüm ilaçlar her gün ve süresiz (#23).
-- Amber `#B26A00` beyaz zeminde 4,24:1 ile kontrast sınırının altında; entegrasyondan önce karar verilmeli.
-- Tasarım 18pt yazı ve 56pt buton istiyor, `CLAUDE.md` ve `theme.ts` ise 22-24pt ve 64px. Entegrasyondan önce uyumlu hâle getirilmeli.
 - 6 ekran tasarlanacak (`arayuz-tasarimi.md`).
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
 - Kullanılmayan paketler henüz kaldırılmadı (`moduler-yapi.md` → Temizlenecek paketler).

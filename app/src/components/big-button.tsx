@@ -1,6 +1,6 @@
 import { Pressable, type StyleProp, StyleSheet, Text, type ViewStyle } from 'react-native';
 
-import { Colors, FontSize, MinButtonHeight, Spacing } from '@/constants/theme';
+import { Colors, FontSize, MinButtonHeight, Radius, Shadow, Spacing } from '@/constants/theme';
 
 type BigButtonProps = {
   label: string;
@@ -27,6 +27,7 @@ export function BigButton({
       style={({ pressed }) => [
         styles.button,
         { backgroundColor: color },
+        color === Colors.primary && styles.raised,
         (pressed || disabled) && styles.dimmed,
         style,
       ]}>
@@ -42,7 +43,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.button,
+  },
+  raised: {
+    boxShadow: Shadow.primaryButton,
   },
   dimmed: {
     opacity: 0.6,

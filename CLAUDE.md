@@ -13,7 +13,7 @@ Sprint 1 (issues #1–#4) is implemented; see `docs/sprint1-plan.md` for its dec
 - Oturum başında `docs/ilerleme.md`'yi oku.
 - Bu bir bitirme projesidir: yaşlılar için yapay zekâ destekli ilaç takip ve aile bilgilendirme uygulaması.
 - Arayüz metinleri Türkçe olsun.
-- Yaşlı kullanıcı ekranlarında yazılar büyük (en az 22-24pt), butonlar en az 64px yüksekliğinde, yüksek kontrastlı olsun.
+- Yaşlı kullanıcı ekranlarında gövde yazısı 18pt, en küçük yazı 16pt (12 ve 14 kullanılmaz), başlık 30pt, ana buton 56pt, dokunma alanı en az 48pt olsun; yazı ile zemin kontrastı en az 4,5:1.
 - `.env` dosyası asla commit edilmez; API anahtarları ve şifreler koda yazılmaz.
 - Her değişiklikten sonra `npm run kontrol` ile kontrol et (tsc + lint + test).
 - Yeni kod bu modüler ve OOP yapısına uymalı: iş mantığı services/ altında sınıflarda, tipler ve form sınıfları models/, doğrulama validation/, saf fonksiyonlar utils/, ekranlar ince. Kod İngilizce, yorum ve dokümanlar Türkçe. Her değişiklikte npm run kontrol geçmeli.
