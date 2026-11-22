@@ -27,7 +27,7 @@ function AppStack() {
         screenOptions={{
           // Renk verilmezse başlık iOS'ta saydam olur ve ekranın üstünü kapatır.
           headerStyle: { backgroundColor: Colors.background },
-          headerTintColor: Colors.text,
+          headerTintColor: Colors.primary,
           headerTitleStyle: { fontSize: FontSize.body, fontWeight: '700' },
           contentStyle: { backgroundColor: Colors.background },
         }}>

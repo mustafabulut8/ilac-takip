@@ -6,10 +6,15 @@
 export const Colors = {
   text: '#000000',
   textOnColor: '#FFFFFF',
+  // Vurgu rengi üzerinde beyaz yazı 2,9:1'de kalıyor; siyah 7,3:1 veriyor.
+  textOnAccent: '#000000',
   background: '#FFFFFF',
   surface: '#F2F2F2',
   border: '#000000',
-  primary: '#0B3D91',
+  // Ana butonlar ve beyaz zemindeki renkli yazılar.
+  primary: '#0F6E6E',
+  // Yalnızca vurgu: ilerleme halkası, seçili çerçeve, etiket zemini. Yazı rengi olamaz.
+  accent: '#3FA89A',
   success: '#0B6B2E',
   danger: '#A80000',
   pending: '#7A4B00',

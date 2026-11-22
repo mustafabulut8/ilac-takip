@@ -5,11 +5,11 @@ import { Colors, FontSize, Spacing } from '@/constants/theme';
 import type { Dose, DoseStatus } from '@/models';
 import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
 
-const STATUS: Record<DoseStatus, { label: string; color: string }> = {
-  bekliyor: { label: 'Bekliyor', color: Colors.pending },
-  alindi: { label: 'Alındı', color: Colors.success },
-  kacirildi: { label: 'Kaçırıldı', color: Colors.danger },
-  yarin: { label: 'Yarın başlıyor', color: Colors.primary },
+const STATUS: Record<DoseStatus, { label: string; color: string; textColor: string }> = {
+  bekliyor: { label: 'Bekliyor', color: Colors.pending, textColor: Colors.textOnColor },
+  alindi: { label: 'Alındı', color: Colors.success, textColor: Colors.textOnColor },
+  kacirildi: { label: 'Kaçırıldı', color: Colors.danger, textColor: Colors.textOnColor },
+  yarin: { label: 'Yarın başlıyor', color: Colors.accent, textColor: Colors.textOnAccent },
 };
 
 export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void }) {
@@ -32,7 +32,9 @@ export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void })
       <View style={styles.details}>
         <Text style={styles.name}>{dose.medication.name}</Text>
         <Text style={styles.time}>{dose.time}</Text>
-        <Text style={[styles.status, { backgroundColor: status.color }]}>{status.label}</Text>
+        <Text style={[styles.status, { backgroundColor: status.color, color: status.textColor }]}>
+          {status.label}
+        </Text>
       </View>
     </Pressable>
   );
@@ -72,7 +74,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
   },
   status: {
-    color: Colors.textOnColor,
     fontSize: FontSize.small,
     fontWeight: '700',
     paddingHorizontal: Spacing.two,
