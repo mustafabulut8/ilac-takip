@@ -84,24 +84,23 @@ Projede alınan teknik kararlar ve gerekçeleri.
 | --- | --- | --- | --- |
 | Tablet | adet (yarım olabilir) | Aldım | Sayılan |
 | Kapsül | adet | Aldım | Sayılan |
-| Şurup | ml | İçtim | "Bitmek üzere" |
+| Şurup | ölçek, tatlı kaşığı, yemek kaşığı, ml | İçtim | "Bitmek üzere" |
 | Damla | damla | Damlattım | "Bitmek üzere" |
 | Krem / Merhem | ince tabaka | Sürdüm | "Bitmek üzere" |
-| Sprey | puf | Kullandım | "Bitmek üzere" * |
-| İğne | ünite | Yaptım | "Bitmek üzere" * |
-| Saşe / Efervesan | adet * | İçtim * | Sayılan * |
-| Bant | adet * | Yapıştırdım | Sayılan * |
-| Diğer | serbest metin * | Kullandım * | "Bitmek üzere" * |
+| Sprey | puf | Kullandım | Sayılan (puf) |
+| İğne | ünite | Yaptım | "Bitmek üzere" |
+| Saşe / Toz | adet | İçtim | Sayılan |
+| Bant / Flaster | adet | Yapıştırdım | Sayılan |
+| Diğer | serbest metin | Kullandım | "Bitmek üzere" |
 
-`*` Taslak değer: kod yazılmadan önce #22'de kesinleştirilecek. Diğer değerler #22'den, koddaki form sınıflarından veya tasarımdan gelir.
+**Düzeltme (23 Kasım 2026):** Şurup birimleri Stitch'teki gibi oldu, "Saşe / Efervesan" adı "Saşe / Toz" oldu, spreyin sayıldığı kesinleşti. Taslak değer kalmadı.
 
 **Gerekçe:** Tek "Aldım" metni krem veya damla için yanlış kalıyordu. Formun davranışı `MedicationForm` alt sınıflarında olduğu için yeni form eklemek ekranları değiştirmez.
 
 **Etkisi:**
 
-- Şu an kodda Tablet, Şurup, Damla ve Krem var; altı yeni alt sınıf gerekir.
-- `stockAfterDose` stoğu tam sayıya yuvarlayıp bir düşürüyor; yarım tablet için doz miktarını alması ve kesirli stoğu koruması gerekir. `parseStock` da yalnızca rakam kabul ediyor.
-- Kayıtlı alan adları değişmez; gerekirse yeni alan `migrations.ts` ile eklenir.
+- On formun hepsi kodda. `stockAfterDose` doz miktarını alır ve 0,5 adımlı stoğu korur.
+- Kayıtlı alan adları değişmedi; yeni alanlar v2 göçüyle eklendi (12. karar).
 
 ## 6. Kullanım sıklığı ve süresi eklenir
 
@@ -161,3 +160,71 @@ Projede alınan teknik kararlar ve gerekçeleri.
 **Gerekçe:** Hoca butonları çok büyük buldu; 56 ve 18 ölçüleri hâlâ okunur ve kolay basılır. `#3FA89A` üzerinde beyaz yazı 2,89:1'de kalıyor, `#0F6E6E` üzerinde 6,04:1 oluyor. Stitch'in amberi ve açık grisi 4,5:1 sınırının altındaydı; yeni renkler bütün zeminlerde geçiyor.
 
 **Etkisi:** `CLAUDE.md`'deki 22-24pt ve 64px kuralı kalktı. `theme.ts` güncellendi; `theme.test.ts` kontrastı ve ölçüleri denetler.
+
+## 11. Başarı ve kaçırıldı renkleri Stitch'teki gibi
+
+**Tarih:** 23 Kasım 2026
+
+**Karar:** Başarı `#2E7D32`, kaçırıldı `#C62828`. Stitch ile yazılı kararlar çelişirse kararlar geçerlidir; diğer her şeyde Stitch'in görünümü esas alınır.
+
+**Gerekçe:** İkisi de beyaz yazıyla, beyaz kart ve `#F7F7F5` zeminde 4,5:1 sınırını geçiyor (5,13 ve 5,62:1 beyazda). Etiket zeminleriyle birlikte `theme.test.ts` denetliyor.
+
+## 12. Veri modeli v2
+
+**Tarih:** 23 Kasım 2026
+
+**Karar:** İlaca `amount`, `unit`, `location`, `mealTiming`, `schedule`, `duration`, `startDate`, `lowStockThreshold`, `markedLow` ve `pastPlans` alanları eklendi (`schemaVersion` 2). Eski anahtar ve alan adları değişmedi.
+
+| Konu | Karar | Gerekçe |
+| --- | --- | --- |
+| Eski kayıtlar | 1 adet, her gün, sürekli, "aç veya tok", sınır 5 | Davranışları değişmez; göç kayıtta olan hiçbir alanın üzerine yazmaz. |
+| `dose` metni | Korundu; yeni alanlardan üretilip yazılır | Eski kayıtların serbest metni ("500 mg") kaybolmaz. Düzenlemede kullanıcı yeni doz seçene kadar aynı kalır. |
+| `pastPlans` | Saat, sıklık veya süre değişince eski plan bitiş anıyla saklanır | Saklanmasaydı bugünkü değişiklik geçmiş günleri de değiştirir, alınmış günler "kaçırıldı" görünürdü. |
+| Süre başlangıcı | İlk dozun günü | Akşam eklenen 7 günlük ilaç ilk gününü kaybetmez. Süren kür uzatılırsa başlangıç aynı kalır, biten kür yeniden başlar. |
+| Bozuk sıklık veya süre | "Her gün, sürekli" sayılır | Hatırlatma sessizce kaybolmasın. |
+| Düşük stok sınırı | Varsayılan 5; kapalıysa `null` | #12. Sprey için sınır da puf sayısıdır. |
+| "Aç veya tok" | Kartlarda yazılmaz | Eski kayıtlarda bu bilgi hiç sorulmadı; verilmemiş bilgi gösterilmez. |
+| Fotoğraf | İsteğe bağlı oldu | Stitch'te "Fotoğrafsız devam et" var. Fotoğraf yoksa form ikonu görünür. |
+| Fotoğraf değişikliği | Yeni dosya adıyla yazılır, eskisi ancak kayıttan sonra silinir | Aynı ad ekranda eski görseli bırakırdı; kayıt başarısızsa fotoğraf kaybolmaz. |
+| Düzenleme | Yalnızca değişen alanlar kaydedilir | Düzenleme açıkken doz onaylanırsa düşen stok ezilmez. |
+| Silinen ilaç | Doz onayları silinmez ama Geçmiş'te görünmez | Onay kaydında ilaç adı yok. Geçmişte gösterilmesi istenirse ayrıca ele alınır. |
+
+## 13. Hatırlatma planlaması ve erteleme
+
+**Tarih:** 23 Kasım 2026
+
+| Konu | Karar | Gerekçe |
+| --- | --- | --- |
+| Sürekli, her gün | `ilacId-saat`, günlük tetikleyici | Eski kimlikle aynı; kurulu hatırlatmalar bozulmaz. |
+| Haftanın günleri | `ilacId-saat-gN`, haftalık tetikleyici | expo-notifications'ta 1 = Pazar, kodda 0 = Pazar; çeviri tek yerde. |
+| Süreli ilaç | `ilacId-saat-tarih`, gün gün tek seferlik | Tekrarlanan bildirim, uygulama açılmazsa süre bitince susmaz. |
+| iOS 64 sınırı | Toplam 60 ile sınırlı, en yakın günler önce; kalanı açılışta ve uygulama öne gelince eşitlemeyle | Tekrarlanan bildirimler hiç kırpılmaz. Uzun süre hiç açılmayan uygulamada çok saatli uzun kürün son günleri eksik kalabilir. |
+| Erteleme | `ertele-` önekli, 10 dakika sonra tek bildirim | Kimlik doza bağlı olduğu için yeniden ertelemede çoğalmaz. Eşitleme silmez; doz onaylanınca veya ilaç silinince iptal olur. |
+| Gece yarısı | Ertelenen bildirim dozun gününü taşır | 23:55 dozu 00:05'te açılsa da doğru güne yazılır. |
+| Doz durumu | Erteleme durumu değiştirmez | 30 dakika kuralı aynı kalır. |
+| İzin kapalıysa | Erteleme Türkçe hata verir | iOS izin yokken planlamayı reddediyor; "Ertelendi" demek yanıltıcı olurdu. |
+
+## 14. 1. tur ekranlarında alınan kararlar
+
+**Tarih:** 23 Kasım 2026
+
+| Konu | Karar | Gerekçe |
+| --- | --- | --- |
+| Alt menü | `expo-router/js-tabs` | Stitch'teki 80pt yükseklik ve 16pt etiket ölçüsü verilebiliyor. Etiket büyütülmez; aksi hâlde menü taşar. |
+| Selamlama | Yalnızca "Günaydın / İyi günler / İyi akşamlar" | Kullanıcı adı henüz kayıtlı değil (2. tur); uydurma ad gösterilmez. |
+| Gece saatleri (00-05) | Akşam & Gece grubunda | Planda üç grup var. |
+| Başarı başlığı | Formdan gelir ("Sürdünüz, teşekkürler!") | "İlacınızı aldınız" krem veya damlada yanlış kalır. |
+| Övgü metni | Yalnızca bütün dozlar alınınca | Kaçırılan doz varken "harika" denmez. |
+| İlaç bilgisi | Düğme "Yakında" bilgisi gösterir | 3. turda yapılacak. |
+| ⋮ menüsü | Yerine doğrudan sil düğmesi (onaylı) | Tek eylem için gizli menü yaşlı kullanıcıya gereksiz adım. |
+| Düzenleme | Aynı sihirbaz özet adımından açılır | Tek alan için dokuz adım geçilmez; her satırda "Düzenle" var. |
+| "Devam" düğmesi | Eksik adımda da basılır, neyin eksik olduğu yazılır | Soluk düğme nedenini söylemez ve kontrastı düşer. |
+| Seçili kart | `#9EEDED` zemin, `#3FA89A` çerçeve, onay işareti | Her adımda aynı; seçim yalnızca renkle anlatılmaz. |
+| Geçmiş günleri | Renge ek olarak ✓ − ✕ işareti | Renk körlüğü. |
+| Sonucu belli olmayan gün | Nötr gri | Gün bitmeden "hiçbiri alınmadı" denmez. Uyum = alınan / (alınan + kaçırılan). |
+| Test bildirimi | Ayarlar'ın altında, yalnızca `__DEV__` | Son kullanıcı görmez. |
+| Hesabı sil, Çıkış | Pasif, "Yakında" | Hiçbir veri silinmez. |
+| İlerleme halkası | İki yarım halka, SVG paketi yok | Yeni yerel paket eklemeden, yeniden derlemeden çalışır. |
+| İkonlar | `expo-symbols` | Zaten kurulu. |
+| Yazı tipi | `@expo-google-fonts/inter`, dört kalınlık | Stitch Inter kullanıyor; yalnızca JavaScript varlığı, yeniden derleme istemez. |
+| Yazı tipi yüklenirken | Kök düzen ekran çizmez, açılış ekranı durur | Önce çizilen metinler kalınlığı sonradan almıyordu. |

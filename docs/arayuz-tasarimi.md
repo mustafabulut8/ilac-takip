@@ -1,8 +1,8 @@
 # Arayüz Tasarımı
 
-**Son güncelleme:** 22 Kasım 2026
+**Son güncelleme:** 23 Kasım 2026
 
-Bu doküman hedeflenen arayüzü anlatır. Tasarım henüz koda aktarılmadı; koddaki karşılığı ikon, açılış ekranı ve temadır (renk, yazı boyu, köşe, gölge) (bkz. [Koddaki durumla farklar](#koddaki-durumla-farklar)).
+Bu doküman hedeflenen arayüzü anlatır. 1. tur ekranları `feature/arayuz-tur1` dalında koda aktarıldı (bkz. [Koddaki durumla farklar](#koddaki-durumla-farklar)).
 
 ## Tasarım Süreci
 
@@ -124,7 +124,7 @@ Sayaçtaki büyük rakam 44'tür.
 
 ### Tutarsızlıklar
 
-Stitch'teki hâli anlatır. 1-5. maddeler 10. kararla çözüldü; kalanlar açıktır.
+Stitch'teki hâli anlatır. Hepsi 5., 7., 10., 11. ve 13. kararlarla veya 1. tur kodunda çözüldü.
 
 | # | Konu | Durum |
 | --- | --- | --- |
@@ -134,10 +134,10 @@ Stitch'teki hâli anlatır. 1-5. maddeler 10. kararla çözüldü; kalanlar aç�
 | 4 | Küçük yazı | 16'nın altında: İlaçlarım'daki "Bitmek üzere" etiketi 12, Ayarlar'daki "Mehmet bağlı" 14 |
 | 5 | `outline` ve amber yazı | 4,5:1 sınırının altında (tablolar) |
 | 6 | Alt menü | Tasarım metni Bugün/İlaçlarım/Ayarlar, ekranlar Bugün/İlaçlarım/Geçmiş; 7. karar ekranlardakiyle aynı |
-| 7 | Başlık yazımı | "İlaç ekle" ve "İlaç Ekle" |
-| 8 | Form adı | Stitch'te "Saşe / Toz", 5. kararda "Saşe / Efervesan" |
-| 9 | Şurup birimi | Stitch'te ölçek, kaşık, ml; 5. kararda yalnızca ml |
-| 10 | Kodda olmayan özellik | "10 dakika sonra hatırlat" (İlaç zamanı) |
+| 7 | Başlık yazımı | "İlaç ekle" ve "İlaç Ekle"; "İlaç ekle" seçildi |
+| 8 | Form adı | Stitch'te "Saşe / Toz", 5. kararda "Saşe / Efervesan" idi; "Saşe / Toz" seçildi |
+| 9 | Şurup birimi | Stitch'te ölçek, kaşık, ml; 5. kararda yalnızca ml idi; Stitch'teki dört birim seçildi |
+| 10 | Kodda olmayan özellik | "10 dakika sonra hatırlat" (İlaç zamanı); eklendi |
 | 11 | Bugün sayıları | Başlıkta 4 doz, listede 3 doz; stok uyarısı listede olmayan bir ilaç için |
 
 ### Gezinme
@@ -150,12 +150,12 @@ Toplam 14 ekran: 8'i tasarlandı, 6'sı tasarlanacak.
 
 | # | Ekran | Tasarlanan hâller | Durum | Tur |
 | --- | --- | --- | --- | --- |
-| 1 | Bugün | | Tasarlandı | 1 |
-| 2 | İlaç zamanı | Onay ve başarı | Tasarlandı | 1 |
-| 3 | İlaç ekleme sihirbazı | 9 adım; şurup ve damla varyantları | Tasarlandı | 1 |
-| 4 | İlaçlarım | Dolu ve boş | Tasarlandı | 1 |
-| 5 | Geçmiş | | Tasarlandı | 1 |
-| 6 | Ayarlar | | Tasarlandı | 1 (yalnızca görünüm) |
+| 1 | Bugün | | Kodlandı | 1 |
+| 2 | İlaç zamanı | Onay ve başarı | Kodlandı | 1 |
+| 3 | İlaç ekleme sihirbazı | 9 adım; şurup ve damla varyantları | Kodlandı | 1 |
+| 4 | İlaçlarım | Dolu ve boş | Kodlandı | 1 |
+| 5 | Geçmiş | | Kodlandı | 1 |
+| 6 | Ayarlar | | Kodlandı | 1 (yalnızca görünüm) |
 | 7 | İlaç bilgisi | 3 durum | Tasarlandı | 3 |
 | 8 | Açılış ekranı ve ikon | | Tasarlandı, koda eklendi | 1 |
 | 9 | Karşılama ve rol seçimi | | Tasarlanacak | 2 |
@@ -187,9 +187,33 @@ Görseller `docs/ekranlar/stitch/` altındadır (22 dosya) ve Stitch'ten alınd�
 
 ## Koddaki Durumla Farklar
 
-| Konu | Kodda (23 Kasım) | Tasarımda |
+Karşılaştırma, `docs/ekranlar/tur1/` (iPhone 17 simülatörü, iOS 27.2, örnek veri) ile `docs/ekranlar/stitch/` arasında yapıldı. Gerekçeler 10-14. kararlardadır.
+
+| Ekran | Tasarımda | Kodda |
 | --- | --- | --- |
-| Başarı | `#0B6B2E` | `#2E7D32` |
-| Kaçırıldı | `#A80000` | `#C62828` |
-| Gezinme | Tek `Stack` | Üç sekmeli alt menü |
-| İlaç ekleme | Tek uzun form | 9 adımlı sihirbaz |
+| Genel | Ana buton `#006A60` veya `#3FA89A` | `#0F6E6E`, beyaz yazı |
+| Genel | Zemin `#FCF9F8`, köşe 12-24 | `#F7F7F5`; kart 20, buton 16 |
+| Genel | 12 ve 14 yazılar, Material ikonları | En az 16; iOS'ta SF Symbols |
+| Genel | Başlık 26-30 | 30 |
+| Bugün | "Günaydın, Ayşe Hanım" | Adsız selamlama |
+| Bugün | Profil düğmesi 32 | 48 (dokunma alanı) |
+| Bugün | Stok bandı tek satır | İlaç başına satır ve "İlaçlarıma bak" düğmesi |
+| Bugün | "Harika gidiyorsunuz, sadece 2 dozunuz kaldı" | "Bugün 2 dozunuz kaldı." |
+| İlaç zamanı | Köşe 24, "Yemekten önce alın." | Köşe 20, "Aç karnına"; "aç veya tok" ise kart yok |
+| Başarı | Kalp ikonu, "İlacınızı aldınız, harika!" | Onay ikonu, formun metni; kalan stok da yazılır |
+| Sihirbaz 1 | Vizör 288 | 220; üç düğme kaydırmadan görünür |
+| Sihirbaz 2 | Ad boşken "Devam" soluk | Basılır, eksik olan yazılır |
+| Sihirbaz 4 | Seçili kart koyu zemin | `#9EEDED` zemin, vurgu çerçevesi, onay işareti |
+| Sihirbaz 4 | Şurup 1-10 | 1-50 (ml için) |
+| Sihirbaz 8 | Sayaç ve hızlı seçim | Ek olarak −10 / +10 |
+| Sihirbaz 9 | Tek kartta satırlar, ilk hatırlatma notu | Her satır ayrı kart; not yok |
+| İlaçlarım | "İlaç Takip" üst yazısı, ⋮ menüsü | Üst yazı yok; onay soran sil düğmesi |
+| İlaçlarım | İlaç bilgisi ekranı | "Yakında" bilgisi (3. tur) |
+| İlaçlarım (boş) | Çizim | İkonlu daire |
+| Geçmiş | Yalnızca renkli gün | Renk ve ✓ − ✕ işareti; sonucu belli olmayan gün gri |
+| Ayarlar | Ad, e-posta, "Profili düzenle", "Mehmet bağlı" | "Henüz giriş yapılmadı"; 2. tur satırları "Yakında" ve pasif |
+| Ayarlar | Yazı boyutu "Büyük" | "Telefon ayarına uyar" |
+
+Büyük yazı (Dynamic Type, erişilebilirlik boyu) `buyuk-yazi-*.png` görsellerinde denendi: metin kesilmiyor, düğme ve etiketler alt satıra geçiyor. Alt menü etiketi ve Geçmiş'teki gün daireleri bilinçli olarak sabit boydadır.
+
+**Simülatörde denenemeyenler:** Dokunma otomasyonu olmadığı için ekranlar bağlantıyla açıldı; düğmelere basma, kamera, bildirim ve titreşim elle denenmeli. Android'de hiç denenmedi.

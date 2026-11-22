@@ -1,10 +1,20 @@
 # İlerleme
 
-**Son güncelleme:** 22 Kasım 2026
+**Son güncelleme:** 23 Kasım 2026
 
 ## Bugün Tamamlananlar
 
-- **Arayüz tasarımı:** Google Stitch'te 14 ekranın 8'i tasarlandı. Tasarım sistemi, ekran listesi ve entegrasyon planı: `docs/arayuz-tasarimi.md`. Tasarım ekranları henüz koda aktarılmadı.
+1. tur arayüz entegrasyonu `feature/arayuz-tur1` dalında; main'e birleştirilmedi. Önceki hâli `v0.2-tema` etiketinde.
+
+- **Ekranlar:** Üç sekmeli alt menü, Bugün, İlaç zamanı ve başarı, 9 adımlı sihirbaz (ekleme ve düzenleme), İlaçlarım (düzenle, sil, "Bitmek üzere"), Geçmiş, Ayarlar görünümü. Görseller: `docs/ekranlar/tur1/`.
+- **Veri:** On ilaç formu, yarım tablet, sıklık ve süre, aç/tok, stok sınırı. `schemaVersion` 2 göçü; eski kayıt simülatörde denendi, alanları korundu.
+- **Hatırlatma:** Haftanın günleri, süre bitince susma, "10 dakika sonra hatırlat", uygulama öne gelince eşitleme.
+- **Test:** 255 test, mantık katmanlarında %96 kapsam.
+- **Kararlar:** `kararlar.md` 5. karar düzeltmesi ve 11-14. kararlar.
+
+## Önceki Tamamlananlar (22 Kasım)
+
+- **Arayüz tasarımı:** Google Stitch'te 14 ekranın 8'i tasarlandı. Tasarım sistemi, ekran listesi ve entegrasyon planı: `docs/arayuz-tasarimi.md`. 
 - **Kararlar:** `docs/kararlar.md` 3-9. kararlar (kim ilaç ekler, sihirbaz, on ilaç formu, sıklık ve süre, alt menü, tavsiye vermeme, logo).
 - **Rapor:** Literatür taraması (#14) ve gereksinim analizi (#15) rapor dokümanında yazıldı, issue'lar kapatıldı.
 - **İkon, açılış ekranı ve ana renk:** Uygulama ikonu ve açılış ekranı yeni logoyla değişti. Ana butonlar `#0F6E6E` zemin ve beyaz yazı (6:1). `#3FA89A` yalnızca vurgu rengi; üzerindeki yazı siyah (7,3:1), çünkü beyaz 2,9:1'de kalıyor. Renk çiftlerinin en az 4,5:1 olduğu testle denetleniyor. Android adaptive ikon kenar boşluklu `adaptive-icon.png` görselini kullanıyor. Kullanılmayan Expo şablon görselleri silindi.
@@ -22,22 +32,30 @@
 
 ## Bilinen Eksikler
 
-- İlaç silme ve düzeltme ekranı yok (servis hazır).
-- İlaç formu seçimi arayüzde yok; on formdan dördü kodda var (#22).
-- Kullanım sıklığı ve süresi yok; tüm ilaçlar her gün ve süresiz (#23).
+- 1. tur simülatörde yalnızca görüntü olarak denendi; dokunma, kamera, bildirim, titreşim ve Android elle denenmedi.
+- Silinen ilacın dozları Geçmiş'te görünmez (kayıtlar durur, ilaç adı yok).
+- iOS 64 bildirim sınırı: uzun ve çok saatli kürün son günleri ancak uygulama açılınca kurulur.
 - 6 ekran tasarlanacak (`arayuz-tasarimi.md`).
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
 - Kullanılmayan paketler henüz kaldırılmadı (`moduler-yapi.md` → Temizlenecek paketler).
 
+## Elle Test Listesi
+
+1. Eski sürümdeki ilaçlarla aç: ilaçlar, stok ve geçmiş aynı mı?
+2. Sihirbazla tablet (yarım), şurup ve belirli günlü/süreli birer ilaç ekle; fotoğraf çekince 2. adıma geçiyor mu?
+3. Bildirim gelince dokun, onayla: stok yarım düşüyor mu, sıradaki ilaç doğru mu?
+4. "10 dakika sonra hatırlat"a bas, uygulamayı kapat; bildirim gelince doğru doz açılıyor mu? Onayladıktan sonra ikinci bildirim gelmemeli.
+5. İlacın saatini değiştir: Geçmiş'teki önceki günler aynı kalmalı.
+6. İlaç sil: onay soruyor ve bildirimi susuyor mu?
+7. Telefonun yazı boyutunu büyüt, bütün ekranları gez; VoiceOver ile bir doz onayla.
+8. #3 uçak modu ve uygulama kapalıyken bildirime dokunma.
+
 ## Yarın Yapılacaklar
 
-1. **Stitch MCP bağlantısı:** Kesin ölçüleri ve sihirbaz adımlarını `arayuz-tasarimi.md`'ye işle.
-2. **1. tur arayüz entegrasyonu:** Bugün, İlaç zamanı, sihirbaz, İlaçlarım, Geçmiş, Ayarlar görünümü (ikon tamam).
-3. **Simülatör ve telefon testi:** Mevcut ilaçların kaybolmadığını, #3 uçak modunu ve uygulama kapalıyken bildirime dokunmayı da dene. Telefona kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
-4. **24 Kasım Salı ders hazırlığı:** Sistem Mimarisi (#17); `moduler-yapi.md` diyagramları kullanılabilir.
+1. **Elle test** (yukarıdaki liste), sonra dalı main'e birleştirme kararı. Telefona kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
+2. **24 Kasım Salı ders hazırlığı:** Sistem Mimarisi (#17); `moduler-yapi.md` diyagramları kullanılabilir.
 
 ## Sonraki İşler
 
-- İlaç formu desteği (#22), sıklık ve süre (#23).
-- İlaç silme ve düzeltme ekranı: `MedicationService.update/remove` hazır.
 - Kalan 6 ekranın tasarımı ve 2. tur (Supabase).
+- 3. tur: İlaç bilgisi.

@@ -51,31 +51,37 @@ Refactor öncesi (`v0.1-sprint1`) kod `app/src/` altında yaklaşık 1300 satır
 
 ```text
 app/src/
-├── app/                    # Ekranlar (Expo Router). İnce: yalnızca kanca çağırır
-│   ├── _layout.tsx         # Kök Stack, ErrorBoundary, bildirime dokununca yönlendirme
-│   ├── index.tsx           # Bugünkü dozlar
-│   ├── ilac-ekle.tsx       # İlaç ekleme formu
-│   └── aldim/[id].tsx      # Tam ekran onay (ALDIM / İÇTİM / ...)
-├── components/             # Görsel bileşenler
-│   ├── form/               # FormField, TextField, PhotoField, TimesField, FieldError
-│   ├── error-boundary.tsx  # Çöken ekran için "Yeniden dene"
-│   └── big-button.tsx, dose-card.tsx, time-stepper.tsx
-├── hooks/                  # useMedications, useTodayDoses, useMedicationDraft, ...
-├── context/medications.tsx # Sadece React durumu; iş kuralı yok
-├── services/               # İş mantığı sınıfları
-│   ├── StorageService.ts   # IStorage arayüzü + AsyncStorageService
-│   ├── migrations.ts       # Kayıtlı veri sürüm göçleri
+├── app/                      # Ekranlar (Expo Router). İnce: yalnızca kanca çağırır
+│   ├── _layout.tsx           # Kök Stack, yazı tipi, ErrorBoundary, bildirim dokunuşu
+│   ├── (tabs)/               # Alt menü: index (Bugün), ilaclarim, gecmis
+│   ├── ilac-ekle.tsx         # Sihirbaz (yeni ilaç)
+│   ├── ilac-duzenle/[id].tsx # Aynı sihirbaz, dolu
+│   ├── aldim/[id].tsx        # Tam ekran ilaç zamanı ve başarı
+│   └── ayarlar.tsx
+├── components/               # Görsel bileşenler
+│   ├── wizard/               # WizardStepLayout ve dokuz adım
+│   ├── form/                 # TextField, FieldError
+│   ├── app-text, icon, card, pill, banner, section-header, screen-header
+│   ├── primary-button, secondary-button (ortak gövde: button-base), icon-button
+│   ├── option-card, chip-group, number-stepper, time-stepper
+│   ├── status-chip, progress-ring, medication-photo
+│   └── dose-card, dose-prompt, dose-done, medication-card, week-days, settings-row, ...
+├── hooks/                    # useMedications, useTodayDoses, useMedicationWizard, ...
+├── context/medications.tsx   # Sadece React durumu; iş kuralı yok
+├── services/                 # İş mantığı sınıfları
+│   ├── StorageService.ts     # IStorage arayüzü + AsyncStorageService
+│   ├── migrations.ts         # Kayıtlı veri sürüm göçleri
 │   ├── MedicationService.ts, DoseService.ts, NotificationService.ts, PhotoService.ts
-│   └── index.ts            # Bağımlılıkların kurulduğu tek yer
-├── models/                 # Tipler ve form sınıfları
-│   ├── medication.ts, dose-log.ts, dose.ts
-│   └── forms/              # MedicationForm (soyut), Tablet, Syrup, Drops, Cream
-├── validation/             # medication-input.ts (girdi), stored-records.ts (kayıtlı veri)
-├── errors/                 # AppError, ValidationError, StorageError, NotificationError
-├── utils/                  # Saf fonksiyonlar: date, time, json, id, logger
-├── constants/theme.ts      # Yüksek kontrastlı tema
-├── config.ts               # Ortam değişkenleri
-└── test-utils/fakes.ts     # Testler için sahte depolama
+│   └── index.ts              # Bağımlılıkların kurulduğu tek yer
+├── models/                   # Tipler ve form sınıfları
+│   ├── medication.ts, schedule.ts (plan), dose-log.ts, dose.ts
+│   └── forms/                # MedicationForm (soyut) ve on form sınıfı
+├── validation/               # medication-input, wizard-steps (girdi), stored-records (kayıt)
+├── errors/                   # AppError, ValidationError, StorageError, NotificationError
+├── utils/                    # Saf fonksiyonlar: date, time, schedule, json, id, logger
+├── constants/theme.ts        # Yüksek kontrastlı tema
+├── config.ts                 # Ortam değişkenleri
+└── test-utils/fakes.ts       # Testler için sahte depolama
 ```
 
 Testler ilgili klasörün `__tests__/` alt klasöründedir (örn. `services/__tests__/DoseService.test.ts`).
@@ -84,12 +90,12 @@ Testler ilgili klasörün `__tests__/` alt klasöründedir (örn. `services/__te
 
 | Seviye | Projedeki karşılığı | Örnekler |
 | --- | --- | --- |
-| **1. Fonksiyon** | Her fonksiyon tek iş yapar; saf fonksiyonlar yan etkisizdir ve tek başına test edilir. | `formatDate`, `atTime` (`utils/date.ts`); `isValidTime`, `formatTime` (`utils/time.ts`); `safeJsonParse` (`utils/json.ts`); `parseStock`, `validateMedicationDraft`, `firstInvalidField` (`validation/medication-input.ts`) |
+| **1. Fonksiyon** | Her fonksiyon tek iş yapar; saf fonksiyonlar yan etkisizdir ve tek başına test edilir. | `formatDate`, `atTime` (`utils/date.ts`); `isValidTime`, `formatTime` (`utils/time.ts`); `safeJsonParse` (`utils/json.ts`); `isScheduledOn`, `nextOccurrence` (`utils/schedule.ts`); `validateMedicationDraft`, `changesOf` (`validation/medication-input.ts`) |
 | **2. Sınıf** | Birbiriyle ilgili veri ve davranış bir sınıfta toplanır; iç durum `private`. | `DoseService` (doz kimliği, durum, onay), `MedicationService` (ekle/sil/güncelle/listele), `NotificationService`, `PhotoService`, `AsyncStorageService`, `Logger`, `MedicationForm` ve alt sınıfları, `ErrorBoundary` |
 | **3. Paket / dosya** | Klasörler katmanlara karşılık gelir; her klasör `index.ts` ile dışa açtığı şeyi belirler. | `models/`, `services/`, `validation/`, `errors/`, `utils/`, `hooks/`, `components/`, `app/` |
 | **4. Sistem** | Uygulama, sunucu ve dış servisler ayrı bileşenlerdir; aralarında arayüz vardır. | Mobil uygulama ↔ `IStorage` ↔ Supabase; Edge Functions ↔ Claude API; e-posta servisi (aşağıda) |
 
-Ekran dosyaları küçüldü: `ilac-ekle.tsx` 289 satırdan 126 satıra indi. Kalan satırların çoğu stil tanımı.
+Ekran dosyaları incedir: `ilac-ekle.tsx` 5 satırdır; sihirbazın durumu `useMedicationWizard`, kuralları `validation/`, görünümü `components/wizard/` içindedir.
 
 ### Katmanlar
 
@@ -100,11 +106,15 @@ Bağımlılık yönü tek yönlüdür: üst katman alttakini bilir, alttaki üst
 | Kanca | Arkasındaki servis | Kullanan |
 | --- | --- | --- |
 | `useMedications` | context → `MedicationService`, `DoseService` | Tüm ekranlar |
-| `useTodayDoses` | `DoseService.getTodayDoses` | `index.tsx` |
-| `useDose` | `DoseService.isTaken`, doz onayı | `aldim/[id].tsx` |
-| `useMedicationPhoto` | `PhotoService.photoUri` | `aldim/[id].tsx`, `DoseCard` |
-| `useTestNotification` | `NotificationService.scheduleTest` | `index.tsx` |
-| `useNotificationPermission` | `NotificationService` izin metotları | `index.tsx` |
+| `useTodayDoses` | `DoseService.getTodayDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün |
+| `useHistoryWeek` | `DoseService.getWeek` | Geçmiş |
+| `useDose` | Doz onayı, sıradaki doz | `aldim/[id].tsx` |
+| `useSnooze` | `NotificationService.snooze` | `aldim/[id].tsx` |
+| `useMedicationWizard` | context → `MedicationService.add/update` | Sihirbaz |
+| `useMedicationPhoto` | `PhotoService.photoUri` | `MedicationPhoto`, `DosePrompt`, sihirbaz |
+| `useReminderSync` | `MedicationService.syncReminders` | `_layout.tsx` |
+| `useTestNotification` | `NotificationService.scheduleTest` | Ayarlar (`__DEV__`) |
+| `useNotificationPermission` | `NotificationService` izin metotları | Bugün, Ayarlar |
 | `useDoseNotificationTaps` | `NotificationService.subscribeToDoseTaps` | `_layout.tsx` |
 
 Gerekçe: Ekranlar yalnızca görünümle ilgilenir. Bir servis değişirse (örneğin Supabase'e geçişte) sadece kanca güncellenir. Bildirim kütüphanesi değişirse yalnızca `NotificationService` etkilenir. Bildirimin genel ayarı (`notificationService.configure()`) da ekranda değil, bağımlılıkların kurulduğu `services/index.ts`'de yapılır.
@@ -169,8 +179,8 @@ export class DoseService {
   private static readonly MISSED_AFTER_MS = 30 * 60 * 1000;
   private readonly storage: IStorage;
   private readonly now: () => Date;
-  // public: doseLogId, isTaken, getTodayDoses, confirmDose
-  // private: statusOf, withStockAfterDose
+  // public: doseLogId, getTodayDoses, getDosesOn, groupByPeriod, progressOf, getWeek, confirmDose
+  // private: dosesOf, planPeriods, statusOf, summaryOf, withStockAfterDose
 }
 ```
 
@@ -182,12 +192,12 @@ export class DoseService {
 
 - `IStorage` (`services/StorageService.ts`): `load`, `saveMedications`, `saveDoseConfirmation`. Servisler ve context yalnızca bu arayüzü bilir; `AsyncStorageService` bugünkü uygulamasıdır, Supabase sınıfı aynı arayüzü uygulayacak.
 - `KeyValueStore`: AsyncStorage'ın kullandığımız üç metodu. Testte `MemoryKeyValueStore` verilir.
-- `PhotoStore`, `ReminderScheduler`, `NotificationsApi`, `LogSink`: servislerin dış dünyadan beklediği en küçük arayüzler.
+- `PhotoStore`, `ReminderScheduler`, `SnoozeCanceller`, `NotificationsApi`, `LogSink`: servislerin dış dünyadan beklediği en küçük arayüzler.
 - Ekranlar servis sınıfını hiç bilmez; yalnızca kancaları (`useMedications`, `useTodayDoses`, `useDose` ...) çağırır. Bkz. Katmanlar bölümündeki kural.
 
 ### Kalıtım
 
-`MedicationForm` soyut sınıftır. `Tablet` doğrudan ondan türer. Sayılamayan formlar (`Syrup`, `Drops`, `Cream`) araya giren `UncountableForm` sınıfından türer ve stok kuralını oradan devralır. Kayıtlı ilaçlarda `form` alanı yoksa (eski kayıtlar) `Tablet` sayılır.
+`MedicationForm` soyut sınıftır. Sayılan formlar (`Tablet`, `Capsule`, `Spray`, `Sachet`, `Patch`) doğrudan ondan türer. Sayılamayan formlar (`Syrup`, `Drops`, `Cream`, `Injection`, `Other`) araya giren `UncountableForm` sınıfından türer ve stok kuralını oradan devralır. Kayıtlı ilaçlarda `form` alanı yoksa (eski kayıtlar) `Tablet` sayılır.
 
 ### Çok biçimlilik
 
@@ -195,10 +205,10 @@ Ekran formun türüne bakmaz, `if/switch` yoktur:
 
 ```tsx
 const form = getMedicationForm(medication.form);
-<Text>{form.confirmLabel()}</Text> // Tablet: ALDIM, Şurup: İÇTİM, Damla: DAMLATTIM, Krem: SÜRDÜM
+<PrimaryButton label={form.confirmLabel()} /> // Tablet: Aldım, Şurup: İçtim, Damla: Damlattım
 ```
 
-`DoseService` de stoğu aynı şekilde düşürür: `getMedicationForm(medication.form).stockAfterDose(stock)`. Tablet bir azaltır, şurup azaltmaz. Türden sınıfa geçiş de `switch` yerine bir tabloyla (`FORMS` kaydı, `models/forms/index.ts`) yapılır.
+`DoseService` de stoğu aynı şekilde düşürür: `getMedicationForm(medication.form).stockAfterDose(stock, amount)`. Tablet doz kadar (yarım olabilir) azaltır, şurup azaltmaz. Sihirbazın dozaj ve stok adımları da formun `doseUnits()`, `presetAmounts()`, `locations()`, `isCountable()` metotlarından kurulur; yeni form eklemek ekranı değiştirmez. Türden sınıfa geçiş de `switch` yerine bir tabloyla (`FORMS` kaydı, `models/forms/index.ts`) yapılır.
 
 ### Bağımlılık enjeksiyonu
 
@@ -206,14 +216,14 @@ Servisler bağımlılıklarını constructor ile alır. Gerçek nesneler tek bir
 
 ```ts
 export const storage: IStorage = new AsyncStorageService(AsyncStorage);
-export const doseService = new DoseService(storage);
+export const doseService = new DoseService(storage, notificationService);
 export const medicationService = new MedicationService(storage, photoService, notificationService);
 ```
 
 Testte sahteleri verilir:
 
 ```ts
-const service = new DoseService(new FakeStorage(), () => new Date(2026, 10, 16, 9, 0));
+const service = new DoseService(new FakeStorage(), sahteErteleme, () => new Date(2026, 10, 16, 9, 0));
 ```
 
 `MedicationsProvider` da isteğe bağlı `services` özelliği alır.
@@ -237,17 +247,22 @@ classDiagram
   }
   class DoseService {
     -storage: IStorage
+    -snoozes: SnoozeCanceller
     -MISSED_AFTER_MS$
     +doseLogId()$
     +getTodayDoses()
+    +getDosesOn()
+    +groupByPeriod()
+    +progressOf()
+    +getWeek()
     +confirmDose()
-    +isTaken()
   }
   class MedicationService {
     -storage: IStorage
     -photos: PhotoStore
     -reminders: ReminderScheduler
     +load()
+    +syncReminders()
     +add()
     +update()
     +remove()
@@ -255,8 +270,10 @@ classDiagram
   class NotificationService {
     -api: NotificationsApi
     +normalizeDate()$
-    +scheduleMedication()
     +sync()
+    +cancelMedication()
+    +snooze()
+    +cancelSnooze()
     +subscribeToDoseTaps()
     +doseTargetFromResponse()
   }
@@ -269,12 +286,20 @@ classDiagram
     <<abstract>>
     +kind
     +label
+    +doseUnits()*
     +confirmLabel()*
-    +doseUnit()*
-    +stockAfterDose(stock)
+    +presetAmounts()
+    +locations()
+    +formatDose()
+    +validateDose()
+    +isCountable()
+    +isRunningLow()
+    +stockAfterDose(stock, amount)
   }
   class UncountableForm {
     <<abstract>>
+    +isCountable()
+    +isRunningLow()
     +stockAfterDose(stock)
   }
   IStorage <|.. AsyncStorageService
@@ -282,23 +307,31 @@ classDiagram
   MedicationService --> IStorage
   MedicationService --> PhotoService
   MedicationService --> NotificationService
+  DoseService --> NotificationService
   DoseService ..> MedicationForm
   MedicationForm <|-- Tablet
+  MedicationForm <|-- Capsule
+  MedicationForm <|-- Spray
+  MedicationForm <|-- Sachet
+  MedicationForm <|-- Patch
   MedicationForm <|-- UncountableForm
   UncountableForm <|-- Syrup
   UncountableForm <|-- Drops
   UncountableForm <|-- Cream
+  UncountableForm <|-- Injection
+  UncountableForm <|-- Other
 ```
 
 ## Savunmacı Programlama
 
 ### Girdi doğrulama (`validation/medication-input.ts`)
 
-- Ad ve doz boş veya sadece boşluk olamaz.
-- Fotoğraf zorunlu.
+- Ad boş olamaz; form ve aç/tok seçilmelidir. Fotoğraf isteğe bağlıdır.
+- Doz, formun kendi aralığı ve adımıyla denetlenir (`MedicationForm.validateDose`).
+- Belirli günlerde en az bir gün, süreli kullanımda 1-90 gün.
 - En az bir saat; her saat `HH:mm` biçiminde (`isValidTime`).
-- Stok yalnızca rakamlardan oluşan, sıfır veya pozitif tam sayı (`parseStock`): `-1`, `2,5`, `abc` reddedilir.
-- Ekran `validateMedicationDraft` ile alan alan Türkçe mesaj gösterir. `MedicationService.add` aynı kuralları `assertValidNewMedication` ile ikinci kez uygular. Böylece ekran dışından gelen veri de denetlenir.
+- Stok 0-999 arası, 0,5 adımlı (yarım tablet).
+- Sihirbaz her adımda `stepError` ile yalnızca o adımın alanlarını denetler. `MedicationService.add` ve `update` aynı kuralları `assertValidNewMedication` ve `assertValidChanges` ile ikinci kez uygular. Böylece ekran dışından gelen veri de denetlenir.
 
 ### Kayıtlı veri (`validation/stored-records.ts`, `StorageService`)
 
@@ -320,6 +353,7 @@ Kök düzeyde tüm ekranları sarar. Bir ekran çizilirken hata çıkarsa "Bir s
 
 - Yeni `schemaVersion` anahtarı eklendi. Anahtar yoksa veri v0 (`v0.1-sprint1` biçimi) sayılır.
 - **v1:** `form` alanı olmayan ilaçlara `form: "tablet"` eklenir. Diğer alanlar ve `medications` / `doseLogs` anahtarları aynen kalır.
+- **v2:** Miktar, birim, bölge, aç/tok, sıklık, süre, stok sınırı ve eski planlar eklenir. Önce varsayılanlar, sonra kayıt yayılır; kayıtta olan hiçbir alanın üzerine yazılmaz.
 - Göç sonucu diske yazılır. Bozuk veri bulunduysa yazılmaz; yedeklenen ham veri olduğu gibi kalır.
 - Daha yeni bir sürümden gelen veriye (sürüm > güncel) göç uygulanmaz.
 - Eski uygulama (`v0.1-sprint1`) bilmediği `form` alanını yok sayar, yani geri dönüş de güvenlidir.
@@ -338,7 +372,7 @@ Aşağıdaki paketler uygulama kodunda doğrudan kullanılmıyor. Bu refactor'da
 | `expo-device` | Yok | Hiçbir paket buna bağlı değil. **Güvenle kaldırılabilir.** |
 | `expo-linking` | Yok (`Linking` react-native'den geliyor) | **Dolaylı:** `expo-router`'ın zorunlu peer bağımlılığı. Kalmalı. |
 | `expo-glass-effect` | Yok | **Dolaylı:** `expo-router`'ın doğrudan bağımlılığı; package.json'dan silinse de kurulur. |
-| `expo-symbols` | Yok | **Dolaylı:** `expo-router`'ın isteğe bağlı peer bağımlılığı (sekme ikonları). Kaldırılabilir. |
+| `expo-symbols` | `components/icon.tsx` | 1. turdan beri kullanılıyor. Kalmalı. |
 | `@expo/ui` | Yok | **Dolaylı:** `expo-router`'ın isteğe bağlı peer bağımlılığı. Kaldırılabilir. |
 | `react-native-reanimated` | Yok | **Dolaylı:** `expo-router` (drawer) isteğe bağlı peer. Animasyon eklenirse gerekir. |
 | `react-native-worklets` | Yok | **Dolaylı:** `react-native-reanimated`'ın zorunlu peer bağımlılığı. Reanimated ile birlikte gider. |
