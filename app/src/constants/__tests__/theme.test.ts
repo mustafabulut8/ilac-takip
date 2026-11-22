@@ -35,6 +35,17 @@ describe('tema kontrastı (WCAG AA, en az 4,5:1)', () => {
     ['danger', 'card'],
     ['pending', 'background'],
     ['pending', 'card'],
+    ['success', 'successSoft'],
+    ['danger', 'dangerSoft'],
+    ['text', 'warningSoft'],
+    ['pending', 'warningSoft'],
+    ['text', 'accentSoft'],
+    ['primary', 'primarySoft'],
+    ['textSecondary', 'neutralSoft'],
+    ['onDayAll', 'dayAll'],
+    ['text', 'daySome'],
+    ['onDayNone', 'dayNone'],
+    ['textSecondary', 'neutralStrong'],
   ] as const)('%s yazısı %s zemininde okunur', (text, background) => {
     expect(contrast(Colors[text], Colors[background])).toBeGreaterThanOrEqual(4.5);
   });
@@ -46,6 +57,8 @@ describe('tema renk kararları', () => {
     expect(Colors.accent).toBe('#3FA89A');
     expect(Colors.pending).toBe('#8D5100');
     expect(Colors.textSecondary).toBe('#3D4947');
+    expect(Colors.success).toBe('#2E7D32');
+    expect(Colors.danger).toBe('#C62828');
   });
 
   it('vurgu rengi beyaz yazı için yeterli değildir', () => {

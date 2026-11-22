@@ -18,23 +18,49 @@ export const Colors = {
   primary: '#0F6E6E',
   // Yalnızca vurgu: ilerleme halkası, seçili çerçeve, etiket zemini. Yazı rengi olamaz.
   accent: '#3FA89A',
-  success: '#0B6B2E',
-  danger: '#A80000',
+  success: '#2E7D32',
+  danger: '#C62828',
   // Amber: uyarı ve bekleyen doz.
   pending: '#8D5100',
+  // Etiket ve uyarı zeminleri (Stitch).
+  successSoft: '#E8F5E9',
+  dangerSoft: '#FFEBEE',
+  warningSoft: '#FFF8E1',
+  warningIcon: '#FFE082',
+  accentSoft: '#9EEDED',
+  primarySoft: '#E6F4F3',
+  neutralSoft: '#F0EDED',
+  neutralStrong: '#EAE7E7',
+  hairline: '#DDD9D9',
+  // Geçmiş takviminin gün renkleri (Stitch).
+  dayAll: '#A3F69C',
+  onDayAll: '#003909',
+  daySome: '#FEF3C7',
+  dayNone: '#FFDAD6',
+  onDayNone: '#93000A',
 } as const;
 
 export const FontSize = {
   small: 16,
   body: 18,
+  subtitle: 22,
   title: 30,
   huge: 44,
+} as const;
+
+/** Inter; ağırlık `fontWeight` ile değil aile adıyla seçilir. */
+export const FontFamily = {
+  regular: 'Inter_400Regular',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  extrabold: 'Inter_800ExtraBold',
 } as const;
 
 export const Spacing = {
   one: 4,
   two: 8,
   three: 16,
+  screen: 20,
   four: 24,
   five: 32,
 } as const;
@@ -49,6 +75,7 @@ export const Radius = {
 /** Değerler Stitch tasarımından alındı. */
 export const Shadow = {
   card: '0px 4px 16px rgba(0, 0, 0, 0.05)',
+  activeCard: '0px 6px 20px rgba(63, 168, 154, 0.18)',
   primaryButton: '0px 4px 12px rgba(63, 168, 154, 0.25)',
 } as const;
 
