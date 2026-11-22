@@ -1,15 +1,12 @@
-import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PrimaryButton } from '@/components/primary-button';
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { DoseDone } from '@/components/dose-done';
+import { DosePrompt } from '@/components/dose-prompt';
+import { NotFoundMessage } from '@/components/not-found-message';
 import { useDose } from '@/hooks/useDose';
-import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
-import { getMedicationForm } from '@/models';
+import { useSnooze } from '@/hooks/useSnooze';
 import { formatDate } from '@/utils/date';
 
 function goHome() {
@@ -17,6 +14,7 @@ function goHome() {
   else router.replace('/');
 }
 
+/** Tam ekran ilaç zamanı: onaydan önce DosePrompt, sonra DoseDone. */
 export default function TakeDoseScreen() {
   const {
     id,
@@ -27,32 +25,22 @@ export default function TakeDoseScreen() {
     time: string;
     date?: string;
   }>();
-  const { isLoaded, medication, isTaken, confirm: confirmDose } = useDose(id, date, time);
-  const photoUri = useMedicationPhoto(medication?.photoFile ?? '');
+  const dose = useDose(id, date, time);
+  const { isSnoozed, error: snoozeError, snooze } = useSnooze();
   const isConfirming = useRef(false);
   const [justConfirmed, setJustConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isLoaded, medication, now } = dose;
 
   if (!isLoaded) return null;
-
-  if (!medication || !time) {
-    return (
-      <SafeAreaView style={styles.message}>
-        <Text style={styles.name}>İlaç bulunamadı.</Text>
-        <PrimaryButton label="Ana Ekrana Dön" onPress={goHome} />
-      </SafeAreaView>
-    );
-  }
-
-  // Çok biçimlilik: form türüne bakılmadan aynı metotlar çağrılır (tablet için "ALDIM").
-  const form = getMedicationForm(medication.form);
+  if (!medication || !time) return <NotFoundMessage />;
 
   const confirm = async () => {
     // Hızlı çift dokunuş stoğu iki kez düşürmesin.
     if (isConfirming.current) return;
     isConfirming.current = true;
     try {
-      await confirmDose();
+      await dose.confirm();
       setJustConfirmed(true);
       setError(null);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -63,107 +51,28 @@ export default function TakeDoseScreen() {
     }
   };
 
+  if (dose.isTaken) {
+    return (
+      <DoseDone
+        medication={medication}
+        takenAt={dose.takenAt}
+        justConfirmed={justConfirmed}
+        nextDose={dose.nextDose}
+        onHome={goHome}
+      />
+    );
+  }
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.details}>
-        <Image
-          source={photoUri}
-          style={styles.photo}
-          contentFit="contain"
-          accessibilityLabel={`${medication.name} fotoğrafı`}
-        />
-        <Text style={styles.name} numberOfLines={2} adjustsFontSizeToFit>
-          {medication.name}
-        </Text>
-        <Text style={styles.info}>
-          {medication.dose} · Saat {time}
-        </Text>
-        {error && <Text style={styles.error}>{error}</Text>}
-      </View>
-
-      {isTaken ? (
-        <View style={styles.confirmed} accessibilityLiveRegion="polite">
-          <Text style={styles.confirmedTitle}>
-            ✓ {justConfirmed ? form.confirmedMessage() : form.alreadyConfirmedMessage()}
-          </Text>
-          <Text style={styles.info}>Kalan stok: {medication.stock}</Text>
-          <PrimaryButton label="Ana Ekrana Dön" onPress={goHome} />
-        </View>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={form.confirmAccessibilityLabel(medication.name)}
-          onPress={confirm}
-          style={({ pressed }) => [styles.takeButton, pressed && styles.takeButtonPressed]}>
-          <Text style={styles.takeButtonLabel}>{form.confirmLabel()}</Text>
-        </Pressable>
-      )}
-    </SafeAreaView>
+    <DosePrompt
+      medication={medication}
+      date={date}
+      time={time}
+      now={now}
+      error={error ?? snoozeError}
+      isSnoozed={isSnoozed}
+      onConfirm={confirm}
+      onSnooze={() => snooze(medication, date, time)}
+      onClose={goHome}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  // Üst ve alt yarı eşit flex alır: ALDIM butonu ekranın yarısını kaplar.
-  details: {
-    flex: 1,
-    alignItems: 'center',
-    gap: Spacing.one,
-    padding: Spacing.three,
-  },
-  photo: {
-    flex: 1,
-    width: '100%',
-  },
-  name: {
-    color: Colors.text,
-    fontSize: FontSize.title,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  info: {
-    color: Colors.text,
-    fontSize: FontSize.body,
-    textAlign: 'center',
-  },
-  error: {
-    color: Colors.danger,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  takeButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-  },
-  takeButtonPressed: {
-    opacity: 0.7,
-  },
-  takeButtonLabel: {
-    color: Colors.textOnColor,
-    fontSize: FontSize.huge * 1.5,
-    fontWeight: '800',
-  },
-  confirmed: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-  },
-  confirmedTitle: {
-    color: Colors.success,
-    fontSize: FontSize.title,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  message: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-  },
-});

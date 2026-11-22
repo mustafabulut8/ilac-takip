@@ -64,6 +64,11 @@ export class DoseService {
     return `${medicationId}_${date}_${time}`;
   }
 
+  /** Ekranların kancaları için: `doseLogId` ile aynı kimlik. */
+  logIdOf(medicationId: string, date: string, time: string) {
+    return DoseService.doseLogId(medicationId, date, time);
+  }
+
   isTaken(doseLogs: DoseLog[], medicationId: string, date: string, time: string) {
     const id = DoseService.doseLogId(medicationId, date, time);
     return doseLogs.some((log) => log.id === id);
@@ -110,6 +115,11 @@ export class DoseService {
   /** Sıradaki doz: saate göre ilk bekleyen. */
   nextPending(doses: Dose[]): Dose | undefined {
     return doses.find((dose) => dose.status === 'bekliyor');
+  }
+
+  /** Bu günden önce eklenmiş ilaç var mı? (Geçmiş'te daha geri gidilebilir mi) */
+  hasHistoryBefore(day: Date, medications: Medication[]): boolean {
+    return medications.some((medication) => new Date(medication.createdAt) < day);
   }
 
   /** Pazartesiden başlayan haftanın günleri ve uyum oranı. */

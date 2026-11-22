@@ -200,6 +200,13 @@ describe('DoseService ilerleme ve geçmiş', () => {
     expect(week.adherence).toBeNull();
   });
 
+  it('ilk ilacın eklendiği haftadan öncesine gidilemez', () => {
+    const added = makeMedication({ createdAt: at(10).toISOString() });
+    expect(service.hasHistoryBefore(TODAY, [added])).toBe(false);
+    expect(service.hasHistoryBefore(new Date(2026, 10, 23), [added])).toBe(true);
+    expect(service.hasHistoryBefore(TODAY, [])).toBe(false);
+  });
+
   it('alınan dozun onay anını taşır', () => {
     const takenAt = at(8, 4).toISOString();
     const [dose] = service.getTodayDoses(
@@ -348,5 +355,6 @@ describe('DoseService.confirmDose', () => {
     const logs = [log('ilac1', '2026-11-16', '08:00')];
     expect(service.isTaken(logs, 'ilac1', '2026-11-16', '08:00')).toBe(true);
     expect(service.isTaken(logs, 'ilac1', '2026-11-16', '20:00')).toBe(false);
+    expect(service.logIdOf('ilac1', '2026-11-16', '08:00')).toBe(logs[0].id);
   });
 });
