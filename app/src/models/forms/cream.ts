@@ -1,15 +1,15 @@
-import { UncountableForm } from './medication-form';
+import { type DoseInput, LOCATION_SEPARATOR, UncountableForm } from './medication-form';
 
 export class Cream extends UncountableForm {
   readonly kind = 'cream';
   readonly label = 'Krem / Merhem';
 
-  doseUnit() {
-    return 'ince tabaka';
+  doseUnits() {
+    return ['ince tabaka'];
   }
 
   confirmLabel() {
-    return 'SÜRDÜM';
+    return 'Sürdüm';
   }
 
   confirmedMessage() {
@@ -20,7 +20,15 @@ export class Cream extends UncountableForm {
     return 'Bu doz sürüldü';
   }
 
-  confirmAccessibilityLabel(medicationName: string) {
-    return `${medicationName} ilacını sürdüm`;
+  override hasAmount() {
+    return false;
+  }
+
+  override hasFreeTextLocation() {
+    return true;
+  }
+
+  override formatDose({ location }: DoseInput) {
+    return location.trim() ? `İnce tabaka${LOCATION_SEPARATOR}${location.trim()}` : 'İnce tabaka';
   }
 }

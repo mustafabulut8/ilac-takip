@@ -1,10 +1,11 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BigButton } from '@/components/big-button';
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { AppText } from '@/components/app-text';
+import { PrimaryButton } from '@/components/primary-button';
+import { Colors, Spacing } from '@/constants/theme';
 import { logger } from '@/utils/logger';
 
 type Props = { children: ReactNode };
@@ -36,11 +37,13 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Bir sorun oluştu</Text>
-        <Text style={styles.body}>
+        <AppText size="title" weight="bold" color={Colors.danger} center>
+          Bir sorun oluştu
+        </AppText>
+        <AppText center>
           Ekran açılırken beklenmeyen bir hata oldu. İlaç bilgileriniz silinmedi.
-        </Text>
-        <BigButton label="Yeniden dene" onPress={this.retry} />
+        </AppText>
+        <PrimaryButton label="Yeniden dene" onPress={this.retry} />
       </SafeAreaView>
     );
   }
@@ -53,16 +56,5 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.three,
     backgroundColor: Colors.background,
-  },
-  title: {
-    color: Colors.danger,
-    fontSize: FontSize.title,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  body: {
-    color: Colors.text,
-    fontSize: FontSize.body,
-    textAlign: 'center',
   },
 });

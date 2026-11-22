@@ -6,10 +6,17 @@ import { NotificationService } from './NotificationService';
 import { PhotoService } from './PhotoService';
 import { AsyncStorageService, type IStorage } from './StorageService';
 
-export { DoseService, type DoseState } from './DoseService';
+export {
+  DoseService,
+  type DaySummary,
+  type DoseGroup,
+  type DoseState,
+  type HistoryDay,
+  type HistoryWeek,
+} from './DoseService';
 export {
   MedicationService,
-  type AddMedicationResult,
+  type MedicationResult,
   type MedicationChanges,
   type PhotoStore,
   type ReminderScheduler,
@@ -28,9 +35,9 @@ export type { IStorage, KeyValueStore, StoredData } from './StorageService';
  * constructor ile alır; Supabase'e geçişte yalnızca `storage` satırı değişir.
  */
 export const storage: IStorage = new AsyncStorageService(AsyncStorage);
-export const doseService = new DoseService(storage);
 export const photoService = new PhotoService();
 export const notificationService = new NotificationService();
+export const doseService = new DoseService(storage, notificationService);
 // Uygulama açıkken gelen bildirim de gösterilsin. Uygulama açılırken bir kez çalışır.
 notificationService.configure();
 export const medicationService = new MedicationService(storage, photoService, notificationService);

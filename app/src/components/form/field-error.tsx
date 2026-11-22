@@ -1,21 +1,12 @@
-import { StyleSheet, Text } from 'react-native';
+import { AppText } from '@/components/app-text';
+import { Colors } from '@/constants/theme';
 
-import { Colors, FontSize } from '@/constants/theme';
-
-/** Alanın altındaki kırmızı hata metni; mesaj yoksa hiçbir şey çizmez. */
+/** Kırmızı hata metni; mesaj yoksa hiçbir şey çizmez. */
 export function FieldError({ message }: { message?: string | null }) {
   if (!message) return null;
   return (
-    <Text style={styles.error} accessibilityLiveRegion="polite">
+    <AppText weight="bold" color={Colors.danger} accessibilityLiveRegion="polite">
       {message}
-    </Text>
+    </AppText>
   );
 }
-
-const styles = StyleSheet.create({
-  error: {
-    color: Colors.danger,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-  },
-});

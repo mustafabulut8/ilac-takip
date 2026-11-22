@@ -4,12 +4,12 @@ export class Syrup extends UncountableForm {
   readonly kind = 'syrup';
   readonly label = 'Şurup';
 
-  doseUnit() {
-    return 'ml';
+  doseUnits() {
+    return ['ölçek', 'tatlı kaşığı', 'yemek kaşığı', 'ml'];
   }
 
   confirmLabel() {
-    return 'İÇTİM';
+    return 'İçtim';
   }
 
   confirmedMessage() {
@@ -20,7 +20,7 @@ export class Syrup extends UncountableForm {
     return 'Bu doz içildi';
   }
 
-  confirmAccessibilityLabel(medicationName: string) {
-    return `${medicationName} ilacını içtim`;
+  override amountRange() {
+    return { min: 1, max: 50, step: 1 };
   }
 }

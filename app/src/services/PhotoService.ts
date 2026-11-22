@@ -12,12 +12,12 @@ export class PhotoService {
   }
 
   /** Seçilen fotoğraf geçici olabileceği için kalıcı klasöre kopyalanır; dosya adı döner. */
-  async savePhoto(sourceUri: string, medicationId: string): Promise<string> {
+  async savePhoto(sourceUri: string, baseName: string): Promise<string> {
     const directory = this.directory();
     directory.create({ intermediates: true, idempotent: true });
 
     const source = new File(sourceUri);
-    const fileName = `${medicationId}${source.extension || '.jpg'}`;
+    const fileName = `${baseName}${source.extension || '.jpg'}`;
     await source.copy(new File(directory, fileName), { overwrite: true });
     return fileName;
   }

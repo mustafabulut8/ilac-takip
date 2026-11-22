@@ -4,12 +4,12 @@ export class Tablet extends MedicationForm {
   readonly kind = 'tablet';
   readonly label = 'Tablet';
 
-  doseUnit() {
-    return 'adet';
+  doseUnits() {
+    return ['adet'];
   }
 
   confirmLabel() {
-    return 'ALDIM';
+    return 'Aldım';
   }
 
   confirmedMessage() {
@@ -20,7 +20,11 @@ export class Tablet extends MedicationForm {
     return 'Bu doz alındı';
   }
 
-  confirmAccessibilityLabel(medicationName: string) {
-    return `${medicationName} ilacını aldım`;
+  override amountRange() {
+    return { min: 0.5, max: 10, step: 0.5 };
+  }
+
+  override presetAmounts() {
+    return [0.5, 1, 2];
   }
 }

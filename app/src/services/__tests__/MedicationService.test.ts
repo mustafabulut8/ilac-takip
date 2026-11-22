@@ -9,8 +9,17 @@ const NOW = new Date(2026, 10, 16, 9, 0);
 const input: NewMedication = {
   name: 'Aspirin',
   dose: '1 tablet',
+  amount: 1,
+  unit: 'adet',
+  location: '',
+  form: 'tablet',
   times: ['08:00'],
+  schedule: { kind: 'daily' },
+  duration: { kind: 'continuous' },
+  mealTiming: 'full',
   stock: 30,
+  lowStockThreshold: 5,
+  markedLow: false,
   photoSourceUri: 'file:///gecici.jpg',
 };
 
@@ -21,7 +30,6 @@ function setup() {
     deletePhoto: jest.fn(),
   } satisfies PhotoStore;
   const reminders = {
-    scheduleMedication: jest.fn().mockResolvedValue(undefined),
     cancelMedication: jest.fn().mockResolvedValue(undefined),
     sync: jest.fn().mockResolvedValue(undefined),
   } satisfies ReminderScheduler;
@@ -46,7 +54,7 @@ describe('MedicationService.load', () => {
 });
 
 describe('MedicationService.add', () => {
-  it('fotoğrafı kopyalar, tablet formuyla kaydeder ve hatırlatma kurar', async () => {
+  it('fotoğrafı kopyalar, kaydeder ve hatırlatma kurar', async () => {
     const { storage, photos, reminders, service } = setup();
     const result = await service.add([], input);
 
@@ -59,8 +67,25 @@ describe('MedicationService.add', () => {
     });
     expect(photos.savePhoto).toHaveBeenCalledWith('file:///gecici.jpg', medication.id);
     expect(storage.medications).toEqual(result.medications);
-    expect(reminders.scheduleMedication).toHaveBeenCalledWith(medication);
+    expect(reminders.sync).toHaveBeenCalledWith(result.medications);
     expect(result.notice).toBe('İlaç kaydedildi');
+  });
+
+  it('fotoğrafsız ilaç kaydedilebilir', async () => {
+    const { photos, service } = setup();
+    const result = await service.add([], { ...input, photoSourceUri: null });
+    expect(result.medications[0].photoFile).toBe('');
+    expect(photos.savePhoto).not.toHaveBeenCalled();
+  });
+
+  it('süre ilk dozun gününden sayılır', async () => {
+    const { service } = setup();
+    const startOf = async (times: string[]) =>
+      (await service.add([], { ...input, times, duration: { kind: 'days', count: 7 } }))
+        .medications[0].startDate;
+    // Saat 09:00: bugünün 08:00 dozu geçti, 20:00 dozu bugün alınabilir.
+    expect(await startOf(['08:00'])).toBe('2026-11-17');
+    expect(await startOf(['08:00', '20:00'])).toBe('2026-11-16');
   });
 
   it('geçersiz girdiyi kaydetmez', async () => {
@@ -71,7 +96,7 @@ describe('MedicationService.add', () => {
 
   it('hatırlatma kurulamazsa ilaç yine kaydedilir, kullanıcı uyarılır', async () => {
     const { storage, reminders, service } = setup();
-    reminders.scheduleMedication.mockRejectedValue(new Error('izin yok'));
+    reminders.sync.mockRejectedValue(new Error('izin yok'));
     const result = await service.add([], input);
     expect(storage.medications).toHaveLength(1);
     expect(result.notice).toMatch(/hatırlatma kurulamadı/);
@@ -94,26 +119,97 @@ describe('MedicationService.add', () => {
 });
 
 describe('MedicationService.update / remove', () => {
-  it('güncellemede hatırlatmaları yeniden kurar, negatif stoğu sıfırlar', async () => {
+  it('plan değişince hatırlatmalar yeniden kurulur, eski plan saklanır', async () => {
     const { reminders, service } = setup();
     const existing = makeMedication();
-    const [updated] = await service.update([existing], 'ilac1', { times: ['09:00'], stock: -2 });
+    const { medications, notice } = await service.update([existing], 'ilac1', { times: ['09:30'] });
 
-    expect(updated.times).toEqual(['09:00']);
-    expect(updated.stock).toBe(0);
+    expect(medications[0].times).toEqual(['09:30']);
+    expect(medications[0].pastPlans).toEqual([
+      {
+        times: ['08:00', '20:00'],
+        schedule: { kind: 'daily' },
+        duration: { kind: 'continuous' },
+        startDate: '2026-01-01',
+        until: NOW.toISOString(),
+      },
+    ]);
     expect(reminders.cancelMedication).toHaveBeenCalledWith(existing);
-    expect(reminders.scheduleMedication).toHaveBeenCalledWith(updated);
+    expect(reminders.sync).toHaveBeenCalledWith(medications);
+    expect(notice).toBe('Değişiklik kaydedildi');
+  });
+
+  it('yalnızca stok değişince plan ve hatırlatmalara dokunulmaz', async () => {
+    const { reminders, service } = setup();
+    const { medications } = await service.update([makeMedication()], 'ilac1', { stock: 30 });
+    expect(medications[0]).toEqual(makeMedication({ stock: 30 }));
+    expect(reminders.cancelMedication).not.toHaveBeenCalled();
+  });
+
+  it('geçersiz değişikliği kaydetmez', async () => {
+    const { storage, service } = setup();
+    for (const changes of [{ stock: -2 }, { times: [] }, { name: ' ' }]) {
+      await expect(service.update([makeMedication()], 'ilac1', changes)).rejects.toBeInstanceOf(
+        ValidationError,
+      );
+    }
+    expect(storage.saveCount).toBe(0);
+  });
+
+  it('süren kür uzatılınca başlangıç korunur, biten kür yeniden başlar', async () => {
+    const { service } = setup();
+    const startAfter = async (startDate: string) => {
+      const course = makeMedication({ startDate, duration: { kind: 'days', count: 7 } });
+      const { medications } = await service.update([course], 'ilac1', {
+        duration: { kind: 'days', count: 10 },
+      });
+      return medications[0].startDate;
+    };
+    expect(await startAfter('2026-11-14')).toBe('2026-11-14');
+    expect(await startAfter('2026-10-01')).toBe('2026-11-16');
+  });
+
+  it('yeni fotoğraf farklı adla kopyalanır, eskisi kayıttan sonra silinir', async () => {
+    const { storage, photos, service } = setup();
+    photos.deletePhoto.mockImplementation(() => expect(storage.saveCount).toBe(1));
+    const { medications } = await service.update([makeMedication()], 'ilac1', {
+      photoSourceUri: 'file:///yeni.jpg',
+    });
+    expect(photos.savePhoto).toHaveBeenCalledWith('file:///yeni.jpg', `ilac1-${NOW.getTime()}`);
+    expect(medications[0].photoFile).toBe('kopya.jpg');
+    expect(photos.deletePhoto).toHaveBeenCalledWith('ilac1.jpg');
+  });
+
+  it('kayıt başarısız olursa eski fotoğraf silinmez', async () => {
+    const { storage, photos, service } = setup();
+    storage.failWrites = true;
+    await expect(
+      service.update([makeMedication()], 'ilac1', { photoSourceUri: null }),
+    ).rejects.toBeInstanceOf(StorageError);
+    expect(photos.deletePhoto).not.toHaveBeenCalled();
+  });
+
+  it('hatırlatma kurulamazsa değişiklik yine kaydedilir, kullanıcı uyarılır', async () => {
+    const { storage, reminders, service } = setup();
+    reminders.cancelMedication.mockRejectedValue(new Error('bildirim yok'));
+    const { notice } = await service.update([makeMedication()], 'ilac1', { times: ['09:30'] });
+    expect(storage.medications[0].times).toEqual(['09:30']);
+    expect(notice).toMatch(/hatırlatma kurulamadı/);
   });
 
   it('silmede hatırlatmaları ve fotoğrafı kaldırır', async () => {
     const { storage, photos, reminders, service } = setup();
     const existing = makeMedication();
-    const result = await service.remove([existing, makeMedication({ id: 'ilac2' })], 'ilac1');
+    const { medications, notice } = await service.remove(
+      [existing, makeMedication({ id: 'ilac2' })],
+      'ilac1',
+    );
 
-    expect(result.map((item) => item.id)).toEqual(['ilac2']);
-    expect(storage.medications).toEqual(result);
+    expect(medications.map((item) => item.id)).toEqual(['ilac2']);
+    expect(storage.medications).toEqual(medications);
     expect(reminders.cancelMedication).toHaveBeenCalledWith(existing);
     expect(photos.deletePhoto).toHaveBeenCalledWith('ilac1.jpg');
+    expect(notice).toBe('İlaç silindi');
   });
 
   it('fotoğraf silinemese de ilaç silinir', async () => {
@@ -121,7 +217,9 @@ describe('MedicationService.update / remove', () => {
     photos.deletePhoto.mockImplementation(() => {
       throw new Error('dosya kilitli');
     });
-    await expect(service.remove([makeMedication()], 'ilac1')).resolves.toEqual([]);
+    await expect(service.remove([makeMedication()], 'ilac1')).resolves.toMatchObject({
+      medications: [],
+    });
   });
 
   it('olmayan ilaç için AppError verir', async () => {

@@ -24,6 +24,22 @@ const legacyLog = {
   takenAt: '2026-11-01T17:01:00.000Z',
 };
 
+/** Göçün eklediği alanlar; eski alanların hiçbiri değişmez. */
+const migratedMedication = {
+  ...legacyMedication,
+  form: 'tablet',
+  amount: 1,
+  unit: 'adet',
+  location: '',
+  schedule: { kind: 'daily' },
+  duration: { kind: 'continuous' },
+  startDate: '2026-11-01',
+  mealTiming: 'any',
+  lowStockThreshold: 5,
+  markedLow: false,
+  pastPlans: [],
+};
+
 function setup(initial: Record<string, string> = {}) {
   const store = new MemoryKeyValueStore(initial);
   const storage = new AsyncStorageService(store, () => NOW);
@@ -36,7 +52,7 @@ describe('AsyncStorageService.load', () => {
     expect(await storage.load()).toEqual({ medications: [], doseLogs: [], warnings: [] });
   });
 
-  it('eski (v0) kaydı v1 e göç ettirir: form eklenir, diğer alanlar aynen kalır', async () => {
+  it('eski (v0) kaydı göç ettirir: yeni alanlar eklenir, diğer alanlar aynen kalır', async () => {
     const { store, storage } = setup({
       medications: JSON.stringify([legacyMedication]),
       doseLogs: JSON.stringify([legacyLog]),
@@ -45,15 +61,35 @@ describe('AsyncStorageService.load', () => {
     const data = await storage.load();
 
     expect(data.warnings).toEqual([]);
-    expect(data.medications).toEqual([{ ...legacyMedication, form: 'tablet' }]);
+    expect(data.medications).toEqual([migratedMedication]);
     expect(data.doseLogs).toEqual([legacyLog]);
     // Göç diske yazılır; anahtarlar aynı, sadece sürüm anahtarı eklenir.
     expect(store.keys().sort()).toEqual(['doseLogs', 'medications', 'schemaVersion']);
     expect(store.data.get('schemaVersion')).toBe(String(CURRENT_SCHEMA_VERSION));
-    expect(JSON.parse(store.data.get('medications')!)).toEqual([
-      { ...legacyMedication, form: 'tablet' },
-    ]);
+    expect(JSON.parse(store.data.get('medications')!)).toEqual([migratedMedication]);
     expect(JSON.parse(store.data.get('doseLogs')!)).toEqual([legacyLog]);
+  });
+
+  it('v1 kaydını v2 ye göç ettirir, kayıtlı form ve alanlar korunur', async () => {
+    const { store, storage } = setup({
+      medications: JSON.stringify([{ ...legacyMedication, form: 'syrup', note: 'x' }]),
+      doseLogs: JSON.stringify([legacyLog]),
+      schemaVersion: '1',
+    });
+    const data = await storage.load();
+    expect(data.medications).toEqual([{ ...migratedMedication, form: 'syrup', note: 'x' }]);
+    expect(data.doseLogs).toEqual([legacyLog]);
+    expect(store.data.get('schemaVersion')).toBe('2');
+  });
+
+  it('göç yeniden çalışsa da kullanıcının seçtiği planın üzerine yazmaz', async () => {
+    const chosen = makeMedication({
+      schedule: { kind: 'weekdays', days: [1] },
+      amount: 0.5,
+      stock: 9.5,
+    });
+    const { storage } = setup({ medications: JSON.stringify([chosen]) });
+    expect((await storage.load()).medications).toEqual([chosen]);
   });
 
   it('güncel sürümdeki veriyi yeniden yazmaz', async () => {

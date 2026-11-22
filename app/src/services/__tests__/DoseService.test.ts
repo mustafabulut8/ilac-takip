@@ -9,8 +9,9 @@ const at = (hour: number, minute = 0, day = TODAY) =>
 
 function setup(now = at(9)) {
   const storage = new FakeStorage();
-  const service = new DoseService(storage, () => now);
-  return { storage, service };
+  const snoozes = { cancelSnooze: jest.fn().mockResolvedValue(undefined) };
+  const service = new DoseService(storage, snoozes, () => now);
+  return { storage, service, snoozes };
 }
 
 const log = (medicationId: string, date: string, time: string): DoseLog => ({
@@ -77,7 +78,164 @@ describe('DoseService.getTodayDoses', () => {
   });
 });
 
+describe('DoseService sıklık ve süre (#23)', () => {
+  const { service } = setup();
+  // 16 Kasım 2026 Pazartesi
+  const on = (day: number) => new Date(2026, 10, day);
+  const timesOn = (day: number, medication: ReturnType<typeof makeMedication>) =>
+    service.getDosesOn(on(day), [medication], [], at(23, 59, on(30))).map((dose) => dose.time);
+
+  it('seçilmeyen günde doz yoktur, kaçırılmış sayılmaz', () => {
+    const medication = makeMedication({
+      times: ['08:00'],
+      schedule: { kind: 'weekdays', days: [1, 3] },
+    });
+    expect(timesOn(16, medication)).toEqual(['08:00']);
+    expect(timesOn(17, medication)).toEqual([]);
+    expect(timesOn(18, medication)).toEqual(['08:00']);
+  });
+
+  it('süre dışındaki günlerde doz yoktur', () => {
+    const medication = makeMedication({
+      times: ['08:00'],
+      duration: { kind: 'days', count: 2 },
+      startDate: '2026-11-17',
+    });
+    expect([16, 17, 18, 19].map((day) => timesOn(day, medication).length)).toEqual([0, 1, 1, 0]);
+  });
+
+  it('plan değişince geçmiş günler eski plana göre hesaplanır', () => {
+    const medication = makeMedication({
+      times: ['09:00', '21:00'],
+      pastPlans: [
+        {
+          times: ['08:00', '20:00'],
+          schedule: { kind: 'daily' },
+          duration: { kind: 'continuous' },
+          startDate: '2026-01-01',
+          until: at(10, 0, on(16)).toISOString(),
+        },
+      ],
+    });
+    expect(timesOn(15, medication)).toEqual(['08:00', '20:00']);
+    // Değişiklik günü: geçen saat eski plandan, kalan saat yeni plandan gelir.
+    expect(timesOn(16, medication)).toEqual(['08:00', '21:00']);
+    expect(timesOn(17, medication)).toEqual(['09:00', '21:00']);
+  });
+
+  it('erken alınıp planı değişen doz kaybolmaz', () => {
+    const medication = makeMedication({
+      times: ['21:00'],
+      pastPlans: [
+        {
+          times: ['20:00'],
+          schedule: { kind: 'daily' },
+          duration: { kind: 'continuous' },
+          startDate: '2026-01-01',
+          until: at(19, 50).toISOString(),
+        },
+      ],
+    });
+    const doses = service.getTodayDoses(
+      [medication],
+      [log('ilac1', '2026-11-16', '20:00')],
+      at(19, 55),
+    );
+    expect(doses.map(({ time, status }) => [time, status])).toEqual([
+      ['20:00', 'alindi'],
+      ['21:00', 'bekliyor'],
+    ]);
+  });
+});
+
+describe('DoseService ilerleme ve geçmiş', () => {
+  const { service } = setup();
+  const medication = makeMedication();
+
+  it('günün ilerlemesini ve sıradaki dozu verir', () => {
+    const doses = service.getTodayDoses([medication], [log('ilac1', '2026-11-16', '08:00')], at(9));
+    expect(service.progressOf(doses)).toEqual({ total: 2, taken: 1, remaining: 1, percent: 50 });
+    expect(service.nextPending(doses)?.time).toBe('20:00');
+    expect(service.progressOf([]).percent).toBe(0);
+    expect(service.nextPending([])).toBeUndefined();
+  });
+
+  it('dozları gün dilimlerine ayırır, boş grubu vermez', () => {
+    const late = makeMedication({ times: ['02:00', '08:00', '22:00'] });
+    const groups = service.groupByPeriod(service.getTodayDoses([late], [], at(9)));
+    expect(groups.map(({ period, doses }) => [period, doses.map(({ time }) => time)])).toEqual([
+      ['morning', ['08:00']],
+      ['evening', ['02:00', '22:00']],
+    ]);
+  });
+
+  it('haftanın günlerini ve uyumu hesaplar', () => {
+    const added = makeMedication({ createdAt: at(0).toISOString() });
+    const logs = [
+      log('ilac1', '2026-11-16', '08:00'),
+      log('ilac1', '2026-11-16', '20:00'),
+      log('ilac1', '2026-11-17', '08:00'),
+      log('ilac1', '2026-11-19', '08:00'),
+    ];
+    const week = service.getWeek(TODAY, [added], logs, at(9, 0, new Date(2026, 10, 19)));
+
+    expect(week.days.map(({ summary }) => summary)).toEqual([
+      'all',
+      'some',
+      'none',
+      'open',
+      'open',
+      'open',
+      'open',
+    ]);
+    expect(week).toMatchObject({ taken: 4, missed: 3, adherence: 57 });
+  });
+
+  it('eklenmeden önceki günler boştur, uyum hesaplanmaz', () => {
+    const added = makeMedication({ createdAt: at(10).toISOString() });
+    const week = service.getWeek(new Date(2026, 10, 9), [added], [], at(11));
+    expect(week.days.every(({ doses, summary }) => doses.length === 0 && summary === 'open')).toBe(
+      true,
+    );
+    expect(week.adherence).toBeNull();
+  });
+
+  it('alınan dozun onay anını taşır', () => {
+    const takenAt = at(8, 4).toISOString();
+    const [dose] = service.getTodayDoses(
+      [medication],
+      [{ ...log('ilac1', '2026-11-16', '08:00'), takenAt }],
+      at(9),
+    );
+    expect(dose.takenAt).toBe(takenAt);
+  });
+});
+
 describe('DoseService.confirmDose', () => {
+  it('ertelenmiş bildirimi kaldırır; kaldırılamazsa onay bozulmaz', async () => {
+    const { service, snoozes } = setup();
+    snoozes.cancelSnooze.mockRejectedValue(new Error('bildirim yok'));
+    const next = await service.confirmDose(
+      { medications: [makeMedication()], doseLogs: [] },
+      'ilac1',
+      '2026-11-16',
+      '08:00',
+    );
+    expect(next?.doseLogs).toHaveLength(1);
+    expect(snoozes.cancelSnooze).toHaveBeenCalledWith('ilac1', '2026-11-16', '08:00');
+  });
+
+  it('yarım tablet stoktan yarım düşer', async () => {
+    const { service } = setup();
+    const next = await service.confirmDose(
+      { medications: [makeMedication({ stock: 10, amount: 0.5 })], doseLogs: [] },
+      'ilac1',
+      '2026-11-16',
+      '08:00',
+    );
+    expect(next?.medications[0].stock).toBe(9.5);
+  });
+
   it('doz kaydını ve stok düşüşünü birlikte kaydeder', async () => {
     const { storage, service } = setup(at(8, 2));
     const state = { medications: [makeMedication({ stock: 10 })], doseLogs: [] };

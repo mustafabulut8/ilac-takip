@@ -71,6 +71,16 @@ export function makeMedication(overrides: Partial<Medication> = {}): Medication 
     stock: 10,
     createdAt: new Date(2026, 0, 1, 0, 0).toISOString(),
     form: 'tablet',
+    amount: 1,
+    unit: 'adet',
+    location: '',
+    schedule: { kind: 'daily' },
+    duration: { kind: 'continuous' },
+    startDate: '2026-01-01',
+    mealTiming: 'any',
+    lowStockThreshold: 5,
+    markedLow: false,
+    pastPlans: [],
     ...overrides,
   };
 }

@@ -1,9 +1,14 @@
 import { AppError, StorageError, userMessageOf } from '@/errors';
-import { DEFAULT_FORM_KIND, type Medication, type NewMedication } from '@/models';
+import type { Medication, NewMedication, DosePlan } from '@/models';
+import { formatDate } from '@/utils/date';
 import { createId } from '@/utils/id';
 import { logger } from '@/utils/logger';
-import { assertValidNewMedication } from '@/validation/medication-input';
-import { sanitizeStock } from '@/validation/stored-records';
+import { lastDayOf, nextOccurrence } from '@/utils/schedule';
+import {
+  assertValidChanges,
+  assertValidNewMedication,
+  type MedicationChanges,
+} from '@/validation/medication-input';
 
 import type { NotificationService } from './NotificationService';
 import type { PhotoService } from './PhotoService';
@@ -11,21 +16,17 @@ import type { IStorage, StoredData } from './StorageService';
 
 /** MedicationService'in fotoğraf ve bildirimden beklediği kadarı; testte sahtesi verilir. */
 export type PhotoStore = Pick<PhotoService, 'savePhoto' | 'deletePhoto'>;
-export type ReminderScheduler = Pick<
-  NotificationService,
-  'scheduleMedication' | 'cancelMedication' | 'sync'
->;
+export type ReminderScheduler = Pick<NotificationService, 'cancelMedication' | 'sync'>;
 
-/** Değiştirilebilen ilaç alanları. */
-export type MedicationChanges = Partial<
-  Pick<Medication, 'name' | 'dose' | 'times' | 'stock' | 'form'>
->;
+export type { MedicationChanges };
 
-export type AddMedicationResult = {
+export type MedicationResult = {
   medications: Medication[];
   /** Ana ekranda kısa süre gösterilecek mesaj. */
   notice: string;
 };
+
+const REMINDER_FAILED = 'hatırlatma kurulamadı. Bildirim iznini kontrol edin.';
 
 /**
  * İlaç listeleme, ekleme, güncelleme ve silme. Durum tutmaz: mevcut listeyi alır,
@@ -59,69 +60,147 @@ export class MedicationService {
     return data;
   }
 
-  async add(current: Medication[], input: NewMedication): Promise<AddMedicationResult> {
+  async add(current: Medication[], input: NewMedication): Promise<MedicationResult> {
     assertValidNewMedication(input);
-    const { photoSourceUri, form = DEFAULT_FORM_KIND, ...fields } = input;
-    const id = createId(this.now());
-    const photoFile = await this.copyPhoto(photoSourceUri, id);
+    const { photoSourceUri, ...fields } = input;
+    const now = this.now();
+    const id = createId(now);
+    const photoFile = photoSourceUri ? await this.copyPhoto(photoSourceUri, id) : '';
 
     const medication: Medication = {
       ...fields,
-      form,
       id,
       photoFile,
-      createdAt: this.now().toISOString(),
+      createdAt: now.toISOString(),
+      startDate: this.firstDay(fields, now),
+      pastPlans: [],
     };
     const medications = [...current, medication];
     await this.save(medications, 'İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.');
 
     // Bildirim planlanamasa da ilaç kaydı korunur, ama kullanıcı bunu öğrenir.
-    try {
-      await this.reminders.scheduleMedication(medication);
-      return { medications, notice: 'İlaç kaydedildi' };
-    } catch (error) {
-      logger.error('Bildirim planlanamadı:', error);
-      return {
-        medications,
-        notice: 'İlaç kaydedildi, ancak hatırlatma kurulamadı. Bildirim iznini kontrol edin.',
-      };
-    }
+    const reminded = await this.trySync(medications);
+    return {
+      medications,
+      notice: reminded ? 'İlaç kaydedildi' : `İlaç kaydedildi, ancak ${REMINDER_FAILED}`,
+    };
   }
 
-  /** Alanları günceller; saatler değiştiyse hatırlatmalar yeniden kurulur. */
-  async update(current: Medication[], id: string, changes: MedicationChanges) {
+  /** Verilen alanları günceller. Plan değiştiyse eskisi geçmiş günler için saklanır. */
+  async update(
+    current: Medication[],
+    id: string,
+    changes: MedicationChanges,
+  ): Promise<MedicationResult> {
     const existing = this.findOrThrow(current, id);
+    assertValidChanges(changes);
+    const { photoSourceUri, ...fields } = changes;
+    const now = this.now();
+
     const updated: Medication = {
       ...existing,
-      ...changes,
-      ...(changes.stock !== undefined && { stock: sanitizeStock(changes.stock) }),
+      ...fields,
+      ...this.planAfter(existing, fields, now),
+      // Dosya adı değişir; aynı ad kullanılsaydı ekranda eski fotoğraf önbellekten gelirdi.
+      ...(photoSourceUri !== undefined && {
+        photoFile: photoSourceUri
+          ? await this.copyPhoto(photoSourceUri, `${id}-${now.getTime()}`)
+          : '',
+      }),
     };
     const medications = current.map((item) => (item.id === id ? updated : item));
     await this.save(medications, 'Değişiklik kaydedilemedi. Lütfen tekrar deneyin.');
 
-    await this.reminders.cancelMedication(existing);
-    await this.reminders.scheduleMedication(updated);
-    return medications;
+    // Eski fotoğraf ancak yeni kayıt yazıldıktan sonra silinir.
+    if (updated.photoFile !== existing.photoFile) this.tryDeletePhoto(existing.photoFile);
+    if (!this.affectsReminders(fields)) return { medications, notice: 'Değişiklik kaydedildi' };
+
+    const reminded = (await this.tryCancel(existing)) && (await this.trySync(medications));
+    return {
+      medications,
+      notice: reminded
+        ? 'Değişiklik kaydedildi'
+        : `Değişiklik kaydedildi, ancak ${REMINDER_FAILED}`,
+    };
   }
 
-  /** İlacı siler; hatırlatmaları ve fotoğrafı da kaldırır. Doz geçmişi korunur. */
-  async remove(current: Medication[], id: string) {
+  /** İlacı siler; hatırlatmaları ve fotoğrafı da kaldırır. Doz onayları silinmez. */
+  async remove(current: Medication[], id: string): Promise<MedicationResult> {
     const existing = this.findOrThrow(current, id);
     const medications = current.filter((item) => item.id !== id);
     await this.save(medications, 'İlaç silinemedi. Lütfen tekrar deneyin.');
 
-    try {
-      await this.reminders.cancelMedication(existing);
-      this.photos.deletePhoto(existing.photoFile);
-    } catch (error) {
-      logger.warn('Silinen ilacın hatırlatması veya fotoğrafı kaldırılamadı:', error);
-    }
-    return medications;
+    await this.tryCancel(existing);
+    this.tryDeletePhoto(existing.photoFile);
+    return { medications, notice: 'İlaç silindi' };
   }
 
-  private async copyPhoto(sourceUri: string, medicationId: string) {
+  /** İlk dozun günü; bugünün saatleri geçtiyse süre yarından sayılır. */
+  private firstDay(plan: Pick<DosePlan, 'times' | 'schedule'>, now: Date) {
+    const unlimited: DosePlan = {
+      ...plan,
+      duration: { kind: 'continuous' },
+      startDate: formatDate(now),
+    };
+    return formatDate(nextOccurrence(unlimited, now) ?? now);
+  }
+
+  /** Plan değişikliğinde yeni başlangıç günü ve saklanacak eski plan. */
+  private planAfter(existing: Medication, changes: MedicationChanges, now: Date) {
+    if (!changes.times && !changes.schedule && !changes.duration) return {};
+    const { times, schedule, duration, startDate, pastPlans } = existing;
+    const last = lastDayOf(existing);
+    // Süren bir kürde gün sayısı uzatılırsa başlangıç aynı kalır; biten kür yeniden başlar.
+    const isOngoingCourse = last !== null && formatDate(last) >= formatDate(now);
+    return {
+      startDate: isOngoingCourse
+        ? startDate
+        : this.firstDay(
+            { times: changes.times ?? times, schedule: changes.schedule ?? schedule },
+            now,
+          ),
+      pastPlans: [...pastPlans, { times, schedule, duration, startDate, until: now.toISOString() }],
+    };
+  }
+
+  /** Bildirim metninde veya saatinde geçen alanlar. */
+  private affectsReminders(changes: MedicationChanges) {
+    return (['name', 'dose', 'times', 'schedule', 'duration'] as const).some(
+      (field) => changes[field] !== undefined,
+    );
+  }
+
+  private async trySync(medications: Medication[]) {
     try {
-      return await this.photos.savePhoto(sourceUri, medicationId);
+      await this.reminders.sync(medications);
+      return true;
+    } catch (error) {
+      logger.error('Bildirim planlanamadı:', error);
+      return false;
+    }
+  }
+
+  private async tryCancel(medication: Medication) {
+    try {
+      await this.reminders.cancelMedication(medication);
+      return true;
+    } catch (error) {
+      logger.warn('İlacın hatırlatması kaldırılamadı:', error);
+      return false;
+    }
+  }
+
+  private tryDeletePhoto(photoFile: string) {
+    try {
+      this.photos.deletePhoto(photoFile);
+    } catch (error) {
+      logger.warn('İlacın fotoğrafı kaldırılamadı:', error);
+    }
+  }
+
+  private async copyPhoto(sourceUri: string, fileName: string) {
+    try {
+      return await this.photos.savePhoto(sourceUri, fileName);
     } catch (error) {
       logger.error('Fotoğraf kopyalanamadı:', error);
       throw new StorageError(

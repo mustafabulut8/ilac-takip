@@ -1,4 +1,9 @@
 import { Stack } from 'expo-router';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { Inter_800ExtraBold } from '@expo-google-fonts/inter/800ExtraBold';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -13,10 +18,18 @@ SplashScreen.preventAutoHideAsync();
 
 function AppStack() {
   const { isLoaded } = useMedications();
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+  // Yazı tipi yüklenemezse uygulama sistem yazı tipiyle açılır.
+  const isReady = isLoaded && (fontsLoaded || !!fontError);
 
   useEffect(() => {
-    if (isLoaded) SplashScreen.hideAsync();
-  }, [isLoaded]);
+    if (isReady) SplashScreen.hideAsync();
+  }, [isReady]);
 
   useDoseNotificationTaps(isLoaded);
 
@@ -32,7 +45,12 @@ function AppStack() {
           contentStyle: { backgroundColor: Colors.background },
         }}>
         <Stack.Screen name="index" options={{ title: 'Bugünkü İlaçlarım' }} />
-        <Stack.Screen name="ilac-ekle" options={{ title: 'İlaç Ekle' }} />
+        {/* Sihirbazda kaydırarak geri çıkış, girilen bilgileri sormadan kaybettirirdi. */}
+        <Stack.Screen name="ilac-ekle" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen
+          name="ilac-duzenle/[id]"
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
         <Stack.Screen name="aldim/[id]" options={{ headerShown: false }} />
       </Stack>
     </>

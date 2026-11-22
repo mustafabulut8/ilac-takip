@@ -1,7 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { BigButton } from '@/components/big-button';
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
+
+import { AppText } from './app-text';
+import { IconButton } from './icon-button';
 
 type StepperColumnProps = {
   label: string;
@@ -12,12 +14,25 @@ type StepperColumnProps = {
 };
 
 function StepperColumn({ label, value, onChange, step, max }: StepperColumnProps) {
+  const button = { size: 56, color: Colors.textOnColor, background: Colors.primary };
   return (
     <View style={styles.column}>
-      <Text style={styles.label}>{label}</Text>
-      <BigButton label={`${label} artır`} onPress={() => onChange((value + step) % max)} />
-      <Text style={styles.value}>{String(value).padStart(2, '0')}</Text>
-      <BigButton label={`${label} azalt`} onPress={() => onChange((value - step + max) % max)} />
+      <AppText weight="bold">{label}</AppText>
+      <IconButton
+        icon="plus"
+        accessibilityLabel={`${label} artır`}
+        onPress={() => onChange((value + step) % max)}
+        {...button}
+      />
+      <AppText size="huge" weight="extrabold" maxFontSizeMultiplier={1.3}>
+        {String(value).padStart(2, '0')}
+      </AppText>
+      <IconButton
+        icon="minus"
+        accessibilityLabel={`${label} azalt`}
+        onPress={() => onChange((value - step + max) % max)}
+        {...button}
+      />
     </View>
   );
 }
@@ -45,18 +60,7 @@ const styles = StyleSheet.create({
   },
   column: {
     flex: 1,
+    alignItems: 'center',
     gap: Spacing.two,
-  },
-  label: {
-    color: Colors.text,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  value: {
-    color: Colors.text,
-    fontSize: FontSize.huge,
-    fontWeight: '700',
-    textAlign: 'center',
   },
 });

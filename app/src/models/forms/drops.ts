@@ -4,12 +4,12 @@ export class Drops extends UncountableForm {
   readonly kind = 'drops';
   readonly label = 'Damla';
 
-  doseUnit() {
-    return 'damla';
+  doseUnits() {
+    return ['damla'];
   }
 
   confirmLabel() {
-    return 'DAMLATTIM';
+    return 'Damlattım';
   }
 
   confirmedMessage() {
@@ -20,7 +20,7 @@ export class Drops extends UncountableForm {
     return 'Bu doz damlatıldı';
   }
 
-  confirmAccessibilityLabel(medicationName: string) {
-    return `${medicationName} ilacını damlattım`;
+  override locations() {
+    return ['Sağ göz', 'Sol göz', 'İki göz', 'Kulak', 'Burun'];
   }
 }

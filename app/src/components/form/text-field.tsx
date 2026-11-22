@@ -1,8 +1,9 @@
-import { StyleSheet, TextInput, type KeyboardTypeOptions } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
-import { Colors, FontSize, MinButtonHeight, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, MinButtonHeight, Radius, Spacing } from '@/constants/theme';
+import { AppText } from '@/components/app-text';
 
-import { FormField } from './form-field';
+import { FieldError } from './field-error';
 
 type TextFieldProps = {
   label: string;
@@ -10,33 +11,39 @@ type TextFieldProps = {
   onChangeText: (text: string) => void;
   placeholder: string;
   error?: string;
-  keyboardType?: KeyboardTypeOptions;
-  onLayoutY?: (y: number) => void;
 };
 
 /** Büyük yazılı, hatalıysa kalın kırmızı çerçeveli metin kutusu. */
-export function TextField({ label, error, onLayoutY, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, ...inputProps }: TextFieldProps) {
   return (
-    <FormField label={label} error={error} onLayoutY={onLayoutY}>
+    <View style={styles.field}>
+      <AppText weight="bold">{label}</AppText>
       <TextInput
+        accessibilityLabel={label}
         style={[styles.input, !!error && styles.inputInvalid]}
         placeholderTextColor={Colors.textSecondary}
+        maxLength={60}
         {...inputProps}
       />
-    </FormField>
+      <FieldError message={error} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  field: {
+    gap: Spacing.two,
+  },
   input: {
     minHeight: MinButtonHeight,
     borderWidth: 2,
     borderColor: Colors.border,
     backgroundColor: Colors.card,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.button,
     paddingHorizontal: Spacing.three,
     color: Colors.text,
     fontSize: FontSize.body,
+    fontFamily: FontFamily.regular,
   },
   inputInvalid: {
     borderColor: Colors.danger,

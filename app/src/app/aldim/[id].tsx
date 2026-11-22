@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BigButton } from '@/components/big-button';
+import { PrimaryButton } from '@/components/primary-button';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useDose } from '@/hooks/useDose';
 import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
@@ -39,7 +39,7 @@ export default function TakeDoseScreen() {
     return (
       <SafeAreaView style={styles.message}>
         <Text style={styles.name}>İlaç bulunamadı.</Text>
-        <BigButton label="Ana Ekrana Dön" onPress={goHome} />
+        <PrimaryButton label="Ana Ekrana Dön" onPress={goHome} />
       </SafeAreaView>
     );
   }
@@ -87,7 +87,7 @@ export default function TakeDoseScreen() {
             ✓ {justConfirmed ? form.confirmedMessage() : form.alreadyConfirmedMessage()}
           </Text>
           <Text style={styles.info}>Kalan stok: {medication.stock}</Text>
-          <BigButton label="Ana Ekrana Dön" onPress={goHome} />
+          <PrimaryButton label="Ana Ekrana Dön" onPress={goHome} />
         </View>
       ) : (
         <Pressable

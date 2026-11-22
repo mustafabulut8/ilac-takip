@@ -1,6 +1,6 @@
 import { photoService } from '@/services';
 
-/** Kayıtlı fotoğraf dosya adından ekranda gösterilecek adres. */
-export function useMedicationPhoto(photoFile: string) {
-  return photoService.photoUri(photoFile);
+/** Kayıtlı fotoğraf dosya adından ekranda gösterilecek adres; fotoğraf yoksa null. */
+export function useMedicationPhoto(photoFile: string): string | null {
+  return photoFile ? photoService.photoUri(photoFile) : null;
 }

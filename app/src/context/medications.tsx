@@ -81,11 +81,15 @@ export function MedicationsProvider({
   };
 
   const updateMedication = async (id: string, changes: MedicationChanges) => {
-    setMedications(await services.medications.update(medications, id, changes));
+    const result = await services.medications.update(medications, id, changes);
+    setMedications(result.medications);
+    setNotice(result.notice);
   };
 
   const removeMedication = async (id: string) => {
-    setMedications(await services.medications.remove(medications, id));
+    const result = await services.medications.remove(medications, id);
+    setMedications(result.medications);
+    setNotice(result.notice);
   };
 
   const confirmDose = async (medicationId: string, date: string, time: string) => {

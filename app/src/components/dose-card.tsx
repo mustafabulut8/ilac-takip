@@ -1,83 +1,104 @@
-import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Colors, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
-import type { Dose, DoseStatus } from '@/models';
-import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
+import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';
+import { getMedicationForm, MEAL_TIMING_LABELS, type Dose } from '@/models';
+import { DAY_PERIOD_LABELS, dayPeriodOf } from '@/utils/time';
 
-const STATUS: Record<DoseStatus, { label: string; color: string; textColor: string }> = {
-  bekliyor: { label: 'Bekliyor', color: Colors.pending, textColor: Colors.textOnColor },
-  alindi: { label: 'Alındı', color: Colors.success, textColor: Colors.textOnColor },
-  kacirildi: { label: 'Kaçırıldı', color: Colors.danger, textColor: Colors.textOnColor },
-  yarin: { label: 'Yarın başlıyor', color: Colors.accent, textColor: Colors.textOnAccent },
+import { AppText } from './app-text';
+import { Icon } from './icon';
+import { MedicationPhoto } from './medication-photo';
+import { Pill } from './pill';
+import { PrimaryButton } from './primary-button';
+import { StatusChip, statusLook } from './status-chip';
+
+type DoseCardProps = {
+  dose: Dose;
+  /** Verilmezse kart dokunulamaz (Geçmiş). */
+  onPress?: () => void;
+  /** Sıradaki doz vurgulanır ve onay butonu gösterilir. */
+  isNext?: boolean;
 };
 
-export function DoseCard({ dose, onPress }: { dose: Dose; onPress: () => void }) {
-  const status = STATUS[dose.status];
-  const photoUri = useMedicationPhoto(dose.medication.photoFile);
+export function DoseCard({ dose, onPress, isNext }: DoseCardProps) {
+  const { medication, time } = dose;
+  const look = statusLook(dose);
+  const meal = medication.mealTiming === 'any' ? '' : MEAL_TIMING_LABELS[medication.mealTiming];
+  const detail = [medication.dose, meal].filter(Boolean).join(' · ');
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${dose.medication.name}, saat ${dose.time}, ${status.label}`}
-      disabled={dose.status === 'yarin'}
-      onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-      <Image
-        source={photoUri}
-        style={styles.photo}
-        contentFit="cover"
-        accessibilityLabel={`${dose.medication.name} fotoğrafı`}
-      />
-      <View style={styles.details}>
-        <Text style={styles.name}>{dose.medication.name}</Text>
-        <Text style={styles.time}>{dose.time}</Text>
-        <Text style={[styles.status, { backgroundColor: status.color, color: status.textColor }]}>
-          {status.label}
-        </Text>
-      </View>
-    </Pressable>
+    <View style={[styles.card, isNext && styles.next]}>
+      {isNext && <View style={styles.accentBar} />}
+      <Pressable
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessible
+        accessibilityLabel={`${medication.name}, ${detail}, saat ${time}, ${look.label}`}
+        disabled={!onPress || dose.status === 'yarin'}
+        onPress={onPress}
+        style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+        <MedicationPhoto medication={medication} />
+        <View style={styles.details}>
+          {isNext && (
+            <Pill label="Sıradaki doz" color={Colors.text} background={Colors.accentSoft} />
+          )}
+          <AppText size="subtitle" weight="bold">
+            {medication.name}
+          </AppText>
+          {detail !== '' && <AppText color={Colors.textSecondary}>{detail}</AppText>}
+          <View style={styles.time}>
+            <Icon name="clock" size={20} color={Colors.primary} />
+            <AppText weight="semibold">
+              {time} · {DAY_PERIOD_LABELS[dayPeriodOf(time)]}
+            </AppText>
+          </View>
+          <StatusChip dose={dose} />
+        </View>
+      </Pressable>
+      {isNext && onPress && (
+        <PrimaryButton
+          label={`Şimdi ${getMedicationForm(medication.form).confirmLabel().toLocaleLowerCase('tr-TR')}`}
+          icon="check"
+          onPress={onPress}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     gap: Spacing.three,
-    padding: Spacing.three,
+    padding: Spacing.screen,
     borderRadius: Radius.card,
     backgroundColor: Colors.card,
     boxShadow: Shadow.card,
   },
+  next: {
+    overflow: 'hidden',
+    paddingTop: Spacing.screen + 6,
+    boxShadow: Shadow.activeCard,
+  },
+  accentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: Colors.accent,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+  },
   pressed: {
     opacity: 0.7,
   },
-  photo: {
-    width: 110,
-    height: 110,
-    borderRadius: Spacing.two,
-    backgroundColor: Colors.surface,
-  },
   details: {
     flex: 1,
-    gap: Spacing.one,
-    alignItems: 'flex-start',
-  },
-  name: {
-    color: Colors.text,
-    fontSize: FontSize.body,
-    fontWeight: '700',
+    gap: 6,
   },
   time: {
-    color: Colors.text,
-    fontSize: FontSize.body,
-  },
-  status: {
-    fontSize: FontSize.small,
-    fontWeight: '700',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.pill,
-    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });

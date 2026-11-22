@@ -10,4 +10,6 @@ export type Dose = {
   /** HH:mm */
   time: string;
   status: DoseStatus;
+  /** Yalnızca alınmış dozda: onay anı (ISO). */
+  takenAt?: string;
 };

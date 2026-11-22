@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { FlatList, Linking, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BigButton } from '@/components/big-button';
+import { PrimaryButton } from '@/components/primary-button';
+import { SecondaryButton } from '@/components/secondary-button';
 import { DoseCard } from '@/components/dose-card';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { useMedications } from '@/hooks/useMedications';
@@ -34,9 +35,9 @@ export default function HomeScreen() {
           <Text style={styles.warningText}>
             Bildirim izni kapalı. İzin vermezseniz ilaç saatinde hatırlatma alamazsınız.
           </Text>
-          <BigButton
+          <SecondaryButton
             label="Ayarları Aç"
-            color={Colors.danger}
+            variant="danger"
             onPress={() => Linking.openSettings()}
           />
         </View>
@@ -77,10 +78,10 @@ export default function HomeScreen() {
             {testMessage}
           </Text>
         )}
-        <BigButton label="İlaç Ekle" onPress={() => router.push('/ilac-ekle')} />
-        <BigButton
+        <PrimaryButton label="İlaç Ekle" onPress={() => router.push('/ilac-ekle')} />
+        <SecondaryButton
           label="1 Dakika Sonra Test Bildirimi"
-          color={Colors.pending}
+          variant="neutral"
           onPress={sendTestNotification}
         />
       </View>
