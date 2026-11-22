@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Radius } from '@/constants/theme';
 
 import { AppText } from './app-text';
 import { Icon, type IconName } from './icon';

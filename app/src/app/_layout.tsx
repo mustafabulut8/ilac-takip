@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/error-boundary';
-import { Colors, FontSize } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { MedicationsProvider } from '@/context/medications';
 import { useDoseNotificationTaps } from '@/hooks/useDoseNotificationTaps';
 import { useMedications } from '@/hooks/useMedications';
@@ -38,20 +38,12 @@ function AppStack() {
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          // Renk verilmezse başlık iOS'ta saydam olur ve ekranın üstünü kapatır.
-          headerStyle: { backgroundColor: Colors.background },
-          headerTintColor: Colors.primary,
-          headerTitleStyle: { fontSize: FontSize.body, fontWeight: '700' },
+          headerShown: false,
           contentStyle: { backgroundColor: Colors.background },
         }}>
-        <Stack.Screen name="index" options={{ title: 'Bugünkü İlaçlarım' }} />
         {/* Sihirbazda kaydırarak geri çıkış, girilen bilgileri sormadan kaybettirirdi. */}
-        <Stack.Screen name="ilac-ekle" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen
-          name="ilac-duzenle/[id]"
-          options={{ headerShown: false, gestureEnabled: false }}
-        />
-        <Stack.Screen name="aldim/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="ilac-ekle" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="ilac-duzenle/[id]" options={{ gestureEnabled: false }} />
       </Stack>
     </>
   );
