@@ -69,6 +69,7 @@ export function DosePrompt({
           icon="clock"
           color={Colors.text}
           background={Colors.accentSoft}
+          align="center"
         />
         <IconButton icon="close" accessibilityLabel="Kapat" onPress={onClose} />
       </View>
@@ -98,14 +99,13 @@ export function DosePrompt({
         <AppText size="title" weight="bold" center accessibilityRole="header">
           {medication.name}
         </AppText>
-        <View style={styles.center}>
-          <Pill
-            label={[medication.dose, form.label].filter(Boolean).join(' · ')}
-            icon={form.kind}
-            color={Colors.primary}
-            background={Colors.primarySoft}
-          />
-        </View>
+        <Pill
+          label={[medication.dose, form.label].filter(Boolean).join(' · ')}
+          icon={form.kind}
+          color={Colors.primary}
+          background={Colors.primarySoft}
+          align="center"
+        />
         {medication.mealTiming !== 'any' && (
           <Card style={styles.usage}>
             <Icon name="meal" size={30} color={Colors.primary} />
@@ -181,9 +181,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     bottom: 12,
-  },
-  center: {
-    alignItems: 'center',
   },
   usage: {
     flexDirection: 'row',

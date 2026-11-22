@@ -5,7 +5,13 @@ import { Colors, Radius, Spacing } from '@/constants/theme';
 import { AppText } from './app-text';
 import { Icon, type IconName } from './icon';
 
-type PillProps = { label: string; icon?: IconName; color?: string; background?: string };
+type PillProps = {
+  label: string;
+  icon?: IconName;
+  color?: string;
+  background?: string;
+  align?: 'flex-start' | 'center';
+};
 
 /** Tam yuvarlak etiket. */
 export function Pill({
@@ -13,9 +19,10 @@ export function Pill({
   icon,
   color = Colors.textSecondary,
   background = Colors.neutralSoft,
+  align = 'flex-start',
 }: PillProps) {
   return (
-    <View style={[styles.pill, { backgroundColor: background }]}>
+    <View style={[styles.pill, { backgroundColor: background, alignSelf: align }]}>
       {icon && <Icon name={icon} size={18} color={color} />}
       <AppText size="small" weight="bold" color={color} style={styles.label}>
         {label}
@@ -28,7 +35,6 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: Spacing.one,
     maxWidth: '100%',
     paddingHorizontal: 12,

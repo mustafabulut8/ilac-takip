@@ -13,10 +13,15 @@ export function PhotoStep({ wizard }: { wizard: MedicationWizard }) {
   return (
     <>
       <StepTitle title="İlacın kutusunun fotoğrafını çekin" />
-      <DraftPhoto draft={draft} height={288} />
+      <DraftPhoto draft={draft} height={220} />
       <PrimaryButton label="Fotoğraf çek" icon="camera" onPress={takePhoto} />
       <SecondaryButton label="Galeriden seç" icon="gallery" onPress={pickPhoto} />
-      <SecondaryButton label="Fotoğrafsız devam et" variant="neutral" compact onPress={skipPhoto} />
+      <SecondaryButton
+        label={draft.photo || draft.photoFile ? 'Fotoğrafı kaldır' : 'Fotoğrafsız devam et'}
+        variant="neutral"
+        compact
+        onPress={skipPhoto}
+      />
     </>
   );
 }

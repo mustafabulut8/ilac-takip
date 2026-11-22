@@ -55,6 +55,7 @@ export function DoseDone({ medication, takenAt, justConfirmed, nextDose, onHome 
               icon="check"
               color={Colors.success}
               background={Colors.successSoft}
+              align="center"
             />
           </View>
           <View style={styles.medication}>

@@ -13,25 +13,18 @@ import { Colors } from '@/constants/theme';
 import { MedicationsProvider } from '@/context/medications';
 import { useDoseNotificationTaps } from '@/hooks/useDoseNotificationTaps';
 import { useMedications } from '@/hooks/useMedications';
+import { useReminderSync } from '@/hooks/useReminderSync';
 
 SplashScreen.preventAutoHideAsync();
 
 function AppStack() {
   const { isLoaded } = useMedications();
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
-  });
-  // Yazı tipi yüklenemezse uygulama sistem yazı tipiyle açılır.
-  const isReady = isLoaded && (fontsLoaded || !!fontError);
-
   useEffect(() => {
-    if (isReady) SplashScreen.hideAsync();
-  }, [isReady]);
+    if (isLoaded) SplashScreen.hideAsync();
+  }, [isLoaded]);
 
   useDoseNotificationTaps(isLoaded);
+  useReminderSync();
 
   return (
     <>
@@ -50,6 +43,16 @@ function AppStack() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+  // Yazı tipi gelmeden çizilen metinler kalınlığını sonradan almıyor; açılış ekranı bu sırada
+  // açık kalır. Yazı tipi yüklenemezse uygulama sistem yazı tipiyle açılır.
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <ErrorBoundary>
       <MedicationsProvider>

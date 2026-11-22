@@ -55,7 +55,7 @@ export function DoseCard({ dose, onPress, isNext }: DoseCardProps) {
       </Pressable>
       {isNext && onPress && (
         <PrimaryButton
-          label={`Şimdi ${getMedicationForm(medication.form).confirmLabel().toLocaleLowerCase('tr-TR')}`}
+          label={`Şimdi ${getMedicationForm(medication.form).confirmLabel()}`}
           icon="check"
           onPress={onPress}
         />

@@ -31,17 +31,19 @@ export function SettingsRow({ icon, label, value, onPress, soon, danger }: Setti
       <View style={[styles.tile, danger && styles.tileDanger]}>
         <Icon name={icon} size={24} color={danger ? Colors.danger : Colors.primary} />
       </View>
-      <View style={styles.texts}>
-        <AppText weight="semibold" color={color}>
-          {label}
-        </AppText>
-        {value && (
-          <AppText size="small" color={Colors.textSecondary}>
-            {value}
+      <View style={styles.body}>
+        <View style={styles.texts}>
+          <AppText weight="semibold" color={color}>
+            {label}
           </AppText>
-        )}
+          {value && (
+            <AppText size="small" color={Colors.textSecondary}>
+              {value}
+            </AppText>
+          )}
+        </View>
+        {soon && <Pill label="Yakında" align="center" />}
       </View>
-      {soon && <Pill label="Yakında" />}
       {onPress && !soon && <Icon name="forward" size={20} color={Colors.textSecondary} />}
     </Pressable>
   );
@@ -69,7 +71,16 @@ const styles = StyleSheet.create({
   tileDanger: {
     backgroundColor: Colors.dangerSoft,
   },
-  texts: {
+  // Yazı büyüyünce "Yakında" etiketi alt satıra geçer, ad harf arasından bölünmez.
+  body: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.one,
+  },
+  texts: {
+    flexShrink: 1,
   },
 });

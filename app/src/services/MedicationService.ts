@@ -54,10 +54,15 @@ export class MedicationService {
   async load(): Promise<StoredData> {
     const data = await this.storage.load();
     // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
-    this.reminders.sync(data.medications).catch((error) => {
-      logger.error('Bildirimler eşitlenemedi:', error);
-    });
+    this.syncReminders(data.medications);
     return data;
+  }
+
+  /** Hatırlatmaları arka planda eşitler; izin yoksa uygulama çalışmaya devam eder. */
+  syncReminders(medications: Medication[]) {
+    this.reminders.sync(medications).catch((error) => {
+      logger.warn('Bildirimler eşitlenemedi:', error.cause ?? error);
+    });
   }
 
   async add(current: Medication[], input: NewMedication): Promise<MedicationResult> {
