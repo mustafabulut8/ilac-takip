@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Banner } from '@/components/banner';
@@ -12,12 +12,13 @@ import { SecondaryButton } from '@/components/secondary-button';
 import { SectionHeader } from '@/components/section-header';
 import { TabScreen } from '@/components/tab-screen';
 import { Colors, MinTouchSize, Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/useAuth';
 import { useMedications } from '@/hooks/useMedications';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useTodayDoses } from '@/hooks/useTodayDoses';
 import type { Dose } from '@/models';
 import { formatLongDate } from '@/utils/date';
-import { DAY_PERIOD_LABELS, DAY_PERIOD_RANGES, greetingOf } from '@/utils/time';
+import { DAY_PERIOD_LABELS, DAY_PERIOD_RANGES, greetingFor } from '@/utils/time';
 
 function openDose({ medication, time, date }: Dose) {
   router.push({ pathname: '/aldim/[id]', params: { id: medication.id, time, date } });
@@ -26,30 +27,31 @@ function openDose({ medication, time, date }: Dose) {
 export default function TodayScreen() {
   const { medications, storageWarnings } = useMedications();
   const { now, doses, groups, progress, nextDose } = useTodayDoses();
-  const permissionDenied = useNotificationPermission();
+  const { profile } = useAuth();
+  const permission = useNotificationPermission();
 
   return (
     <TabScreen title="Bugün">
       {storageWarnings.map((warning) => (
         <Banner key={warning} tone="danger" icon="warning" title={warning} />
       ))}
-      {permissionDenied && (
+      {permission.missing && (
         <Banner
           tone="danger"
           icon="bell"
           title="Bildirim izni kapalı"
           detail="İzin vermezseniz ilaç saatinde hatırlatma alamazsınız.">
           <SecondaryButton
-            label="Ayarları aç"
+            label={permission.status === 'denied' ? 'Ayarları aç' : 'İzin ver'}
             variant="danger"
-            onPress={() => Linking.openSettings()}
+            onPress={permission.request}
           />
         </Banner>
       )}
 
       <View style={styles.greeting}>
         <AppText size="title" weight="bold">
-          {greetingOf(now)}
+          {greetingFor(now, profile?.name)}
         </AppText>
         <View style={styles.dateRow}>
           <View style={styles.date}>

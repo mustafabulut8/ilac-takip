@@ -1,29 +1,17 @@
-import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Colors, Spacing } from '@/constants/theme';
 
-import { IconButton } from './icon-button';
 import { NoticeBanner } from './notice-banner';
 import { ScreenHeader } from './screen-header';
+import { SettingsButton } from './settings-button';
 
-/** Alt menüdeki ekranların iskeleti: başlık, profil düğmesi, kaydırılan içerik. */
+/** Alt menüdeki ekranların iskeleti: başlık, Ayarlar dişlisi, kaydırılan içerik. */
 export function TabScreen({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View style={styles.container}>
-      <ScreenHeader
-        title={title}
-        right={
-          <IconButton
-            icon="person"
-            accessibilityLabel="Ayarlar"
-            color={Colors.textOnColor}
-            background={Colors.primary}
-            onPress={() => router.push('/ayarlar')}
-          />
-        }
-      />
+      <ScreenHeader title={title} right={<SettingsButton />} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <NoticeBanner />
         {children}
