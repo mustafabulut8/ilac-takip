@@ -294,4 +294,6 @@ Mevcut tasarım diliyle (tema, `AppText`, kart ve buton bileşenleri) basitçe y
 | Sade mod | Yer yer 18 ve 16 px yazı | En küçük yazı 20pt |
 | Aile paneli | Kırmızı uyarı kartında "Annemi ara" | Düğme yok |
 | Tüm ekranlar | "%33" gibi yüzde yazıları | Kullanılmaz; yalnızca "1 / 3 ilaç alındı" |
+| Rol seçimi | Rozet ve "Aa" dairesi seçili kartla aynı `#E6F2F2` zeminde | Seçili kart zemini `#E6F2F2` kalır; rozet ve "Aa" dairesi beyaz zeminli, 1px `#0F6E6E` kenarlıklı |
+| Ayarlar - Hesap | E-posta adresi kesilir (`truncate`) | Kesilmez, gerekirse alt satıra geçer |
 

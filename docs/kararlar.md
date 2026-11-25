@@ -253,3 +253,20 @@ Projede alınan teknik kararlar ve gerekçeleri.
 - 2. turda (Supabase) hesap, rol ve davet kodu eşleşmesi gerekir.
 - Sade modda ilaç ekleme ve düzenleme düğmeleri gizlenir; aynı sihirbaz Aile panelinde kullanılır.
 - 14. karardaki "Selamlama" ve "Hesabı sil, Çıkış" satırları hesap gelince değişecek: Bugün ekranı kullanıcıyı adıyla selamlar, Ayarlar'da hesap bilgisi ve çıkış yer alır.
+
+## 16. Supabase anahtarları ve veri bölgesi
+
+**Tarih:** 26 Kasım 2026
+
+**Karar:**
+
+- Uygulamada yalnızca publishable anahtar bulunur. Bu anahtar herkese açık olabilir; veriyi RLS (satır düzeyinde güvenlik) korur. Secret (`service_role`) anahtar uygulamaya ve depoya asla girmez.
+- Supabase projesi Europe (AB) bölgesinde, ücretsiz planda; RLS yeni tablolarda otomatik açık.
+- Adres ve anahtar `app/.env` dosyasındadır ve commit edilmez. Depoda yalnızca boş değerli `app/.env.example` bulunur. Değerler kodda yalnızca `src/config.ts` içinde okunur.
+
+**Gerekçe:** `EXPO_PUBLIC_` ile başlayan değişkenler uygulama paketine gömülür ve paketten okunabilir. Bu yüzden pakete yalnızca açık olması sakıncasız anahtar konur; erişimi anahtar değil, her tablodaki RLS kuralları sınırlar. Secret anahtar RLS'yi atladığı için yalnızca sunucu tarafında (Edge Function sırrı) kullanılabilir.
+
+**KVKK notu:** Prototipte test verisi kullanıldığı için sunucu AB'dedir. Gerçek kullanımda veriler Türkiye'de barındırılmalı ya da KVKK 9. madde uyarınca standart sözleşme yapılıp Kurum'a bildirilmelidir.
+
+**Etkisi:** Her yeni tabloya RLS kuralı yazılmadan veri açılmaz; 2. turda tablolar kurulurken kurallar da birlikte yazılır ve test edilir.
+
