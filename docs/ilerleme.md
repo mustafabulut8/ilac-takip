@@ -1,10 +1,18 @@
 # İlerleme
 
-**Son güncelleme:** 23 Kasım 2026
+**Son güncelleme:** 25 Kasım 2026
 
-## Bugün Tamamlananlar
+## Bugün Tamamlananlar (25 Kasım)
 
-1. tur arayüz entegrasyonu `feature/arayuz-tur1` dalında; main'e birleştirilmedi. Önceki hâli `v0.2-tema` etiketinde.
+- **1. tur main'de:** Simülatörde çalıştı ve hocaya sunuldu. `feature/arayuz-tur1` main'e birleştirildi, dal silindi, `v0.3-arayuz-tur1` etiketi kondu.
+- **Hocanın yeni istekleri:**
+  - Bugün ekranında kullanıcıyı adıyla selamlama ("Günaydın, Ayşe Hanım" gibi).
+  - Ayarlar'da hesap bilgisi ve çıkış.
+- **Onaylanan yeni yapı (`kararlar.md` 15. karar):** Üç rol: Sade mod (yaşlı), Standart mod ve Aile paneli. Sade modda ilaçları aile ekler. Hem Sade hem Standart mod kullanıcısı davet koduyla aileye bağlanabilir.
+
+## Önceki Tamamlananlar (23 Kasım)
+
+1. tur arayüz entegrasyonu. Önceki hâli `v0.2-tema` etiketinde.
 
 - **Ekranlar:** Üç sekmeli alt menü, Bugün, İlaç zamanı ve başarı, 9 adımlı sihirbaz (ekleme ve düzenleme), İlaçlarım (düzenle, sil, "Bitmek üzere"), Geçmiş, Ayarlar görünümü. Görseller: `docs/ekranlar/tur1/`.
 - **Veri:** On ilaç formu, yarım tablet, sıklık ve süre, aç/tok, stok sınırı. `schemaVersion` 2 göçü; eski kayıt simülatörde denendi, alanları korundu.
@@ -52,10 +60,11 @@
 
 ## Yarın Yapılacaklar
 
-1. **Elle test** (yukarıdaki liste), sonra dalı main'e birleştirme kararı. Telefona kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
-2. **24 Kasım Salı ders hazırlığı:** Sistem Mimarisi (#17); `moduler-yapi.md` diyagramları kullanılabilir.
+1. **Elle test** (yukarıdaki liste) telefonda. Kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
+2. **2. tur planı:** Supabase hesabı, üç rol, davet kodu, Sade modda ilaç ekleme düğmelerinin gizlenmesi, adla selamlama, Ayarlar'da hesap ve çıkış.
 
 ## Sonraki İşler
 
-- Kalan 6 ekranın tasarımı ve 2. tur (Supabase).
+- Kalan 6 ekranın tasarımı; Aile paneli ve mod seçimi ekranları eklenecek.
+- 2. tur (Supabase): hesap, roller, davet koduyla eşleşme.
 - 3. tur: İlaç bilgisi.

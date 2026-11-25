@@ -64,6 +64,8 @@ Projede alınan teknik kararlar ve gerekçeleri.
 
 **Etkisi:** Eşleşmeye bağlı özellikler (aile bildirimi, aile paneli) eşleşme yoksa kapalıdır; hatırlatma, onay ve geçmiş bundan etkilenmez.
 
+> **Güncelleme (25 Kasım 2026):** 15. kararla daraltıldı. Bu karar Standart mod için geçerlidir; Sade modda ilaçları aile ekler.
+
 ## 4. İlaç ekleme 9 adımlı sihirbazla yapılır
 
 **Tarih:** 22 Kasım 2026
@@ -228,3 +230,26 @@ Projede alınan teknik kararlar ve gerekçeleri.
 | İkonlar | `expo-symbols` | Zaten kurulu. |
 | Yazı tipi | `@expo-google-fonts/inter`, dört kalınlık | Stitch Inter kullanıyor; yalnızca JavaScript varlığı, yeniden derleme istemez. |
 | Yazı tipi yüklenirken | Kök düzen ekran çizmez, açılış ekranı durur | Önce çizilen metinler kalınlığı sonradan almıyordu. |
+
+## 15. Üç rol: Sade mod, Standart mod ve Aile paneli
+
+**Tarih:** 25 Kasım 2026
+
+**Karar:** Hocanın 1. tur sunumundan sonra onaylanan yapıya göre uygulamada üç rol olacak:
+
+| Rol | Kim kullanır | İlacı kim ekler |
+| --- | --- | --- |
+| Sade mod | Yaşlı kullanıcı | Aile, Aile panelinden |
+| Standart mod | Kendi ilacını yönetebilen kullanıcı | Kullanıcının kendisi (3. karar) |
+| Aile paneli | Aile üyesi | Bağlı olduğu Sade mod kullanıcısı için aile üyesi |
+
+- Hem Sade hem Standart mod kullanıcısı **davet koduyla** aileye bağlanabilir.
+- Sade modda kullanıcı ilaç eklemez; hatırlatma, onay ve geçmiş ekranlarını kullanır.
+
+**Gerekçe:** Teknolojiyle arası iyi olmayan yaşlı kullanıcı için dokuz adımlı sihirbaz bile yük olabilir; ilaç girişini aileye bırakmak hata payını düşürür. Kendi ilacını yönetebilen kullanıcı ise aileye bağlı olmadan Standart modda kullanmaya devam eder, bu yüzden 3. karar o mod için geçerli kalır.
+
+**Etkisi:**
+
+- 2. turda (Supabase) hesap, rol ve davet kodu eşleşmesi gerekir.
+- Sade modda ilaç ekleme ve düzenleme düğmeleri gizlenir; aynı sihirbaz Aile panelinde kullanılır.
+- 14. karardaki "Selamlama" ve "Hesabı sil, Çıkış" satırları hesap gelince değişecek: Bugün ekranı kullanıcıyı adıyla selamlar, Ayarlar'da hesap bilgisi ve çıkış yer alır.
