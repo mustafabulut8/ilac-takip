@@ -43,6 +43,8 @@ export type NotificationsApi = Pick<
   | 'clearLastNotificationResponseAsync'
 >;
 
+export type NotificationPermissionStatus = 'granted' | 'undetermined' | 'denied';
+
 /**
  * Yerel ilaç hatırlatmaları: izin, günlük planlama, kayıtlı veriyle eşitleme ve
  * bildirim tarihini platformdan bağımsız hale getirme. Ağ gerektirmez.
@@ -100,6 +102,16 @@ export class NotificationService {
         shouldSetBadge: false,
       }),
     });
+  }
+
+  /**
+   * İzin durumu: verildi, henüz sorulmadı (veya yeniden sorulabilir) ya da reddedildi.
+   * Reddedildiyse izin yalnızca telefonun Ayarlar'ından açılabilir.
+   */
+  async permissionStatus(): Promise<NotificationPermissionStatus> {
+    const { granted, canAskAgain } = await this.api.getPermissionsAsync();
+    if (granted) return 'granted';
+    return canAskAgain ? 'undetermined' : 'denied';
   }
 
   async hasPermission() {

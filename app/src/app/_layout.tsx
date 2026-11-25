@@ -10,22 +10,32 @@ import { useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors } from '@/constants/theme';
+import { AuthProvider } from '@/context/auth';
 import { MedicationsProvider } from '@/context/medications';
+import { useAuth } from '@/hooks/useAuth';
 import { useDoseNotificationTaps } from '@/hooks/useDoseNotificationTaps';
 import { useMedications } from '@/hooks/useMedications';
 import { useReminderSync } from '@/hooks/useReminderSync';
+import { HOME_ROUTES } from '@/utils/routes';
 
 SplashScreen.preventAutoHideAsync();
 
 function AppStack() {
   const { isLoaded } = useMedications();
+  const { isLoading: authLoading, homeRoute } = useAuth();
+  const ready = isLoaded && !authLoading;
   useEffect(() => {
-    if (isLoaded) SplashScreen.hideAsync();
-  }, [isLoaded]);
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
 
-  useDoseNotificationTaps(isLoaded);
+  useDoseNotificationTaps(ready);
   useReminderSync();
 
+  const signedIn = ready && homeRoute !== HOME_ROUTES.guest && homeRoute !== HOME_ROUTES.noProfile;
+  const isHome = (route: string) => ready && homeRoute === route;
+
+  // Korumalı gruplar: koşulu sağlanmayan ekran açılmaz, kullanıcı kendi ana ekranına
+  // yönlendirilir. Oturum açılınca, kapanınca veya rol değişince yönlendirme kendiliğinden olur.
   return (
     <>
       <StatusBar style="dark" />
@@ -34,9 +44,39 @@ function AppStack() {
           headerShown: false,
           contentStyle: { backgroundColor: Colors.background },
         }}>
-        {/* Sihirbazda kaydırarak geri çıkış, girilen bilgileri sormadan kaybettirirdi. */}
-        <Stack.Screen name="ilac-ekle" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="ilac-duzenle/[id]" options={{ gestureEnabled: false }} />
+        <Stack.Protected guard={isHome(HOME_ROUTES.standart)} redirectTo={homeRoute}>
+          <Stack.Screen name="(tabs)" />
+          {/* Sihirbazda kaydırarak geri çıkış, girilen bilgileri sormadan kaybettirirdi. */}
+          <Stack.Screen name="ilac-ekle" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="ilac-duzenle/[id]" options={{ gestureEnabled: false }} />
+        </Stack.Protected>
+        <Stack.Protected guard={isHome(HOME_ROUTES.sade)} redirectTo={homeRoute}>
+          <Stack.Screen name="sade" />
+        </Stack.Protected>
+        <Stack.Protected guard={isHome(HOME_ROUTES.aile)} redirectTo={homeRoute}>
+          <Stack.Screen name="aile" />
+        </Stack.Protected>
+        <Stack.Protected
+          guard={signedIn && homeRoute !== HOME_ROUTES.onboarding}
+          redirectTo={homeRoute}>
+          <Stack.Screen name="aldim/[id]" />
+          <Stack.Screen name="ayarlar" />
+          <Stack.Screen name="kullanim-bicimi" />
+        </Stack.Protected>
+        <Stack.Protected guard={isHome(HOME_ROUTES.onboarding)} redirectTo={homeRoute}>
+          <Stack.Screen name="bildirim-izni" options={{ gestureEnabled: false }} />
+        </Stack.Protected>
+        <Stack.Protected guard={isHome(HOME_ROUTES.noProfile)} redirectTo={homeRoute}>
+          <Stack.Screen name="profil-hatasi" />
+        </Stack.Protected>
+        <Stack.Protected guard={!ready || homeRoute === HOME_ROUTES.guest} redirectTo={homeRoute}>
+          <Stack.Screen name="hos-geldiniz" />
+          <Stack.Screen name="kayit" />
+          <Stack.Screen name="giris" />
+          <Stack.Screen name="sifremi-unuttum" />
+        </Stack.Protected>
+        {/* Kayıttan ve Ayarlar'dan açılır; oturumdan bağımsızdır. */}
+        <Stack.Screen name="kvkk" />
       </Stack>
     </>
   );
@@ -55,9 +95,11 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <MedicationsProvider>
-        <AppStack />
-      </MedicationsProvider>
+      <AuthProvider>
+        <MedicationsProvider>
+          <AppStack />
+        </MedicationsProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
