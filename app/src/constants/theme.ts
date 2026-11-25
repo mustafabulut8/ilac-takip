@@ -29,6 +29,8 @@ export const Colors = {
   warningIcon: '#FFE082',
   accentSoft: '#9EEDED',
   primarySoft: '#E6F4F3',
+  // Rol seçiminde seçili kartın zemini (arayuz-tasarimi.md, 2. tur farkları).
+  selectedSoft: '#E6F2F2',
   neutralSoft: '#F0EDED',
   neutralStrong: '#EAE7E7',
   hairline: '#DDD9D9',
@@ -43,8 +45,13 @@ export const Colors = {
 export const FontSize = {
   small: 16,
   body: 18,
+  // Sade modda en küçük yazı 20pt (arayuz-tasarimi.md, 2. tur farkları).
+  large: 20,
   subtitle: 22,
+  heading: 26,
+  action: 28,
   title: 30,
+  display: 34,
   huge: 44,
 } as const;
 
