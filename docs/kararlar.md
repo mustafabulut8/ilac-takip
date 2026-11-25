@@ -270,3 +270,35 @@ Projede alınan teknik kararlar ve gerekçeleri.
 
 **Etkisi:** Her yeni tabloya RLS kuralı yazılmadan veri açılmaz; 2. turda tablolar kurulurken kurallar da birlikte yazılır ve test edilir.
 
+## 17. Prototipte e-posta doğrulaması kapalı
+
+**Tarih:** 26 Kasım 2026
+
+**Karar:** Supabase'de "Confirm email" kapalıdır. Kayıt olan kullanıcı e-postasını doğrulamadan hemen oturum açar.
+
+**Gerekçe:**
+
+- Yaşlı kullanıcının kayıt sırasında e-postasına gidip bağlantıya basması zor ve akışı yarıda bırakır.
+- Ücretsiz planda Supabase'in e-posta gönderme sınırı çok düşüktür (saatte birkaç e-posta); testte kayıtlar takılırdı.
+- Prototipte test verisi kullanılıyor (16. karar).
+
+**Riskler ve gerçek kullanımda yapılacaklar:** Başkasının e-postasıyla hesap açılabilir ve yanlış yazılan e-posta fark edilmez. Gerçek kullanımda doğrulama açılmalı, kendi SMTP sunucusu bağlanmalı ve kayıt ekranına "E-postanızı doğrulayın" adımı eklenmelidir. `AuthService.signUp`, oturum açılmazsa (doğrulama açıksa böyle olur) kullanıcıya "Lütfen giriş yapmayı deneyin" der; uygulama çökmez.
+
+## 18. Hesap, oturum ve rol yönlendirmesi
+
+**Tarih:** 26 Kasım 2026
+
+**Karar:**
+
+- **Profil tablosu:** `profiles` (ad, rol). Satırı kayıt sırasında veritabanındaki tetikleyici, kayıtta gönderilen ad ve rolden oluşturur; uygulama profil eklemez. RLS ile kullanıcı yalnızca kendi satırını okur ve yalnızca ad ile rolü değiştirebilir.
+- **Oturum:** Supabase istemcisi oturumu AsyncStorage'da saklar ve uygulama öndeyken yeniler. Çıkış yalnızca o telefondaki oturumu kapatır (`scope: 'local'`).
+- **Profilin cihazdaki kopyası:** Profil `profile` anahtarıyla AsyncStorage'a da yazılır. İnternet yokken aynı kullanıcının kopyası kullanılır; böylece yaşlı kullanıcı internetsiz açtığında da kendi ana ekranını görür. Çıkışta kopya silinir.
+- **Yönlendirme:** Ana ekranı saf `homeRouteOf` fonksiyonu seçer (oturum yok → rol seçimi; sade → Sade ana ekran; standart → Bugün; aile → Aile ekranı; yeni kayıt → önce Bildirim İzni). Ekranlar Expo Router'ın `Stack.Protected` gruplarıyla korunur; giriş, çıkış ve rol değişince yönlendirme kendiliğinden olur.
+- **Şifre:** Uygulamada en az 8 karakter istenir (sunucuda en az 6). Hata mesajları `AuthError` ile Türkçeye çevrilir: yanlış şifre, kayıtlı e-posta, zayıf şifre, internet yok, çok fazla deneme.
+- **Şifremi unuttum:** Adresin kayıtlı olup olmadığı söylenmez; başkasının hesabı böyle sorgulanamaz.
+- **Kod adları:** Proje kuralı gereği kod İngilizcedir. İstenen metotlar: `kayitOl` → `signUp`, `girisYap` → `signIn`, `cikisYap` → `signOut`, `sifreSifirla` → `resetPassword`, `mevcutProfil` → `currentProfile`. Veritabanı sütunları Türkçedir (`ad`, `rol`, `olusturma_zamani`); servis bunları `name`, `role`, `createdAt` alanlarına çevirir.
+
+**Sade mod ana ekranı:** Tek bir doz gösterilir (`DoseService.focusDose`): saati gelmiş ama alınmamış en son doz, yoksa sıradaki doz. Yeni bir dozun saati gelince önceki kaçırılan doz ekrandan çekilir; Geçmiş'te kaçırıldı olarak kalır. İlerleme yüzdesiz yazılır ("Bugün 1 / 3 ilaç alındı"), en küçük yazı 20pt.
+
+**Ertelenenler:** Uygulama içi yeni şifre ekranı, hesap silme (sunucu tarafında yapılmalı), "Bu dozu atla" ve profil düzenleme.
+

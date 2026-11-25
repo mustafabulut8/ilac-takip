@@ -1,8 +1,20 @@
 # İlerleme
 
-**Son güncelleme:** 25 Kasım 2026
+**Son güncelleme:** 26 Kasım 2026
 
-## Bugün Tamamlananlar (25 Kasım)
+## Bugün Tamamlananlar (26 Kasım)
+
+2. tur, 1. parça: hesap, rol seçimi ve adla selamlama. Dal: `feature/tur2-hesap` (main'e birleştirilmedi). İlaç verisi bu parçada da cihazda kalıyor.
+
+- **Supabase:** CLI kuruldu (`npm run supabase -- <komut>`, `app/` içinden), proje bağlandı. `profiles` tablosu (ad, rol), kayıtta profili oluşturan tetikleyici ve RLS kuralları `db push --remote` ile uygulandı (`supabase/migrations/`). Tetikleyici fonksiyonu `security definer` ve `set search_path = ''`.
+- **Hesap katmanı:** `services/supabase.ts` (tek istemci, oturum AsyncStorage'da), `AuthService` (kayıt, giriş, çıkış, şifre sıfırlama, profil, rol değiştirme), `AuthError` ve Türkçe hata mesajları, `validation/auth-input.ts`, `context/auth.tsx` ve `useAuth`.
+- **Ekranlar:** Rol seçimi (09), Kayıt ol (10), Giriş yap (11), Bildirim izni (12), Şifremi unuttum, KVKK aydınlatma metni (taslak), Ayarlar - Hesap (19) ve Çıkış onayı (20), Kullanım biçimi (rol değiştirme), Sade mod ana ekranı (13, 14, 15), Aile için geçici ekran.
+- **Yönlendirme:** Oturum yoksa rol seçimi; varsa role göre Sade ana ekran, Bugün veya Aile ekranı (`utils/routes.ts`, `Stack.Protected`).
+- **Adla selamlama:** "Günaydın / İyi günler / İyi akşamlar <ad>" (`greetingFor`, saf fonksiyon). Bugün ve Sade ana ekranda; ikisinde de sağ üstte Ayarlar dişlisi.
+- **Test:** 303 test (46 yeni: AuthService sahte Supabase istemcisiyle, doğrulama, yönlendirme, selamlama, Sade modun gösterdiği doz).
+- **Kararlar:** `kararlar.md` 17-18. kararlar.
+
+## Önceki Tamamlananlar (25 Kasım)
 
 - **1. tur main'de:** Simülatörde çalıştı ve hocaya sunuldu. `feature/arayuz-tur1` main'e birleştirildi, dal silindi, `v0.3-arayuz-tur1` etiketi kondu.
 - **Hocanın yeni istekleri:**
@@ -46,6 +58,11 @@
 - 6 ekran tasarlanacak (`arayuz-tasarimi.md`).
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
 - Kullanılmayan paketler henüz kaldırılmadı (`moduler-yapi.md` → Temizlenecek paketler).
+- **Şifre sıfırlama yarım:** Bağlantı e-postayla gidiyor ama yeni şifre Supabase'in varsayılan sayfasında belirleniyor; uygulama içi "yeni şifre" ekranı sonra yapılacak.
+- **İlaçlar hesaba bağlı değil:** İlaçlar telefonda tutuluyor; aynı telefonda başka hesapla girilirse aynı ilaçlar görünür. Veriler Supabase'e taşınınca çözülecek (2. parça).
+- **"Hesabımı sil" "Yakında":** Silme işi sunucu tarafında (Edge Function) yapılmalı; sonraki parçada.
+- **Sade modda yapılmayanlar:** "Bu dozu atla" onayı ve profil düzenleme (kalem) bu parçada yok.
+- **Bildirim izni artık kendiliğinden sorulmuyor:** Kayıttan sonraki Bildirim İzni ekranında veya ana ekrandaki "İzin ver" düğmesiyle soruluyor. 1. turdan kalan, oturumu olmayan kullanıcı da önce hesap açacak.
 
 ## Elle Test Listesi
 
@@ -58,13 +75,17 @@
 7. Telefonun yazı boyutunu büyüt, bütün ekranları gez; VoiceOver ile bir doz onayla.
 8. #3 uçak modu ve uygulama kapalıyken bildirime dokunma.
 
+9. **Hesap (2. tur, 1. parça):** Üç rolle birer kayıt; çıkış; yeniden giriş; yanlış şifre; internet kapalıyken giriş ("İnternet bağlantısı yok") ve internet kapalıyken uygulamayı açma (doğru ana ekran açılmalı).
+10. **Sade mod:** Doz saati gelmeden, geçince ("Saati geçti") ve hepsi alınınca (14) ekranları; büyük onay düğmesi stoğu düşürüyor mu?
+
 ## Yarın Yapılacaklar
 
-1. **Elle test** (yukarıdaki liste) telefonda. Kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
-2. **2. tur planı:** Supabase hesabı, üç rol, davet kodu, Sade modda ilaç ekleme düğmelerinin gizlenmesi, adla selamlama, Ayarlar'da hesap ve çıkış.
+1. **Simülatörde hesap testi** (yukarıdaki 9 ve 10).
+2. **Elle test** (1-8) telefonda. Kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
+3. **2. tur, 2. parça:** İlaç verisini Supabase'e taşıma, davet koduyla aile bağlantısı, Aile paneli.
 
 ## Sonraki İşler
 
 - Kalan 6 ekranın tasarımı; Aile paneli ve mod seçimi ekranları eklenecek.
-- 2. tur (Supabase): hesap, roller, davet koduyla eşleşme.
+- 2. tur (Supabase): ~~hesap, roller~~ (1. parça), davet koduyla eşleşme, verinin sunucuya taşınması.
 - 3. tur: İlaç bilgisi.
