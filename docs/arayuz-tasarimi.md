@@ -146,7 +146,7 @@ Alt menüde Bugün, İlaçlarım ve Geçmiş bulunur. Ayarlar profil ikonundan a
 
 ## Ekranlar
 
-Toplam 14 ekran: 8'i tasarlandı, 6'sı tasarlanacak.
+Toplam 14 ekran; hepsi tasarlandı. 9-14 numaralı ekranların ayrıntısı aşağıdaki "2. Tur Ekranları" bölümündedir.
 
 | # | Ekran | Tasarlanan hâller | Durum | Tur |
 | --- | --- | --- | --- | --- |
@@ -158,12 +158,12 @@ Toplam 14 ekran: 8'i tasarlandı, 6'sı tasarlanacak.
 | 6 | Ayarlar | | Kodlandı | 1 (yalnızca görünüm) |
 | 7 | İlaç bilgisi | 3 durum | Tasarlandı | 3 |
 | 8 | Açılış ekranı ve ikon | | Tasarlandı, koda eklendi | 1 |
-| 9 | Karşılama ve rol seçimi | | Tasarlanacak | 2 |
-| 10 | Giriş / kayıt | | Tasarlanacak | 2 |
-| 11 | KVKK ve bildirim izni | | Tasarlanacak | 2 |
-| 12 | Ailemi bağla | | Tasarlanacak | 2 |
-| 13 | Kodla bağlan | | Tasarlanacak | 2 |
-| 14 | Aile paneli | | Tasarlanacak | 2 |
+| 9 | Karşılama ve rol seçimi | | Tasarlandı (2. Tur Ekranları) | 2 |
+| 10 | Giriş / kayıt | | Tasarlandı (2. Tur Ekranları) | 2 |
+| 11 | KVKK ve bildirim izni | | Tasarlandı (2. Tur Ekranları) | 2 |
+| 12 | Ailemi bağla | | Tasarlandı (2. Tur Ekranları) | 2 |
+| 13 | Kodla bağlan | | Tasarlandı (2. Tur Ekranları) | 2 |
+| 14 | Aile paneli | | Tasarlandı (2. Tur Ekranları) | 2 |
 
 Sihirbaz adımları: 1 Fotoğraf, 2 İsim, 3 Form, 4 Dozaj (tablet, şurup, damla), 5 Sıklık ve süre, 6 Saatler, 7 Aç veya tok, 8 Kutu mevcudu, 9 Özet. İlaç bilgisi durumları: boş, özet hazırlanıyor, dolu.
 
@@ -217,3 +217,81 @@ Karşılaştırma, `docs/ekranlar/tur1/` (iPhone 17 simülatörü, iOS 27.2, ör
 Büyük yazı (Dynamic Type, erişilebilirlik boyu) `buyuk-yazi-*.png` görsellerinde denendi: metin kesilmiyor, düğme ve etiketler alt satıra geçiyor. Alt menü etiketi ve Geçmiş'teki gün daireleri bilinçli olarak sabit boydadır.
 
 **Simülatörde denenemeyenler:** Dokunma otomasyonu olmadığı için ekranlar bağlantıyla açıldı; düğmelere basma, kamera, bildirim ve titreşim elle denenmeli. Android'de hiç denenmedi.
+
+## 2. Tur Ekranları
+
+**Tarih:** 26 Kasım 2026
+
+15. karardaki üç rol (Sade mod, Standart mod, Aile paneli) için Stitch'te 13 ekran çizildi. Kodlama için HTML'ler `docs/ekranlar/stitch/tur2/` altına kaydedildi; dosya adındaki sayı aşağıdaki tablodaki numaradır. Görseller rapor için sonra Stitch'ten dışa aktarılıp aynı adlarla eklenecek.
+
+### Ekran listesi
+
+| # | Ekran | Rol | Dosya |
+| --- | --- | --- | --- |
+| 09 | Hoş Geldiniz - Rol Seçimi | Ortak | `09-rol-secimi.html` |
+| 10 | Kayıt Ol | Ortak | `10-kayit-ol.html` |
+| 11 | Giriş Yap | Ortak | `11-giris-yap.html` |
+| 12 | Bildirim İzni | Ortak | `12-bildirim-izni.html` |
+| 13 | Sade Mod - Ana Ekran | Sade | `13-sade-ana-ekran.html` |
+| 14 | Sade Mod - Hepsi Alındı | Sade | `14-sade-hepsi-alindi.html` |
+| 15 | Sade Mod - Kaçırılan Doz | Sade | `15-sade-kacirilan-doz.html` |
+| 16 | Ailemi Bağla | Sade, Standart | `16-ailemi-bagla.html` |
+| 17 | Kodla Bağlan | Aile | `17-kodla-baglan.html` |
+| 18 | Aile Paneli - Ana Ekran | Aile | `18-aile-paneli.html` |
+| 19 | Ayarlar - Hesap | Ortak | `19-ayarlar-hesap.html` |
+| 20 | Ayarlar - Çıkış Onayı | Ortak | `20-cikis-onayi.html` |
+| 21 | Ayarlar - Hesap Silme Onayı | Ortak | `21-hesap-silme-onayi.html` |
+
+- Stitch'te "Kayıt Ol" iki kez var; yeni sürüm (`73bead1b`) kullanıldı, eski JPEG'li kopya (`ebdae9fe`) alınmadı.
+- Standart mod için yeni ana ekran çizilmedi; mevcut Bugün ekranı kullanılır.
+
+### Gezinme haritası
+
+```mermaid
+flowchart TD
+    Rol[09 Rol seçimi] --> Kayit[10 Kayıt ol] --> Izin[12 Bildirim izni]
+    Rol -- "Zaten hesabım var" --> Giris[11 Giriş yap]
+    Izin -- sade --> Sade[13-15 Sade ana ekran]
+    Izin -- standart --> Bugun[Bugün - mevcut]
+    Izin -- aile --> Kod[17 Kodla bağlan] --> Panel[18 Aile paneli]
+    Giris -- role göre --> Sade
+    Giris -- role göre --> Bugun
+    Giris -- role göre --> Panel
+    Panel -- "İlaç ekle" --> Sihirbaz["Sihirbaz - mevcut, üstte yakının adı"]
+    Panel -- "İlaçları yönet" --> Ilaclarim[İlaçlarım - mevcut]
+    Panel -- kişi kartı --> Gecmis[Geçmiş - mevcut]
+    Ayarlar[19 Ayarlar] -- "Kullanım biçimi" --> Rol
+    Ayarlar -- "Ailemi bağla" --> Bagla[16 Ailemi bağla]
+    Ayarlar -- "Çıkış yap" --> Cikis[20 Çıkış onayı]
+    Ayarlar -- "Hesabımı sil" --> Sil[21 Hesap silme onayı]
+```
+
+- **İlk açılış:** Rol seçimi → Kayıt → Bildirim izni. Ardından rol sade ise Sade ana ekran, standart ise mevcut Bugün ekranı, aile ise Kodla bağlan → Aile paneli.
+- **Giriş:** Kayıtlı role göre ilgili ana ekran.
+- **Dişli:** Her ana ekrandaki dişli Ayarlar'ı açar.
+- **Aile paneli:** "İlaç ekle" mevcut 9 adımlı sihirbazı açar; üstte `<yakın adı> için` yazar. "İlaçları yönet" mevcut İlaçlarım'ı, kişi kartı mevcut Geçmiş'i açar.
+- **Ayarlar:** "Kullanım biçimi" rol seçimi kartlarını, "Ailemi bağla" Ailemi Bağla ekranını açar.
+
+### Stitch'te çizilmeyen ekranlar
+
+Mevcut tasarım diliyle (tema, `AppText`, kart ve buton bileşenleri) basitçe yapılacak:
+
+| Ekran | Not |
+| --- | --- |
+| Şifremi unuttum | Giriş'teki bağlantıdan; e-posta alanı ve "Bağlantı gönder" |
+| KVKK Aydınlatma Metni | Kayıt'taki bağlantıdan ve Ayarlar > Gizlilik'ten; kaydırılabilir metin |
+| Profil düzenle | Ayarlar profil kartındaki kalemden; ad ve e-posta |
+| Bildirimler | Ayarlar'dan; aç/kapa anahtarı |
+| "Bu dozu atla" onayı | Sade mod kaçırılan doz ekranından; Çıkış onayı (20) kalıbında |
+
+### Tasarımdan farklı uygulanacaklar
+
+| Ekran | Tasarımda | Uygulamada |
+| --- | --- | --- |
+| Ayarlar - Hesap | "Verilerimi indir" satırı | Kaldırılır |
+| Rol seçimi | "İleri yaş için önerilir" rozeti, "Aa" ikonu | Rozet `#E6F2F2` zeminli hap; "Aa" 48px `#E6F2F2` dairede |
+| Çıkış onayı | "Vazgeç" kenarlıksız | 2px `#0F6E6E` kenarlık (Hesap silme onayındaki gibi) |
+| Sade mod | Yer yer 18 ve 16 px yazı | En küçük yazı 20pt |
+| Aile paneli | Kırmızı uyarı kartında "Annemi ara" | Düğme yok |
+| Tüm ekranlar | "%33" gibi yüzde yazıları | Kullanılmaz; yalnızca "1 / 3 ilaç alındı" |
+
