@@ -40,9 +40,27 @@ export function dayPeriodOf(time: string): DayPeriod {
   return hour < 11 ? 'morning' : 'noon';
 }
 
-/** Saate göre selamlama. */
+/**
+ * Saate göre selamlama: 05:00-11:00 "Günaydın", 11:00-17:00 "İyi günler",
+ * 17:00-05:00 "İyi akşamlar". Aralıklar Bugün ekranındaki gruplarla aynıdır.
+ */
 export function greetingOf(now: Date) {
   const hour = now.getHours();
   if (hour >= 5 && hour < 11) return 'Günaydın';
   return hour >= 11 && hour < 17 ? 'İyi günler' : 'İyi akşamlar';
+}
+
+/** "Günaydın Mustafa"; ad bilinmiyorsa yalnızca selamlama. Addaki fazla boşluklar atılır. */
+export function greetingFor(now: Date, name?: string | null) {
+  const trimmed = name?.trim().replace(/\s+/g, ' ');
+  return trimmed ? `${greetingOf(now)} ${trimmed}` : greetingOf(now);
+}
+
+/** Süreyi okunur yazar: 45 → "45 dakika", 120 → "2 saat", 130 → "2 saat 10 dakika". */
+export function formatMinutes(minutes: number) {
+  const total = Math.max(0, Math.floor(minutes));
+  if (total < 60) return `${total} dakika`;
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  return rest === 0 ? `${hours} saat` : `${hours} saat ${rest} dakika`;
 }

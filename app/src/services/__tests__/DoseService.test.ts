@@ -358,3 +358,33 @@ describe('DoseService.confirmDose', () => {
     expect(service.logIdOf('ilac1', '2026-11-16', '08:00')).toBe(logs[0].id);
   });
 });
+
+describe('DoseService.focusDose', () => {
+  const { service } = setup();
+  const medication = makeMedication({ times: ['08:00', '13:00', '20:00'] });
+  const today = '2026-11-16';
+  const focusAt = (now: Date, logs: DoseLog[] = []) =>
+    service.focusDose(service.getTodayDoses([medication], logs, now), now)?.time;
+
+  it('saati gelmemişse sıradaki dozu gösterir', () => {
+    expect(focusAt(at(7))).toBe('08:00');
+  });
+
+  it('saati geçmiş ama alınmamış dozu gösterir; kaçırılmış olsa bile', () => {
+    expect(focusAt(at(8, 10))).toBe('08:00');
+    expect(focusAt(at(10))).toBe('08:00');
+  });
+
+  it('yeni dozun saati gelince en son geciken doz gösterilir', () => {
+    expect(focusAt(at(13, 5))).toBe('13:00');
+  });
+
+  it('alınan dozdan sonra sıradakine geçer', () => {
+    expect(focusAt(at(9), [log(medication.id, today, '08:00')])).toBe('13:00');
+  });
+
+  it('hepsi alındıysa doz göstermez', () => {
+    const logs = ['08:00', '13:00', '20:00'].map((time) => log(medication.id, today, time));
+    expect(focusAt(at(21), logs)).toBeUndefined();
+  });
+});

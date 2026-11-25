@@ -9,7 +9,7 @@ import {
 import { addDays, atTime, formatDate } from '@/utils/date';
 import { logger } from '@/utils/logger';
 import { isScheduledOn } from '@/utils/schedule';
-import { DAY_PERIODS, dayPeriodOf, type DayPeriod } from '@/utils/time';
+import { DAY_PERIODS, dayPeriodOf, formatTime, type DayPeriod } from '@/utils/time';
 
 import type { NotificationService } from './NotificationService';
 import type { IStorage } from './StorageService';
@@ -115,6 +115,19 @@ export class DoseService {
   /** Sıradaki doz: saate göre ilk bekleyen. */
   nextPending(doses: Dose[]): Dose | undefined {
     return doses.find((dose) => dose.status === 'bekliyor');
+  }
+
+  /**
+   * Sade mod ana ekranında gösterilen tek doz: saati gelmiş ama alınmamış en son doz
+   * (gecikmiş veya kaçırılmış); yoksa sıradaki bekleyen doz. Yeni bir dozun saati
+   * gelince önceki kaçırılan doz ekrandan çekilir, Geçmiş'te kaçırıldı olarak kalır.
+   * Dozlar `getTodayDoses` gibi saate göre sıralı olmalıdır.
+   */
+  focusDose(doses: Dose[], now: Date): Dose | undefined {
+    const clock = formatTime(now.getHours(), now.getMinutes());
+    const open = doses.filter((dose) => dose.status === 'bekliyor' || dose.status === 'kacirildi');
+    const due = open.filter((dose) => dose.time <= clock);
+    return due.at(-1) ?? open.find((dose) => dose.status === 'bekliyor');
   }
 
   /** Bu günden önce eklenmiş ilaç var mı? (Geçmiş'te daha geri gidilebilir mi) */
