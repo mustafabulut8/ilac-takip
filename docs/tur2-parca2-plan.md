@@ -1,8 +1,8 @@
 # 2. Tur, 2. Parça Planı: İlaçların Buluta Taşınması, Davet Kodu ve Aile Paneli
 
-**Tarih:** 26 Kasım 2026 · **Dal:** `feature/tur2-aile` (`main`'den, `v0.4-hesap-kalite` etiketinden sonra) · **Durum:** Onay bekliyor
+**Tarih:** 26 Kasım 2026 · **Dal:** `feature/tur2-aile` (`main`'den, `v0.4-hesap-kalite` etiketinden sonra) · **Durum:** Onaylandı (26 Kasım 2026; cevaplar i bölümünde)
 
-Bu belge kod yazılmadan önceki plandır. Onaylanınca adımlar aşağıdaki sırayla, TDD ile ve ayrı commit grupları halinde uygulanacak. Kararlar uygulandıkça `docs/kararlar.md`'ye ADR olarak geçecek (ADR-021…024, bkz. bölüm j).
+Bu belge kod yazılmadan önceki plandır. Adımlar aşağıdaki sırayla, TDD ile ve ayrı commit grupları halinde uygulanır. Kararlar `docs/kararlar.md`'ye ADR olarak geçer (ADR-021…026, bkz. bölüm j). SQL'in kendisi `supabase/migrations/20261126120000…120500` dosyalarındadır.
 
 **Temel ilke:** Yaşlının telefonu internetsiz de tam çalışmaya devam eder. Hatırlatmalar yereldir (ADR-001), sunucu yalnızca kopyalama ve aileyle paylaşma içindir. Bugünkü katmanlar korunur. Repository arayüzleri (ADR-020) bu parçanın girişidir; servisler ve ekranlar olabildiğince değişmez.
 
@@ -12,10 +12,7 @@ Bu belge kod yazılmadan önceki plandır. Onaylanınca adımlar aşağıdaki s�
 
 ### Adlandırma
 
-`profiles` tablosunda sütunlar Türkçe (`ad`, `rol`). Bu parçada istenen adlar ise karışık: `updated_at`, `deleted_at`, `cihaza_ulasti_zamani`. **Öneri:**
-
-- Tablo ve sütun adları İngilizce `snake_case` olsun, ilaç modelindeki alanların karşılığı olsun (`meal_timing` ↔ `mealTiming`). Çeviri tek bir eşleme fonksiyonuyla yapılır, yanlış ad derlemede yakalanır (`npm run tipler`).
-- `cihaza_ulasti_zamani` istendiği gibi Türkçe kalsın. Açık soru 1'e bakın: tutarlılık için `delivered_at` de olabilir.
+Yeni tablo ve sütun adlarının hepsi İngilizce `snake_case`'tir ve ilaç modelindeki alanların karşılığıdır (`meal_timing` ↔ `mealTiming`). "Telefona ulaştı" bilgisi de `delivered_at` adını alır. Çeviri tek bir eşleme fonksiyonuyla yapılır, yanlış ad derlemede yakalanır (`npm run tipler`). `profiles`'taki eski Türkçe sütunlar (`ad`, `rol`) değişmez; adlarını değiştirmek giriş yapmış kullanıcıları bozardı.
 
 ### `medications`
 
@@ -40,14 +37,14 @@ Bu belge kod yazılmadan önceki plandır. Onaylanınca adımlar aşağıdaki s�
 | `updated_at`                       | `timestamptz`   | **Değişikliği yapan telefonun saati.** "Son yazan kazanır" bununla karşılaştırılır.                                                   |
 | `server_updated_at`                | `timestamptz`   | Tetikleyici her yazmada `now()` yazar. Telefon "son çekmeden beri değişenleri" bununla sorar (telefon saati yanlış olsa da kaçırmaz). |
 | `deleted_at`                       | `timestamptz`   | Yumuşak silme. Doz geçmişi silinmiş ilacın adını gösterebilsin diye satır kalır.                                                      |
-| `cihaza_ulasti_zamani`             | `timestamptz`   | Yaşlının telefonu bu sürümü alıp hatırlatmaları kurunca doldurur. İlaç değişince tetikleyici `null` yapar.                            |
+| `delivered_at`                     | `timestamptz`   | Yaşlının telefonu bu sürümü alıp hatırlatmaları kurunca doldurur. İlaç değişince tetikleyici `null` yapar.                            |
 
 **Tetikleyiciler:**
 
 - `server_updated_at` her yazmada `now()` olur.
 - Gelen `updated_at` mevcut satırdakinden eskiyse güncelleme yok sayılır. Böylece geç gönderilen eski bir değişiklik yeniyi ezmez.
 - `owner_id` ve `created_by` güncellemede değiştirilemez.
-- Plan, ad, doz, fotoğraf veya silinme değişirse `cihaza_ulasti_zamani` `null` olur. İlacın sahibi kendi telefonundan değiştirdiyse tetikleyici `now()` yazar, çünkü değişiklik zaten o telefondadır.
+- Plan, ad, doz, fotoğraf veya silinme değişirse `delivered_at` `null` olur. İlacın sahibi kendi telefonundan değiştirdiyse tetikleyici `now()` yazar, çünkü değişiklik zaten o telefondadır.
 
 **İndeksler:**
 
@@ -63,13 +60,13 @@ Bu belge kod yazılmadan önceki plandır. Onaylanınca adımlar aşağıdaki s�
 | `medication_id`                   | `text` not null | → `medications(id)` `on delete cascade` (yumuşak silmede satır kalır).                                             |
 | `scheduled_date`                  | `date`          | Planlanan gün (yerel takvim).                                                                                      |
 | `scheduled_time`                  | `text`          | Planlanan saat, `HH:mm`. Kimlik yerel saatle kurulduğu için `timestamptz` değil, gün + saat.                       |
-| `status`                          | `text`          | `check in ('alindi','atlandi')`. Varsayılan `alindi`.                                                              |
-| `taken_at`                        | `timestamptz`   | `alindi` ise zorunlu, `atlandi` ise `null` (`check`).                                                              |
+| `status`                          | `text`          | `check in ('taken','skipped')`. Varsayılan `taken`.                                                                |
+| `taken_at`                        | `timestamptz`   | `taken` ise zorunlu, `skipped` ise `null` (`check`).                                                               |
 | `created_at`, `server_updated_at` | `timestamptz`   | Çekme imleci için.                                                                                                 |
 
 - `check`: `id = medication_id || '_' || scheduled_date || '_' || scheduled_time`. Kimlik ile alanlar ayrışamaz.
 - **İndeksler:** `(owner_id, scheduled_date desc)` (Geçmiş sayfalaması), `(owner_id, server_updated_at)` ve `(medication_id)`.
-- Telefondaki `DoseLog` kaydına isteğe bağlı `status` alanı eklenir (şema v3; yoksa `alindi`). "Bu dozu atla" arayüzü bu parçada yok (açık soru 6), ama sütun şimdiden hazır.
+- Telefondaki `DoseLog` kaydına isteğe bağlı `status` alanı eklenir (şema v3; yoksa `taken`). "Bu dozu atla" 3. parçada yapılacak; sütun şimdiden hazır.
 
 ### `care_links`
 
@@ -87,17 +84,18 @@ Bu belge kod yazılmadan önceki plandır. Onaylanınca adımlar aşağıdaki s�
 
 ### `invite_codes`
 
-| Sütun        | Tip           | Kural                                           |
-| ------------ | ------------- | ----------------------------------------------- |
-| `id`         | `uuid` PK     |                                                 |
-| `code`       | `char(6)`     | Yalnızca rakam (`check (code ~ '^[0-9]{6}$')`). |
-| `owner_id`   | `uuid`        | Kodu oluşturan, takip edilecek kişi.            |
-| `expires_at` | `timestamptz` | `now() + interval '24 hours'`.                  |
-| `used_at`    | `timestamptz` | Kullanılınca dolar; kod tek kullanımlıktır.     |
-| `used_by`    | `uuid`        | Kodu kullanan aile üyesi.                       |
-| `created_at` | `timestamptz` |                                                 |
+| Sütun        | Tip           | Kural                                             |
+| ------------ | ------------- | ------------------------------------------------- |
+| `id`         | `uuid` PK     |                                                   |
+| `code`       | `text`        | Yalnızca 6 rakam (`check (code ~ '^[0-9]{6}$')`). |
+| `owner_id`   | `uuid`        | Kodu oluşturan, takip edilecek kişi.              |
+| `expires_at` | `timestamptz` | `now() + interval '24 hours'`.                    |
+| `used_at`    | `timestamptz` | Kullanılınca dolar; kod tek kullanımlıktır.       |
+| `used_by`    | `uuid`        | Kodu kullanan aile üyesi.                         |
+| `created_at` | `timestamptz` |                                                   |
 
-- `unique (code) where used_at is null`: kullanılmamış iki kod aynı olamaz.
+- `revoked_at`: yeni kod alınınca veya süresi dolmuş kod temizlenince dolar.
+- `unique (code) where used_at is null and revoked_at is null`: etkin iki kod aynı olamaz. Süresi dolmuş kodlar yeni kod üretilirken iptal edilir; aynı rakamlar yeniden kullanılabilir.
 - Kişi başına tek etkin kod vardır. Yeni kod istenince eski kullanılmamış kod geçersiz olur.
 
 ### `invite_attempts` (yalnızca RPC kullanır)
@@ -106,6 +104,31 @@ Bu belge kod yazılmadan önceki plandır. Onaylanınca adımlar aşağıdaki s�
 | -------------- | ------------- | --------------------------------------- |
 | `user_id`      | `uuid`        | Deneyen kullanıcı.                      |
 | `attempted_at` | `timestamptz` | İndeks: `(user_id, attempted_at desc)`. |
+
+### `health_consent_events` (açık rıza; ADR-021)
+
+| Sütun          | Tip           | Kural                                 |
+| -------------- | ------------- | ------------------------------------- |
+| `id`           | `bigint` PK   |                                       |
+| `user_id`      | `uuid`        | → `profiles(id)` `on delete cascade`. |
+| `action`       | `text`        | `check in ('granted','withdrawn')`.   |
+| `text_version` | `text`        | Onaylanan rıza metninin sürümü.       |
+| `created_at`   | `timestamptz` |                                       |
+
+- Yalnızca ekleme yapılır (kanıt). Kişinin durumu son olaydır: `has_health_consent(kişi)`.
+- Rıza yoksa sunucuya ilaç, doz, fotoğraf ve telefon durumu yazılamaz (RLS). Davet kodu da üretilemez.
+
+### `device_status` (telefonun durumu; ADR-025)
+
+| Sütun             | Tip           | Kural                                                                                                                                             |
+| ----------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner_id`        | `uuid` PK     | → `profiles(id)` `on delete cascade`.                                                                                                             |
+| `reminders_until` | `timestamptz` | Telefon bildirimleri her yeniden kurduğunda yazar: kurulu **son tek seferlik** bildirimin anı. Bütün hatırlatmalar tekrarlanan bildirimse `null`. |
+| `last_synced_at`  | `timestamptz` | Son başarılı eşitleme.                                                                                                                            |
+| `updated_at`      | `timestamptz` | Sunucu yazar.                                                                                                                                     |
+
+- Aile paneli: `reminders_until` boş değilse ve şimdiden 48 saatten az kaldıysa "Fatma hatırlatmaları 29 Kasım 21:00 tarihinde bitiyor, uygulamayı açmasını hatırlatın" uyarısı çıkar. Boşsa uyarı çıkmaz.
+- **Ne zaman dolu:** Yalnızca bütçe yetmediği için bazı dozlar kurulamadıysa (e bölümündeki kayan pencere kipi). Değeri, kurulan son doz bildiriminin anıdır. Bütün dozlar kurulduysa (tekrarlanan bildirimler ve sığan süreli kürler) `null` olur. Böylece kendi kendine biten bir antibiyotik kürü yanlış uyarı vermez.
 
 ### İlişkiler
 
@@ -117,13 +140,15 @@ erDiagram
   profiles ||--o{ care_links : "caregiver_id"
   profiles ||--o{ care_links : "patient_id"
   profiles ||--o{ invite_codes : "owner_id"
+  profiles ||--o{ health_consent_events : "user_id"
+  profiles ||--o| device_status : "owner_id"
 ```
 
 ### Uygulamadaki model değişikliği (şema v3, cihaz)
 
 - `Medication`'a `updatedAt` (yoksa `createdAt`) ve `photoPath` (yoksa `''`) eklenir.
-- `DoseLog`'a `status` eklenir (yoksa `alindi`).
-- Eski anahtar ve alan adları değişmez (CLAUDE.md kuralı). Yeni anahtarlar: `outbox`, `syncState`.
+- `DoseLog`'a `status` eklenir (yoksa `taken`).
+- Eski anahtar ve alan adları değişmez (CLAUDE.md kuralı). Yeni anahtarlar: `outbox`, `syncState`, `healthConsent`.
 
 ---
 
@@ -131,42 +156,52 @@ erDiagram
 
 Yardımcı fonksiyon `is_caregiver_of(patient uuid)`: `security definer`, `stable`, boş `search_path`. "Oturumdaki kullanıcı bu kişiye bağlı aile üyesi mi?" sorusunu sorar. Politikalarda `(select …)` ile çağrılır, böylece Postgres onu satır başına değil sorgu başına bir kez hesaplar.
 
-| Tablo                                   | İşlem               | Kişinin kendisi (`owner`)                                                                                     | Bağlı aile üyesi                                      | Diğer herkes, `anon` |
-| --------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------- |
-| `profiles`                              | okuma               | kendi satırı (var)                                                                                            | bağlı olduğu kişinin satırı (yeni)                    | yok                  |
-| `profiles`                              | güncelleme          | `ad`, `rol` (var)                                                                                             | yok                                                   | yok                  |
-| `medications`                           | okuma               | var                                                                                                           | var                                                   | yok                  |
-| `medications`                           | ekleme              | var (`owner_id = uid`)                                                                                        | var (`is_caregiver_of(owner_id)`, `created_by = uid`) | yok                  |
-| `medications`                           | güncelleme          | var                                                                                                           | var                                                   | yok                  |
-| `medications`                           | silme               | yalnızca `deleted_at` ile (güncelleme). Gerçek `delete` izni kimsede yok, yalnızca hesap silinince `cascade`. | aynı                                                  | yok                  |
-| `dose_logs`                             | okuma               | var                                                                                                           | var                                                   | yok                  |
-| `dose_logs`                             | ekleme              | var                                                                                                           | **yok**                                               | yok                  |
-| `dose_logs`                             | güncelleme, silme   | var                                                                                                           | **yok**                                               | yok                  |
-| `care_links`                            | okuma               | kendi bağlantıları (hasta tarafı)                                                                             | kendi bağlantıları (aile tarafı)                      | yok                  |
-| `care_links`                            | ekleme              | yok, yalnızca RPC                                                                                             | yok, yalnızca RPC                                     | yok                  |
-| `care_links`                            | güncelleme          | yok                                                                                                           | yalnızca `relation_label`                             | yok                  |
-| `care_links`                            | silme               | var ("bağlantıyı kaldır")                                                                                     | var                                                   | yok                  |
-| `invite_codes`                          | okuma               | kendi kodları                                                                                                 | yok                                                   | yok                  |
-| `invite_codes`                          | yazma               | yok, yalnızca RPC                                                                                             | yok                                                   | yok                  |
-| `invite_attempts`                       | hepsi               | yok                                                                                                           | yok                                                   | yok                  |
-| `storage.objects` (`ilac-fotograflari`) | okuma, yazma, silme | yol `{kendi id}/…`                                                                                            | yol `{takip ettiği kişinin id}/…`                     | yok                  |
+| Tablo                                   | İşlem               | Kişinin kendisi (`owner`)                                                                                                                                | Bağlı aile üyesi                                                                    | Diğer herkes, `anon` |
+| --------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------- |
+| `profiles`                              | okuma               | kendi satırı (var)                                                                                                                                       | bağlı olduğu kişinin satırı (yeni; iki yönde)                                       | yok                  |
+| `profiles`                              | güncelleme          | `ad`, `rol` (var)                                                                                                                                        | yok                                                                                 | yok                  |
+| `medications`                           | okuma               | var                                                                                                                                                      | var                                                                                 | yok                  |
+| `medications`                           | ekleme              | var (`owner_id = uid`) + **sahibin rızası**                                                                                                              | var (`is_caregiver_of(owner_id)`) + **sahibin rızası**; `created_by`'ı sunucu yazar | yok                  |
+| `medications`                           | güncelleme          | var + rıza                                                                                                                                               | var + rıza                                                                          | yok                  |
+| `medications`                           | silme               | yalnızca `deleted_at` ile (güncelleme). Gerçek `delete` izni kimsede yok; satırı yalnızca hesap silinmesi (`cascade`) ve rızanın geri alınması kaldırır. | aynı                                                                                | yok                  |
+| `dose_logs`                             | okuma               | var                                                                                                                                                      | var                                                                                 | yok                  |
+| `dose_logs`                             | ekleme              | var + rıza; ilaç da kendisinin olmalı                                                                                                                    | **yok**                                                                             | yok                  |
+| `dose_logs`                             | güncelleme, silme   | var                                                                                                                                                      | **yok**                                                                             | yok                  |
+| `care_links`                            | okuma               | kendi bağlantıları (hasta tarafı)                                                                                                                        | kendi bağlantıları (aile tarafı)                                                    | yok                  |
+| `care_links`                            | ekleme              | yok, yalnızca RPC                                                                                                                                        | yok, yalnızca RPC                                                                   | yok                  |
+| `care_links`                            | güncelleme          | yok                                                                                                                                                      | yalnızca `relation_label`                                                           | yok                  |
+| `care_links`                            | silme               | var ("bağlantıyı kaldır")                                                                                                                                | var                                                                                 | yok                  |
+| `invite_codes`                          | okuma               | kendi kodları                                                                                                                                            | yok                                                                                 | yok                  |
+| `invite_codes`                          | yazma               | yok, yalnızca RPC                                                                                                                                        | yok                                                                                 | yok                  |
+| `invite_attempts`                       | hepsi               | yok                                                                                                                                                      | yok                                                                                 | yok                  |
+| `health_consent_events`                 | okuma               | kendi kayıtları                                                                                                                                          | yok                                                                                 | yok                  |
+| `health_consent_events`                 | yazma               | yok, yalnızca RPC (`grant_…`, `withdraw_health_consent`)                                                                                                 | yok                                                                                 | yok                  |
+| `device_status`                         | okuma               | var                                                                                                                                                      | var                                                                                 | yok                  |
+| `device_status`                         | ekleme, güncelleme  | var (+ rıza)                                                                                                                                             | yok                                                                                 | yok                  |
+| `storage.objects` (`medication-photos`) | okuma, silme        | yol `{kendi id}/…`                                                                                                                                       | yol `{takip ettiği kişinin id}/…`                                                   | yok                  |
+| `storage.objects` (`medication-photos`) | yükleme, değiştirme | yol `{kendi id}/…` + rıza                                                                                                                                | yol `{takip ettiği kişinin id}/…` + sahibin rızası                                  | yok                  |
 
 **Ek kısıtlar:**
 
 - `profiles` migration'ındaki gibi `revoke all … from anon, authenticated` uygulanır, ardından yalnızca gereken `grant`'lar verilir. Örneğin `care_links` için `grant update (relation_label)`.
 - `with check` ifadeleri `using` ile aynıdır. Aile üyesi bir ilacı başka birine "taşıyamaz"; ayrıca `owner_id` değişikliğini tetikleyici reddeder.
-- Realtime de RLS'ye uyar. `medications` ve `dose_logs` yayına (`supabase_realtime`) eklenir.
+- Realtime de RLS'ye uyar. `medications`, `dose_logs` ve `device_status` yayına (`supabase_realtime`) eklenir.
+- `delivered_at` istemciden yazılamaz: tetikleyici yok sayar, yalnızca `mark_delivered` yazar. Aile "ulaştı" bilgisini taklit edemez.
 
-### RPC fonksiyonları (`security definer`, `set search_path = ''`, `anon`'dan `revoke execute`)
+### RPC fonksiyonları (boş `search_path`, `anon`'dan `revoke execute`)
 
-| Fonksiyon                                  | Kim çağırır     | Ne yapar                                                                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create_invite_code()`                     | sade, standart  | Önceki kullanılmamış kodu geçersiz yapar. Etkin kodlarla çakışmayan rastgele 6 hane üretir (`gen_random_bytes`, tekrar dener). Kodu ve bitiş anını döner.                                                                                                                                                                                                                                      |
-| `redeem_invite_code(code, relation_label)` | aile            | 1) Son 1 saatteki denemeleri sayar; 5 veya fazlaysa `too_many_attempts` hatası verir. 2) Denemeyi kaydeder (başarılı da sayılır). 3) Kod yoksa, süresi dolmuşsa, kullanılmışsa veya kişinin kendi koduysa tek bir `invalid_code` hatası verir; saldırgan hangisi olduğunu öğrenemez. 4) Bağlantıyı ekler (`on conflict do nothing`), kodu kullanıldı yapar. 5) Kişinin `id` ve `ad`'ını döner. |
-| `record_dose(log, amount)`                 | kişinin kendisi | Doz kaydını ekler (`on conflict do nothing`). Yalnızca yeni eklendiyse stoğu `greatest(stock - amount, 0)` ile düşer. Tek işlemdir ve tekrar gönderilse de stok bir kez düşer (`DoseLogRepository.recordDose` sözleşmesi).                                                                                                                                                                     |
-| `mark_delivered(items)`                    | kişinin kendisi | `[{id, server_updated_at}]` alır. `cihaza_ulasti_zamani`'nı yalnızca sürüm hâlâ aynıysa doldurur; arada aile yeniden değiştirdiyse dokunmaz.                                                                                                                                                                                                                                                   |
+| Fonksiyon                                  | Kim çağırır     | Ne yapar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_invite_code()` (definer)           | sade, standart  | Önceki kullanılmamış kodu geçersiz yapar. Süresi dolmuş kodları iptal eder. Etkin kodlarla çakışmayan rastgele 6 hane üretir (`gen_random_uuid()`'in rastgele bitleri; çakışırsa yeniden dener). Rıza ister. Kodu ve bitiş anını döner.                                                                                                                                                                                                                                                                                                                                                                              |
+| `redeem_invite_code(code, relation_label)` | aile            | (definer) 1) Etiketi doğrular (1–40 karakter). 2) Son 1 saatteki denemeleri sayar; 5 veya fazlaysa `too_many_attempts` döner. 3) Denemeyi kaydeder (başarılı da sayılır). 4) Kod yoksa, süresi dolmuşsa, kullanılmışsa, kişinin kendi koduysa veya kodun sahibinin rızası yoksa tek bir `invalid_code` döner; deneyen hangisi olduğunu öğrenemez. 5) Bağlantıyı ekler (varsa etiketi günceller), kodu kullanıldı yapar. 6) `status = 'ok'` ile kişinin `id` ve `ad`'ını döner. **Hata istisna olarak değil sonuç olarak döner:** istisna işlemi geri alır ve deneme kaydı da silinirdi; o zaman sınır hiç işlemezdi. |
+| `record_dose(…, amount)` (invoker)         | kişinin kendisi | Doz kaydını ekler (`on conflict do nothing`). Yalnızca yeni eklendiyse stoğu `greatest(stock - amount, 0)` ile düşer. Tek işlemdir ve tekrar gönderilse de stok bir kez düşer (`DoseLogRepository.recordDose` sözleşmesi).                                                                                                                                                                                                                                                                                                                                                                                           |
+| `mark_delivered(items)` (invoker)          | kişinin kendisi | `[{id, server_updated_at}]` alır. `delivered_at`'nı yalnızca sürüm hâlâ aynıysa doldurur; arada aile yeniden değiştirdiyse dokunmaz. Telefonun çekme imlecini ilerletmez.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
-- **Rol denetimi:** `redeem_invite_code`'u yalnızca `rol = 'aile'` olan kullanıcı çağırabilir, kodun sahibi de `sade` veya `standart` olmalıdır (açık soru 5).
+| `grant_health_consent(version)` (definer) | sade, standart | Rıza olayını ekler. |
+| `withdraw_health_consent()` (definer) | kişinin kendisi | Kişinin sunucudaki ilaç, doz, telefon durumu, davet kodu ve aile bağlantılarını siler, geri alma olayını ekler. Fotoğraf dosyalarını uygulama önce Storage API ile siler (Supabase, dosyaların SQL'den silinmesini istemez). |
+
+- `definer` fonksiyonlar tablolara RLS'yi aşarak erişir; bu yüzden her biri önce `auth.uid()`'i ve rolü denetler. `invoker` fonksiyonlarda RLS aynen geçerlidir.
+- **Rol denetimi:** `redeem_invite_code`'u yalnızca `rol = 'aile'` olan kullanıcı çağırabilir. Kod üretme ve rıza yalnızca `sade` ve `standart` içindir.
 - **Hata kodları:** Hatalar `toAuthError` tablosu gibi bir tabloyla Türkçeye çevrilir:
   - `invalid_code`: "Kod geçersiz veya süresi dolmuş. Yakınınızdan yeni kod isteyin."
   - `too_many_attempts`: "Çok fazla deneme yapıldı. Lütfen bir saat sonra tekrar deneyin."
@@ -175,9 +210,9 @@ Yardımcı fonksiyon `is_caregiver_of(patient uuid)`: `security definer`, `stabl
 
 ## c) Fotoğraflar
 
-- **Bucket:** `ilac-fotograflari`, özel (`public = false`), dosya sınırı 2 MB, yalnızca `image/jpeg`.
+- **Bucket:** `medication-photos`, özel (`public = false`), dosya sınırı 2 MB, yalnızca `image/jpeg`.
 - **Yol:** `{owner_id}/{medication_id}-{zaman}.jpg`. Değişen fotoğraf yeni adla yüklenir (ADR-012'deki önbellek gerekçesi), eskisi ancak ilaç kaydı yazıldıktan sonra silinir.
-- **RLS (`storage.objects`):** `bucket_id = 'ilac-fotograflari'`, `(storage.foldername(name))[1] = (select auth.uid())::text` ya da `is_caregiver_of` bu klasör sahibi için doğru olmalı. Okuma, yükleme, güncelleme ve silme için ayrı kurallar yazılır.
+- **RLS (`storage.objects`):** `bucket_id = 'medication-photos'`, `(storage.foldername(name))[1] = (select auth.uid())::text` ya da `is_caregiver_of` bu klasör sahibi için doğru olmalı. Okuma, yükleme, güncelleme ve silme için ayrı kurallar yazılır.
 - **Sıkıştırma (yüklemeden önce, telefonda):** `expo-image-manipulator` (SDK 58 API'si: `ImageManipulator.manipulate(uri).resize(...)` → `renderAsync()` → `saveAsync({ format: SaveFormat.JPEG, compress: 0.7 })`).
   - Uzun kenar 1080 pikseli geçiyorsa 1080'e iner, en-boy oranı korunur. Küçük fotoğraf büyütülmez.
   - Saf karar fonksiyonu `resizeTarget(width, height, 1080)` `utils/`'de olur ve tek başına test edilir. Kütüphane çağrısı `PhotoCompressor` adaptöründe kalır.
@@ -226,7 +261,15 @@ flowchart LR
   - **`pull()`:** `server_updated_at > imleç` olan ilaç ve doz satırlarını çeker; silinmişler de gelir. İmleç `syncState` anahtarında tutulur.
     - Çakışma: aynı ilaç outbox'ta bekliyorsa `updated_at` karşılaştırılır, **son yazan kazanır**. Bekleyen yoksa sunucudaki kayıt alınır.
     - Doz kayıtları değişmez olduğu için birleştirme yeterlidir.
-  - **Çekmeden sonra:** Değişen bir şey varsa `NotificationService.sync` çalışır, ardından `mark_delivered` RPC'si çağrılır. "Henüz telefona ulaşmadı" uyarısı tam olarak bu adımda kalkar: hatırlatma kurulmadan "ulaştı" denmez.
+  - **Çekmeden sonra hatırlatmalar (aile düzenleyince veya silince):**
+    - Bugünkü `NotificationService.sync` yalnızca eksik kimlikleri kurar ve fazlaları siler. Aile ilacın **adını veya dozunu** değiştirirse kimlik aynı kalır ve eski metinli bildirim cihazda kalırdı. Silinen ilacın **ertelenmiş** bildirimini de `sync` silmez.
+    - Bu yüzden `SyncService`, `MedicationService.update` ile aynı kuralı uygular. Çekilen her ilaç için yerel eski hâliyle karşılaştırılır:
+      - bildirimi etkileyen alanlar (ad, doz, saatler, sıklık, süre) değiştiyse veya ilaç silindiyse önce `cancelMedication(eskiHâl)` çalışır (ertelenmişler dahil);
+      - ardından bütün liste için `sync` çalışır.
+    - Bu kural birim testleriyle denenir: aile saati değiştirir, aile adı değiştirir, aile siler, aile yeni ilaç ekler. Her biri için kurulan ve iptal edilen bildirim kimlikleri sahte bildirim API'siyle denetlenir.
+    - Sonra `mark_delivered` RPC'si çağrılır. "Henüz telefona ulaşmadı" uyarısı tam olarak bu adımda kalkar: hatırlatma kurulmadan "ulaştı" denmez.
+    - Son olarak `device_status` yazılır: `last_synced_at` ve `reminders_until` (e bölümü).
+  - **Rıza yoksa** `SyncService` hiç çalışmaz: ne gönderir ne çeker. Uygulama bugünkü gibi yalnızca telefonda çalışır (ADR-021).
 - **Ne zaman çalışır:**
 
 | Tetik                                     | Yapılan                                   | Not                                                                                                                                                                                      |
@@ -244,12 +287,14 @@ flowchart LR
   - iOS simülatöründe hiç çalışmaz; yalnızca gerçek telefonda denenebilir.
   - Push bildirimi de kapalı (ADR-001). Bu yüzden **aile yeni ilaç eklediğinde yaşlının telefonu bunu en geç uygulama açıldığında alır**. Aile bunu "Henüz telefona ulaşmadı" uyarısından görür.
 - **İlk girişte telefondaki ilaçların yüklenmesi:**
-  - `syncState.ownerId` boşsa (bu telefon daha önce hiçbir hesapla eşitlenmediyse), sade veya standart kullanıcı ilk girdiğinde telefondaki bütün ilaçlar, doz kayıtları ve fotoğraflar outbox'a yazılır ve gönderilir.
+  - Yükleme yalnızca açık rıza ekranında onay verilince yapılır (g bölümü, "Sağlık verisi rızası"). Ekran telefonda ilaç varsa sayısını da söyler: "Telefonunuzdaki 3 ilaç ve doz geçmişi hesabınıza yüklenecek."
+  - `syncState.ownerId` boşsa (bu telefon daha önce hiçbir hesapla eşitlenmediyse), onaydan sonra telefondaki bütün ilaçlar, doz kayıtları ve fotoğraflar outbox'a yazılır ve gönderilir.
+  - Silinmiş ilaçların doz kayıtları (ADR-012: ilaç silinince onayları kalır) yüklenmez; sunucuda ilaçsız doz kaydı olamaz.
   - Ardından `ownerId` yazılır. Sunucuda aynı kimlikli ilaç varsa son yazan kazanır, yani tekrar yükleme zarar vermez.
-  - Telefondaki veri **başka** bir hesaba aitse (`ownerId` farklıysa) yüklenmez. Bu durumda yerel önbellek temizlenir, ama gönderilmemiş outbox kaydı varsa önce kullanıcıya sorulur (açık soru 3).
+  - Telefondaki veri **başka** bir hesaba aitse (`ownerId` farklıysa) yüklenmez. Bu durumda yerel önbellek temizlenir; gönderilmemiş outbox kaydı varsa önce kullanıcıya sorulur.
 - **Aile tarafı:** Aile üyesi takip ettiği kişi için çevrimiçi çalışır. Yazmalar doğrudan `Supabase…Repository`'ye gider, outbox kullanılmaz.
   - Gerekçe: Değişikliğin bir anlamı olması için zaten yaşlının telefonuna ulaşması gerekir; internetsiz kaydı "kaydedildi" diye göstermek yanıltıcı olurdu.
-  - İnternet yoksa Türkçe hata gösterilir; son çekilen liste salt okunur görünür.
+  - İnternet yoksa ekle, düzenle ve sil düğmeleri pasif olur ve altlarında "İnternet bağlantısı gerekiyor" yazar (renge ek olarak yazıyla). Son çekilen liste salt okunur görünür. Bağlantı `expo-network` ile izlenir; düğmeye basıldığı anda bağlantı koptuysa istek hatası da aynı Türkçe mesajı verir.
   - **Aile telefonu takip ettiği kişinin hatırlatmalarını kurmaz**: o kişi için kurulan `MedicationService`'e boş (`no-op`) `ReminderScheduler` verilir.
 
 ---
@@ -285,10 +330,13 @@ flowchart LR
 4. Pencere uygulama her açıldığında, öne geldiğinde, eşitlemeden sonra ve arka plan görevinde yenilenir. Kimlikler belirleyici olduğu için (`…-YYYY-MM-DD`) yalnızca fark kurulur ve silinir; bugünkü `sync` mantığı aynen kalır.
 5. **Pencere süresi:** Günde `d` dozda `⌊59 / d⌋` gün. Örnekte 72 / 7 ≈ 10 doz/gün → **5 gün**.
    - Pencere 2 günden kısalırsa Ayarlar'da ve ana ekranda uyarı gösterilir: "Çok sayıda hatırlatma var; uygulamayı her gün açın."
-   - Aile panelinde de aynı kişi için bilgi verilir.
+   - Telefon her yeniden kurulumdan sonra `device_status.reminders_until`'e kurulan son doz bildiriminin anını yazar. Bütün dozlar kurulabildiyse `null` yazar.
+   - Aile panelinde bu ana 48 saatten az kaldıysa kişi kartında amber uyarı çıkar: "Fatma hatırlatmaları 29 Kasım 21:00 tarihinde bitiyor, uygulamayı açmasını hatırlatın." Alan boşsa uyarı çıkmaz. Hesap saf bir fonksiyondadır (`remindersEndingSoon(status, now)`) ve testlidir.
 6. Android'de sınır yok, ama aynı kod çalışır; davranış iki platformda aynı kalsın diye tek strateji seçildi.
-7. **Testler:**
+7. **Testler (TDD):**
+   - Önce **başarısız test** ayrı commit'te: haftada 6 gün, günde 3 kez 4 ilaçla bugünkü `plan` 72 bildirim döner, test 60'ı aşmamasını bekler (`test(bildirim): … (kırmızı)`). Sonra düzeltme (`fix(bildirim): …`).
    - Hiçbir girdiyle 60 aşılmıyor (rastgele ilaç listeleriyle tekrarlı test).
+   - Kayan pencerede son bildirim "Uygulamayı açın" bildirimidir; `reminders_until` onun anıdır.
    - Seçilenler en yakın dozlar.
    - Sığan durumda çıktı bugünküyle birebir aynı (karakterizasyon testi önce yazılır).
 
@@ -312,15 +360,33 @@ flowchart LR
 
 Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin ve ölçüler `arayuz-tasarimi.md`'deki kurallara uyar: en küçük yazı 16pt (Sade'de 20pt), yüzde yazılmaz, "Annemi ara" düğmesi olmaz.
 
-| Ekran                                                | Kim            | Nereden                                                        | İçerik                                                                                                                                                                                                                                                                                                                                                                                    |
-| ---------------------------------------------------- | -------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ailemi Bağla** (`ailemi-bagla`)                    | sade, standart | Ayarlar > "Ailemi bağla"                                       | Büyük 6 haneli kod ("482 913"), "Kod 24 saat geçerlidir", "Kodu paylaş" (React Native `Share`; yeni paket gerekmez), "Yeni kod al", bağlı yakınlar listesi ("Ayşe Bulut · Kızınız") ve onaylı "Bağlantıyı kaldır". Altta gizlilik notu.                                                                                                                                                   |
-| **Kodla Bağlan** (`kodla-baglan`)                    | aile           | Kayıttan sonra ilk ekran; panelde "+ Başka bir yakınımı bağla" | Tek, rakam klavyeli 6 hane alanı; yakınlık seçimi (Annem, Babam, Eşim, Diğer → serbest metin); "Bağlan". Hatalar Türkçe.                                                                                                                                                                                                                                                                  |
-| **Aile Paneli** (`aile/index`)                       | aile           | Aile ana ekranı (bugünkü geçici `aile.tsx`'in yerine)          | Selamlama ve dişli. Kırmızı uyarı kartları ("Annem 09:00 dozunu almadı · 45 dakika geçti"). Her takip edilen kişi için bir kart: baş harfler, ad, "Annem · Sade mod", "Bugün 1 / 3 ilaç alındı", günün dozları (renk + ikon + yazı), ulaşmayan ilaçlarda amber "Henüz telefona ulaşmadı". Kartta "İlaç ekle", "İlaçları yönet", "Geçmiş". Hiç bağlantı yoksa "Yakınımı bağla" boş durumu. |
-| **İlaç ekle** (`aile/[kisiId]/ilac-ekle`)            | aile           | Kişi kartı                                                     | Mevcut 9 adımlı sihirbaz; üst başlıkta "Fatma Bulut için".                                                                                                                                                                                                                                                                                                                                |
-| **İlaçları yönet** (`aile/[kisiId]/ilaclar`)         | aile           | Kişi kartı                                                     | Mevcut İlaçlarım listesi; düzenle ve sil o kişinin ilacına uygulanır. Ulaşmayan ilaçta amber uyarı.                                                                                                                                                                                                                                                                                       |
-| **İlaç düzenle** (`aile/[kisiId]/ilac-duzenle/[id]`) | aile           | İlaçları yönet                                                 | Mevcut sihirbaz, özet adımından.                                                                                                                                                                                                                                                                                                                                                          |
-| **Geçmiş** (`aile/[kisiId]/gecmis`)                  | aile           | Kişi kartı                                                     | Mevcut Geçmiş haftası, hafta hafta sunucudan.                                                                                                                                                                                                                                                                                                                                             |
+| Ekran                                                | Kim            | Nereden                                                                                      | İçerik                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Sağlık verisi rızası** (`saglik-verisi-rizasi`)    | sade, standart | Bildirim izninden sonra bir kez; Ayarlar > "Sağlık verisi ve aile"; rıza yokken Ailemi Bağla | Sade metin (aşağıda), "Kabul ediyorum" ve "Şimdilik hayır". Telefonda ilaç varsa sayısı yazılır. Kabul edilince ilk yükleme başlar. "Şimdilik hayır" denirse uygulama yalnızca telefonda çalışır.                                                                                                                                                                                                                                                                                                                                   |
+| **Ailemi Bağla** (`ailemi-bagla`)                    | sade, standart | Ayarlar > "Ailemi bağla"                                                                     | **Rıza yoksa** kod gösterilmez: "Yakınınızı bağlamak için sağlık verisi rızası gerekir" açıklaması ve rıza ekranına giden düğme görünür; Ayarlar'daki satır da aynı açıklamayla pasif görünür. Rıza varsa: büyük 6 haneli kod ("482 913"), "Kod 24 saat geçerlidir", "Kodu paylaş" (React Native `Share`; yeni paket gerekmez), "Yeni kod al", bağlı yakınlar listesi ("Ayşe Bulut · Kızınız") ve onaylı "Bağlantıyı kaldır". Altta gizlilik notu.                                                                                  |
+| **Kodla Bağlan** (`kodla-baglan`)                    | aile           | Kayıttan sonra ilk ekran; panelde "+ Başka bir yakınımı bağla"                               | Tek, rakam klavyeli 6 hane alanı; yakınlık seçimi (Annem, Babam, Eşim, Diğer → serbest metin); "Bağlan". Hatalar Türkçe.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Aile Paneli** (`aile/index`)                       | aile           | Aile ana ekranı (bugünkü geçici `aile.tsx`'in yerine)                                        | Selamlama ve dişli. Kırmızı uyarı kartları ("Annem 09:00 dozunu almadı · 45 dakika geçti"). Her takip edilen kişi için bir kart: baş harfler, ad, "Annem · Sade mod", "Bugün 1 / 3 ilaç alındı", günün dozları (renk + ikon + yazı), ulaşmayan ilaçlarda amber "Henüz telefona ulaşmadı". `reminders_until`'e 48 saatten az kaldıysa amber "Fatma hatırlatmaları 29 Kasım 21:00 tarihinde bitiyor, uygulamayı açmasını hatırlatın". Kartta "İlaç ekle", "İlaçları yönet", "Geçmiş". Hiç bağlantı yoksa "Yakınımı bağla" boş durumu. |
+| **İlaç ekle** (`aile/[kisiId]/ilac-ekle`)            | aile           | Kişi kartı                                                                                   | Mevcut 9 adımlı sihirbaz; üst başlıkta "Fatma Bulut için".                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **İlaçları yönet** (`aile/[kisiId]/ilaclar`)         | aile           | Kişi kartı                                                                                   | Mevcut İlaçlarım listesi; düzenle ve sil o kişinin ilacına uygulanır. Ulaşmayan ilaçta amber uyarı.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **İlaç düzenle** (`aile/[kisiId]/ilac-duzenle/[id]`) | aile           | İlaçları yönet                                                                               | Mevcut sihirbaz, özet adımından.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **Geçmiş** (`aile/[kisiId]/gecmis`)                  | aile           | Kişi kartı                                                                                   | Mevcut Geçmiş haftası, hafta hafta sunucudan.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+**Sağlık verisi rıza metni (taslak; sade dil, en küçük yazı 18pt):**
+
+> **İlaç bilgileriniz hesabınızda saklansın mı?**
+>
+> - **Hangi bilgi:** İlaçlarınızın adı, dozu, saatleri, kutudaki miktar, fotoğrafı ve hangi dozu ne zaman aldığınız.
+> - **Nerede:** Supabase sunucusunda, Avrupa Birliği'nde (İrlanda).
+> - **Kim görür:** Yalnızca siz ve davet koduyla bağladığınız yakınlarınız. Başka hiç kimse göremez.
+> - **Neden:** Telefonunuz değişse de ilaçlarınız kaybolmasın ve yakınlarınız ilaçlarınızı ekleyip dozlarınızı takip edebilsin.
+> - **Nasıl geri alırım:** İstediğiniz zaman Ayarlar > "Sağlık verisi ve aile" bölümünden rızanızı geri alabilirsiniz. O zaman sunucudaki ilaç bilgileriniz silinir, yakınlarınızla bağlantınız kalkar; ilaçlarınız ve hatırlatmalarınız bu telefonda kalmaya devam eder.
+>
+> Kabul etmezseniz uygulama yalnızca bu telefonda çalışır; hatırlatmalar yine gelir.
+
+- Düğmeler: "Kabul ediyorum" (ana buton) ve "Şimdilik hayır". İkisi de aynı boyda, ikincisi kenarlıklı; seçim zorlanmaz.
+- Metnin sürümü (`text_version`, örn. `2026-11-1`) rıza kaydına yazılır. Telefonda da `healthConsent` anahtarında durum tutulur; böylece uygulama internetsiz açılışta da rızanın durumunu bilir.
+- **Ayarlar > "Sağlık verisi ve aile":** Durum ("Rıza verildi · 27 Kasım 2026"), "Rızamı geri al" (onaylı: "Sunucudaki ilaç bilgileriniz silinecek ve yakınlarınızla bağlantınız kalkacak. Telefonunuzdaki ilaçlar kalır.") veya rıza yoksa "Rıza ver".
+- **Geri alma sırası:** Önce outbox'taki bekleyen kayıtlar atılır, eşitleme durur. Sonra kişinin fotoğraf dosyaları Storage API ile silinir. Ardından `withdraw_health_consent()` çağrılır. En son yerel `syncState` temizlenir. İnternet yoksa geri alma yapılmaz, hiçbir şey değişmez ve "İnternet bağlantısı gerekiyor" yazar.
 
 **Mevcut ekranları değiştirmeden kullanma yolu:**
 
@@ -334,7 +400,8 @@ Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin
 
 **Yönlendirme (`homeRouteOf`):**
 
-- Aile rolünde yeni kayıttan sonra Bildirim izni → Kodla Bağlan → Aile Paneli.
+- Sade ve standart rolde yeni kayıttan sonra Bildirim izni → Sağlık verisi rızası → ana ekran. Eski hesapla ilk girişte (rıza hiç sorulmadıysa) rıza ekranı bir kez gösterilir.
+- Aile rolünde yeni kayıttan sonra Bildirim izni → Kodla Bağlan → Aile Paneli. Aile rolü rıza vermez; kendi sağlık verisi yoktur.
 - Girişte doğrudan Aile Paneli; bağlantı yoksa panel boş durumu "Yakınımı bağla" gösterir. Yönlendirme bağlantı listesinin yüklenmesini beklemez.
 
 **Sade mod:** İlaç ekleme yine gizlidir (ADR-015). Ayarlar'a "Ailemi bağla" satırı eklenir. Aile ilaç eklediğinde Sade ana ekran Realtime veya açılış eşitlemesiyle kendiliğinden güncellenir.
@@ -343,7 +410,9 @@ Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin
 
 - `useInviteCode`, `useCareLinks`, `useRedeemCode` (hepsi yeni `CareService` üzerinden);
 - `useFamilyDashboard` (bağlı kişiler, bugünün dozları; `DoseCalculator` yeniden kullanılır);
-- `useSyncStatus` (Ayarlar'da "Son eşitleme: 2 dk önce", "Gönderilmeyi bekleyen 2 değişiklik").
+- `useSyncStatus` (Ayarlar'da "Son eşitleme: 2 dk önce", "Gönderilmeyi bekleyen 2 değişiklik");
+- `useHealthConsent` (durum, ver, geri al; yeni `ConsentService` üzerinden);
+- `useOnline` (`expo-network`; aile tarafında düğmeleri pasif yapmak için).
 
 ---
 
@@ -372,7 +441,8 @@ Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin
   - **A** sade: takip edilen;
   - **B** aile: A'ya bağlanır;
   - **C** aile: bağlı değil, "yabancı";
-  - **D** aile: yalnızca deneme sınırı testi için.
+  - **D** aile: yalnızca elle SQL betiğindeki deneme sınırı testi için.
+  - **E** sade: rıza vermemiş kişi.
   - Oturumsuz istemci (`anon`) de denenir.
 - **Matris:** Her tablo ve işlem için (okuma, ekleme, güncelleme, silme, RPC) A, B, C ve `anon` ile beklenen sonuç tabloyla yazılır ve `it.each` ile çalıştırılır. Bu, b) bölümündeki tablonun çalıştırılabilir hâlidir. Örnekler:
   - B, A'nın ilacını ekler, düzenler ve siler → izinli.
@@ -381,68 +451,102 @@ Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin
   - A, `care_links`'e doğrudan satır ekleyemez.
   - B, `owner_id`'yi C yapamaz.
   - C, A'nın fotoğraf yolunu okuyamaz.
+  - B, E'nin (rıza yok) ilacını ekleyemez; E kendisi de sunucuya ilaç yazamaz, kod üretemez.
+  - B, A'nın `delivered_at`'ini dolduramaz; A'nın `mark_delivered` çağrısı doldurur.
+  - B, A'nın `device_status`'unu okur ama yazamaz.
+  - A rızasını geri alınca B, A'nın hiçbir ilacını ve bağlantısını görmez.
 - **Akış testleri:**
   - A kod üretir → B kodla bağlanır → bağlantı oluşur.
   - Aynı kod ikinci kez kullanılamaz.
-  - D'nin 6. denemesi `too_many_attempts` alır. Saatlik sınır yüzünden bu test saatte bir kez çalıştırılabilir ve ayrı bir `describe` ile işaretlidir.
+  - B ilacın adını değiştirince `delivered_at` boşalır; A'nın `mark_delivered`'ı eski sürümle çağrılırsa dolmaz, yeni sürümle dolar.
+  - Eski `updated_at` ile gönderilen güncelleme yeni kaydı ezmez.
   - `record_dose` iki kez çağrılınca stok bir kez düşer.
 - **Temizlik:** Her test kendi oluşturduğu ilaç ve bağlantıları `afterAll`'da siler; kimlikler `rls-test-` önekiyle başlar.
-- **Süresi dolmuş kod:** Gerçek projede saat ileri alınamaz. Bu durum `supabase/tests/` altındaki pgTAP testiyle denenir; pgTAP `supabase test db` ile yerel Docker'da çalışır. Docker yoksa bu tek durum elle SQL betiğiyle denenir (açık soru 8).
 
-### 3. Elle deneme
+### 3. Elle SQL testi: süresi dolmuş kod ve deneme sınırı
+
+Docker kurulmayacağı için (pgTAP yerel Docker ister) bu iki durum elle çalıştırılan SQL betiğiyle denenir: `supabase/tests/elle/davet-kodu.sql`. Gerçek projede saat ileri alınamadığından süre, yönetici yetkisiyle kodun bitiş anı geçmişe çekilerek denenir. Deneme sınırı otomatik testte de saatte bir kez çalışabilirdi; betik ise geri alındığı için istendiği kadar çalıştırılır.
+
+**Adımlar:**
+
+1. Supabase panelinde **Authentication > Users**'tan A (sade), B (aile) ve D (aile) test hesaplarının kimliklerini (UUID) kopyalayın.
+2. Betiğin başındaki üç `set_config('test.…')` satırına yapıştırın.
+3. Betiğin tamamını **SQL Editor**'da çalıştırın.
+4. Sonuç tablosunda "Bütün denetimler geçti" yazmalı. Bir denetim tutmazsa betik, hangisinin tutmadığını Türkçe yazan bir hatayla durur.
+
+**Betik ne yapar:** Hepsi tek işlemde çalışır ve sonunda `rollback` ile geri alınır; veritabanında iz kalmaz. Her adımda rol `authenticated` yapılır ve kimlik `request.jwt.claims` ile verilir, yani `auth.uid()` ve RLS uygulamadan gelen istekteki gibi çalışır.
+
+1. A rıza verir, kod üretir. Kod 6 rakam mı?
+2. Yönetici olarak kodun bitiş anı 1 dakika geriye alınır.
+3. B süresi dolmuş kodu dener: `invalid_code` dönmeli ve bağlantı oluşmamalı.
+4. A yeni kod alır, B bağlanır (`ok`). Aynı kod ikinci kez `invalid_code` dönmeli.
+5. D beş yanlış kod dener (her biri `invalid_code`). Altıncı denemede **doğru** kod bile `too_many_attempts` dönmeli.
+
+### 4. Elle deneme
 
 Simülatörde iki hesap (sade + aile) ile adım adım senaryo, iş bitince verilecek. Arka plan görevi ve fotoğraf çekimi yalnızca gerçek telefonda denenebilir.
 
 ---
 
-## i) Riskler ve açık sorular
+## i) Riskler ve cevaplanan sorular
 
 ### Riskler
 
-| #   | Risk                                                                                                                       | Etki                                            | Önlem                                                                                                                                                                                                    |
-| --- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| R1  | "Son yazan kazanır" telefon saatine dayanır; yaşlının telefonunun saati yanlışsa eski değişiklik kazanabilir               | Nadiren yanlış sürüm                            | Çekme imleci sunucu saatiyle (`server_updated_at`). Sunucu, gelecekten (+5 dk) gelen `updated_at`'i `now()`'a indirir. Doz kayıtları çakışmaz.                                                           |
-| R2  | Aile stoğu düzenlerken yaşlı doz alırsa stok değişikliği kaybolabilir                                                      | Stok 1 eksik veya fazla                         | Doz stoğu satırı ezmeden RPC'de `stock - amount` ile düşer. Yalnızca ailenin elle yaptığı stok düzeltmesi son yazan kazanır kuralına tabidir.                                                            |
-| R3  | Push kapalı (ADR-001), arka plan görevi garanti değil                                                                      | Aile eklediği ilaç telefon açılana dek kurulmaz | "Henüz telefona ulaşmadı" uyarısı; hatırlatma kurulmadan "ulaştı" denmez. Gerçek kullanımda ücretli Apple hesabıyla push açılabilir.                                                                     |
-| R4  | 6 haneli kod (10⁶) çok hesapla kaba kuvvetle denenebilir                                                                   | Yetkisiz bağlantı                               | Hesap başına 5/saat, 24 saat süre, tek kullanım, hata türünün gizlenmesi, kişinin "Bağlı yakınlarım"da görüp kaldırabilmesi. Ücretsiz planda IP sınırı yok; gerçek kullanımda Edge Function + IP sınırı. |
-| R5  | Paylaşılan telefon / hesap değiştirme                                                                                      | Başkasının ilaç verisi yeni hesaba yüklenebilir | `syncState.ownerId` denetimi; başka hesabın verisi yüklenmez, önbellek temizlenir.                                                                                                                       |
-| R6  | **KVKK: sağlık verisi ilk kez sunucuya çıkıyor** (özel nitelikli kişisel veri, 6. madde)                                   | Hukuki                                          | Açık rıza gerekir. Kayıttaki onay yalnızca aydınlatma metni içindir (açık soru 2).                                                                                                                       |
-| R7  | Yeni yerel paketler (`expo-background-task`, `expo-task-manager`, `expo-image-manipulator`, `expo-network`, `expo-crypto`) | Yeni geliştirme derlemesi gerekir               | `npx expo install` ile SDK uyumlu sürümler; `npx expo run:ios` ile yeniden derleme. `ios/` klasörüne elle dokunulmaz.                                                                                    |
-| R8  | Ücretsiz Supabase projesi 1 hafta kullanılmazsa duraklatılır                                                               | Sunum günü sunucu kapalı olabilir               | Uygulama yine çalışır (çevrimdışı öncelikli); sunumdan önce panelden uyandırılır.                                                                                                                        |
-| R9  | Saat dilimi: doz saati yaşlının yerel saatidir; aile başka saat dilimindeyse "45 dakika geçti" yanlış hesaplanır           | Yanlış uyarı                                    | Prototipte aynı saat dilimi varsayılır, belgeye yazılır.                                                                                                                                                 |
-| R10 | Outbox'ta takılıp kalan kayıt                                                                                              | Aile değişikliği göremez                        | Ayarlar'da "Gönderilmeyi bekleyen N değişiklik", kalıcı hatalar ayrı anahtarda ve kayıtta.                                                                                                               |
-| R11 | Kapsam büyük; altı adımın her biri ayrı commit grubu                                                                       | Süre                                            | Sıra bağımlılığa göre: önce şema, sonra eşitleme. Her grup kendi başına `npm run kontrol`'den geçer.                                                                                                     |
+| #   | Risk                                                                                                                          | Etki                                            | Önlem                                                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | "Son yazan kazanır" telefon saatine dayanır; yaşlının telefonunun saati yanlışsa eski değişiklik kazanabilir                  | Nadiren yanlış sürüm                            | Çekme imleci sunucu saatiyle (`server_updated_at`). Sunucu, gelecekten (+5 dk) gelen `updated_at`'i `now()`'a indirir. Doz kayıtları çakışmaz.                                                           |
+| R2  | Aile stoğu düzenlerken yaşlı doz alırsa stok değişikliği kaybolabilir                                                         | Stok 1 eksik veya fazla                         | Doz stoğu satırı ezmeden RPC'de `stock - amount` ile düşer. Yalnızca ailenin elle yaptığı stok düzeltmesi son yazan kazanır kuralına tabidir.                                                            |
+| R3  | Push kapalı (ADR-001), arka plan görevi garanti değil                                                                         | Aile eklediği ilaç telefon açılana dek kurulmaz | "Henüz telefona ulaşmadı" uyarısı; hatırlatma kurulmadan "ulaştı" denmez. Gerçek kullanımda ücretli Apple hesabıyla push açılabilir.                                                                     |
+| R4  | 6 haneli kod (10⁶) çok hesapla kaba kuvvetle denenebilir                                                                      | Yetkisiz bağlantı                               | Hesap başına 5/saat, 24 saat süre, tek kullanım, hata türünün gizlenmesi, kişinin "Bağlı yakınlarım"da görüp kaldırabilmesi. Ücretsiz planda IP sınırı yok; gerçek kullanımda Edge Function + IP sınırı. |
+| R5  | Paylaşılan telefon / hesap değiştirme                                                                                         | Başkasının ilaç verisi yeni hesaba yüklenebilir | `syncState.ownerId` denetimi; başka hesabın verisi yüklenmez, önbellek temizlenir.                                                                                                                       |
+| R6  | **KVKK: sağlık verisi ilk kez sunucuya çıkıyor** (özel nitelikli kişisel veri, 6. madde)                                      | Hukuki                                          | Ayrı açık rıza ekranı; rıza yoksa sunucu yazmayı RLS ile reddeder; geri alınınca sunucudaki veri silinir (ADR-021).                                                                                      |
+| R7  | Yeni yerel paketler (`expo-background-task`, `expo-task-manager`, `expo-image-manipulator`, `expo-network`, `expo-crypto`)    | Yeni geliştirme derlemesi gerekir               | `npx expo install` ile SDK uyumlu sürümler; `npx expo run:ios` ile yeniden derleme. `ios/` klasörüne elle dokunulmaz.                                                                                    |
+| R8  | Ücretsiz Supabase projesi 1 hafta kullanılmazsa duraklatılır                                                                  | Sunum günü sunucu kapalı olabilir               | Uygulama yine çalışır (çevrimdışı öncelikli); sunumdan önce panelden uyandırılır.                                                                                                                        |
+| R9  | Saat dilimi: doz saati yaşlının yerel saatidir; aile başka saat dilimindeyse "45 dakika geçti" yanlış hesaplanır              | Yanlış uyarı                                    | Prototipte aynı saat dilimi varsayılır, belgeye yazılır.                                                                                                                                                 |
+| R10 | Outbox'ta takılıp kalan kayıt                                                                                                 | Aile değişikliği göremez                        | Ayarlar'da "Gönderilmeyi bekleyen N değişiklik", kalıcı hatalar ayrı anahtarda ve kayıtta.                                                                                                               |
+| R12 | `server_updated_at` mikro saniyelidir; JavaScript `Date`'e çevrilirse hassasiyet kaybolur ve `mark_delivered` sürümü eşleşmez | "Ulaştı" hiç dolmaz                             | Sürüm telefonda metin olarak saklanır, `Date`'e çevrilmez; testle kilitlenir.                                                                                                                            |
+| R13 | Rıza geri alınırken internet giderse fotoğraflar silinip veri kalabilir                                                       | Yarım geri alma                                 | Sıra: önce yerel eşitleme durur, sonra fotoğraflar, sonra RPC. Yarıda kalırsa "Rızamı geri al" yeniden denenebilir; ikinci çağrı zararsızdır.                                                            |
+| R11 | Kapsam büyük; altı adımın her biri ayrı commit grubu                                                                          | Süre                                            | Sıra bağımlılığa göre: önce şema, sonra eşitleme. Her grup kendi başına `npm run kontrol`'den geçer.                                                                                                     |
 
-### Açık sorular (onayında cevaplamanı istediklerim)
+### Cevaplanan sorular (26 Kasım 2026)
 
-1. **Sütun adları:** İngilizce `snake_case` + istediğin `cihaza_ulasti_zamani` mı, yoksa tamamen İngilizce (`delivered_at`) mi? Öneri: `cihaza_ulasti_zamani` istediğin gibi kalsın, diğerleri İngilizce.
-2. **KVKK açık rızası:** İlaçlar sunucuya yüklenmeden önce ayrı bir açık rıza adımı ekleyelim mi? Öneri: ilk eşitlemeden önce tek ekranlık "Sağlık verilerimin (ilaç ve doz bilgisi) yakınlarımla paylaşılmak üzere sunucuda saklanmasına açık rıza veriyorum" onayı. Onay verilmezse uygulama bugünkü gibi yalnızca telefonda çalışır.
-3. **İlk girişte yükleme:** Telefondaki ilaçlar sormadan mı yüklensin, "Telefondaki 3 ilaç hesabınıza yüklensin mi?" diye sorarak mı? Öneri: sorarak, 2. sorudaki rıza ekranıyla birleşik.
-4. **Standart mod:** Standart kullanıcının ilaçları da buluta taşınsın ve o da aile bağlayabilsin mi? (ADR-015 "ikisi de davet koduyla bağlanabilir" diyor.) Öneri: evet, aynı yol.
-5. **Rol denetimi:** Kodu yalnızca `aile` rolü kullanabilsin mi? Öneri: evet, standart kullanıcı aile olamaz; gerekirse rol değiştirir.
-6. **"Atlandı" durumu:** `status` sütunu kuruluyor. "Bu dozu atla" düğmesi bu parçada eklensin mi, ertelensin mi (ADR-018'de ertelenenlerde)? Öneri: ertelensin; sütun hazır kalsın.
-7. **Aile çevrimdışı yazma:** Aile tarafı için çevrimiçi zorunluluğu kabul mü? Öneri: evet (d bölümündeki gerekçe).
-8. **Docker:** Bilgisayarında Docker Desktop var mı? Varsa süresi dolmuş kod ve deneme süresi pgTAP ile yerelde test edilir; yoksa elle SQL betiğiyle.
+1. **Sütun adları:** Hepsi İngilizce. "Telefona ulaştı" sütunu `delivered_at`.
+2. **KVKK açık rızası:** Ayrı rıza ekranı var (g bölümü). Rıza verilmezse uygulama yalnızca telefonda çalışır ve aile bağlama seçenekleri "bunun için rıza gerekir" açıklamasıyla pasif görünür. Rıza Ayarlar'dan geri alınabilir. ADR-021.
+3. **İlk yükleme:** Kullanıcıya sorularak, rıza ekranıyla birlikte.
+4. **Standart mod:** Standart kullanıcının ilaçları da buluta gider ve o da aile bağlayabilir.
+5. **Davet kodu:** Yalnızca aile rolü kullanabilir.
+6. **"Bu dozu atla":** 3. parçada. Veritabanında `status = 'skipped'` yeri hazır.
+7. **Aile internetsiz:** İlaç ekleyemez ve düzenleyemez. Düğmeler "İnternet bağlantısı gerekiyor" açıklamasıyla pasif olur.
+8. **Docker:** Yok. Süresi dolmuş kod ve deneme sınırı elle SQL ile denenir (h bölümü, 3. madde).
+
+**Ek istekler:**
+
+- Aile ilacı düzenleyince veya silince yaşlının telefonu eşitlemede hatırlatmaları yeniden kurar veya iptal eder. Kuralı ve testi d bölümünde.
+- 64 bildirim stratejisi onaylandı. Önce sınırın aşıldığını gösteren başarısız test, sonra düzeltme (e bölümü).
+- KVKK riski ADR-021 olarak `kararlar.md`'de.
+- `reminders_until` ve aile panelindeki 48 saat uyarısı (a bölümü `device_status`, e bölümü 5. madde). ADR-025.
 
 ---
 
 ## j) Uygulama sırası ve commit grupları
 
-| #   | Grup                       | İçerik                                                                                                                                                         | Bitti sayılması için                                                         |
-| --- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 1   | Migration'lar              | Tablolar, indeksler, RLS, tetikleyiciler, RPC'ler, bucket. **`db push`'tan önce SQL sana gösterilir.** Ardından `npm run tipler`, RLS entegrasyon testleri.    | `db lint` hatasız; Security ve Performance Advisor; `npm run test:rls` yeşil |
-| 2   | Repository'ler ve eşitleme | Cihaz şeması v3, `Supabase…Repository`, `OfflineFirst…`, `Outbox`, `SyncService`, tetikler, Realtime, arka plan görevi, ilk girişte yükleme, `mark_delivered`. | Sözleşme testleri iki uygulamada aynı                                        |
-| 3   | Davet kodu ve eşleşme      | `CareService`, Ailemi Bağla, Kodla Bağlan, Ayarlar satırı, yönlendirme.                                                                                        |                                                                              |
-| 4   | Aile paneli                | Panel, kişi kapsamlı sağlayıcı, "<ad> için" sihirbaz, İlaçları yönet, Geçmiş, "Henüz telefona ulaşmadı".                                                       |                                                                              |
-| 5   | Fotoğraf                   | Sıkıştırma, yükleme, imzalı URL, önbellek.                                                                                                                     |                                                                              |
-| 6   | 64 bildirim sınırı         | Tek bütçe, kayan pencere, "uygulamayı açın" bildirimi, uyarı.                                                                                                  | Karakterizasyon testi önce                                                   |
+| #   | Grup                             | İçerik                                                                                                                                                                                                                                                                               | Bitti sayılması için                                                         |
+| --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 1   | Migration'lar                    | Tablolar, indeksler, RLS, tetikleyiciler, RPC'ler, bucket, rıza. **`db push`'tan önce SQL sana gösterilir.** Ardından `npm run tipler`, RLS entegrasyon testleri.                                                                                                                    | `db lint` hatasız; Security ve Performance Advisor; `npm run test:rls` yeşil |
+| 2   | Repository'ler, eşitleme ve rıza | Rıza servisi ve ekranı, Ayarlar'da geri alma, cihaz şeması v3, `Supabase…Repository`, `OfflineFirst…`, `Outbox`, `SyncService`, tetikler, Realtime, arka plan görevi, ilk girişte yükleme, `mark_delivered`, `device_status`, aile değişikliğinde hatırlatmaların yeniden kurulması. | Sözleşme testleri iki uygulamada aynı; aile düzenle/sil testleri             |
+| 3   | Davet kodu ve eşleşme            | `CareService`, Ailemi Bağla, Kodla Bağlan, Ayarlar satırı, yönlendirme.                                                                                                                                                                                                              |                                                                              |
+| 4   | Aile paneli                      | Panel, kişi kapsamlı sağlayıcı, "<ad> için" sihirbaz, İlaçları yönet, Geçmiş, "Henüz telefona ulaşmadı", 48 saat uyarısı, internetsiz pasif düğmeler.                                                                                                                                |                                                                              |
+| 5   | Fotoğraf                         | Sıkıştırma, yükleme, imzalı URL, önbellek.                                                                                                                                                                                                                                           |                                                                              |
+| 6   | 64 bildirim sınırı               | Tek bütçe, kayan pencere, "uygulamayı açın" bildirimi, `reminders_until`, uyarı.                                                                                                                                                                                                     | Karakterizasyon testi ve kırmızı test önce                                   |
 
 - Her grupta önce testler yazılır (kırmızı), sonra kod (yeşil), sonra temizlik yapılır. Bulunan her hata için ayrı `test(…): … (kırmızı)` ve `fix(…): …` commit'leri atılır.
 - **Bitişte güncellenecek belgeler:**
   - `kararlar.md`:
-    - ADR-021: bulut eşitleme ve outbox;
-    - ADR-022: davet kodu ve bağlantı;
-    - ADR-023: fotoğraf deposu;
-    - ADR-024: bildirim bütçesi.
+    - ADR-021: sağlık verisi için açık rıza (KVKK; şimdi yazıldı);
+    - ADR-022: bulut eşitleme ve outbox;
+    - ADR-023: davet kodu ve bağlantı;
+    - ADR-024: fotoğraf deposu;
+    - ADR-025: telefonun durumu ve `reminders_until`;
+    - ADR-026: bildirim bütçesi.
   - `moduler-yapi.md`, `ilerleme.md` ve `CHANGELOG.md`.
   - Simülatör deneme adımları.

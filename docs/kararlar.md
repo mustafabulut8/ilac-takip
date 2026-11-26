@@ -31,6 +31,7 @@ Numaralar eski numaralarla aynıdır: "N. karar", ADR-0NN demektir. Yeni karar e
 | ADR-018 | Hesap, oturum ve rol yönlendirmesi                                  | Kabul edildi                                            |
 | ADR-019 | SOLID, TDD ve otomatik kalite kuralları                             | Kabul edildi                                            |
 | ADR-020 | Repository, saf alan katmanı, sınır doğrulaması ve commit standardı | Kabul edildi                                            |
+| ADR-021 | Sağlık verisi için açık rıza (KVKK)                                 | Kabul edildi                                            |
 
 ## ADR-001: iOS Push Notifications yetkisi kaldırıldı
 
@@ -546,3 +547,47 @@ Bitirme projesinin savunmasında tasarım ilkelerinin yalnızca anlatılmaması,
 - **Bedeli:**
   - Cihaz deposu son okunan listeyi bellekte tutar; bütün yazmalar bu sınıftan geçtiği için disk ile bellek ayrışmaz.
   - a11y eklentisinin ESLint 9 desteği resmî değil; ESLint büyük sürüm yükseltmesinde yeniden denenmelidir.
+
+## ADR-021: Sağlık verisi için açık rıza (KVKK)
+
+**Tarih:** 26 Kasım 2026 · **Durum:** Kabul edildi
+
+### Bağlam
+
+- 2. turun 2. parçasında ilaç ve doz bilgisi ilk kez telefondan sunucuya (Supabase, AB – İrlanda, ADR-016) çıkıyor ve bağlı aile üyeleriyle paylaşılıyor.
+- İlaç adı, dozu ve hangi dozun ne zaman alındığı kişinin sağlığı hakkında bilgi verir. KVKK 6. madde bunu **özel nitelikli kişisel veri** sayar. Bu veri, kanunda sayılan istisnalar dışında ancak ilgili kişinin **açık rızasıyla** işlenebilir.
+- Kayıt ekranındaki onay (`ConsentCheckbox`) yalnızca aydınlatma metninin okunduğunu gösterir. Açık rıza ise belirli bir konuya ilişkin, bilgilendirmeye dayanan ve özgür iradeyle verilen ayrı bir beyandır; aydınlatma onayının içine gömülemez.
+- Rıza verilmeden de uygulamanın asıl işi olan hatırlatma çalışmalı (ADR-003). Rızayı hizmetin ön koşulu yapmak, rızanın özgür iradeyle verilmesi şartıyla çelişirdi.
+
+### Karar
+
+- **Ayrı rıza ekranı:** Sade ve standart kullanıcıya bildirim izninden sonra bir kez "İlaç bilgileriniz hesabınızda saklansın mı?" ekranı gösterilir. Metin sade dildedir ve beş şeyi söyler:
+  - hangi veri: ilaç adı, doz, saatler, kutudaki miktar, fotoğraf, doz geçmişi;
+  - nerede: Avrupa Birliği'nde, İrlanda'daki Supabase sunucusunda;
+  - kim görür: yalnızca kişi ve davet koduyla bağladığı yakınları;
+  - neden: telefon değişse de veri kaybolmasın ve yakınlar ilaç ekleyip dozları takip edebilsin;
+  - nasıl geri alınır: Ayarlar > "Sağlık verisi ve aile".
+- **Seçim zorlanmaz:** "Kabul ediyorum" ve "Şimdilik hayır" aynı boydadır. Telefonda ilaç varsa ekran sayısını söyler; ilk yükleme ancak onayla başlar.
+- **Rıza yoksa:**
+  - Uygulama yalnızca telefonda çalışır; hatırlatma, onay ve geçmiş etkilenmez.
+  - Eşitleme hiç çalışmaz.
+  - "Ailemi bağla" ve kod üretme pasif görünür, altında "Yakınınızı bağlamak için sağlık verisi rızası gerekir" yazar.
+- **Sunucu da denetler:** Rıza `health_consent_events` tablosunda olay olarak tutulur (yalnızca ekleme; metnin sürümüyle birlikte). RLS, sahibinin geçerli rızası olmayan kişi için ilaç, doz, fotoğraf ve telefon durumu yazılmasına izin vermez; davet kodu da üretilemez. Uygulamadaki bir hata rızasız veri gönderse bile sunucu reddeder.
+- **Geri alma:** Ayarlar'dan onay sorularak yapılır. Sırası:
+  1. eşitleme durur;
+  2. fotoğraf dosyaları silinir;
+  3. `withdraw_health_consent()` kişinin sunucudaki ilaç, doz, telefon durumu, davet kodu ve aile bağlantılarını siler, geri alma olayını yazar.
+
+  Telefondaki ilaçlar ve hatırlatmalar kalır.
+
+- **Aile rolü** rıza vermez; kendi sağlık verisi yoktur. Gördüğü veri, takip ettiği kişinin rızasına dayanır; rıza geri alınınca erişimi de biter.
+
+### Sonuçlar
+
+- Rıza kanıtı (kim, ne zaman, hangi metin sürümü) sunucuda silinmeden durur.
+- Rızasız kullanıcı için davranış bugünküyle aynıdır; rıza vermemek hiçbir temel özelliği kapatmaz.
+- **Bilinen sınırlılıklar:**
+  - Rıza metni ve aydınlatma metni hukukçu tarafından gözden geçirilmedi; prototipte test verisi kullanılır (ADR-016, ADR-017).
+  - Sunucu AB'de olduğu için gerçek kullanımda ADR-016'daki KVKK notu da geçerlidir: veriler Türkiye'de barındırılmalı ya da KVKK 9. madde uyarınca standart sözleşme yapılıp Kurum'a bildirilmelidir.
+  - Geri alma internet ister. İnternet yoksa geri alma yapılmaz, hiçbir şey değişmez ve "İnternet bağlantısı gerekiyor" yazar; kullanıcı bağlantı gelince yeniden dener.
+- Plan ve ekran metni: `docs/tur2-parca2-plan.md` (g bölümü).
