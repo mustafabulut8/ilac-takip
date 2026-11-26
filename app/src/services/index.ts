@@ -5,6 +5,8 @@ import { Platform } from 'react-native';
 import { isSupabaseConfigured } from '@/config';
 
 import { AuthService } from './AuthService';
+import { ProfileCache } from './ProfileCache';
+import { ProfileRepository } from './ProfileRepository';
 import { supabase } from './supabase';
 import { DoseCalculator } from './DoseCalculator';
 import { DoseService } from './DoseService';
@@ -37,7 +39,7 @@ export {
   type NotificationsApi,
 } from './NotificationService';
 export { PhotoService } from './PhotoService';
-export { AuthService, type AuthBackend, type ProfileCache } from './AuthService';
+export { AuthService } from './AuthService';
 export type { IStorage, KeyValueStore, StoredData } from './StorageService';
 
 /**
@@ -64,4 +66,9 @@ export const medicationService = new MedicationService(
   systemClock,
 );
 // Supabase istemcisi yalnızca hesap işlemlerinde kullanılır; ilaç verisi bu parçada cihazda kalır.
-export const authService = new AuthService(supabase, AsyncStorage, isSupabaseConfigured());
+export const authService = new AuthService(
+  supabase.auth,
+  new ProfileRepository(supabase),
+  new ProfileCache(AsyncStorage),
+  isSupabaseConfigured(),
+);

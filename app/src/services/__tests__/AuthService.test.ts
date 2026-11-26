@@ -1,7 +1,10 @@
 import { AuthError, ValidationError } from '@/errors';
 import type { SignUpInput } from '@/models';
 
-import { AuthService, type AuthBackend, type ProfileCache } from '../AuthService';
+import { toAuthError } from '../auth-errors';
+import { AuthService, type AuthApi } from '../AuthService';
+import { ProfileCache, type ProfileCacheStore } from '../ProfileCache';
+import { ProfileRepository, type ProfilesBackend } from '../ProfileRepository';
 
 const USER_ID = 'kullanici-1';
 const ROW = { id: USER_ID, ad: 'Ayşe', rol: 'sade', olusturma_zamani: '2026-11-26T08:00:00Z' };
@@ -16,7 +19,7 @@ const SIGN_UP: SignUpInput = {
   consent: true,
 };
 
-class MemoryCache implements ProfileCache {
+class MemoryCache implements ProfileCacheStore {
   readonly items = new Map<string, string>();
   async getItem(key: string) {
     return this.items.get(key) ?? null;
@@ -59,13 +62,19 @@ function makeBackend(row: unknown = ROW, rowError: unknown = null) {
     stopAutoRefresh: jest.fn().mockResolvedValue(undefined),
   };
   const from = jest.fn().mockReturnValue(query);
-  return { backend: { auth, from } as unknown as AuthBackend, auth, from, query, unsubscribe };
+  const db = { from } as unknown as ProfilesBackend;
+  return { authApi: auth as unknown as AuthApi, db, auth, from, query, unsubscribe };
 }
 
 function setup(row?: unknown, rowError?: unknown) {
   const mocks = makeBackend(row, rowError);
   const cache = new MemoryCache();
-  const service = new AuthService(mocks.backend, cache);
+  const service = new AuthService(
+    mocks.authApi,
+    new ProfileRepository(mocks.db),
+    new ProfileCache(cache),
+    true,
+  );
   return { ...mocks, cache, service };
 }
 
@@ -79,7 +88,7 @@ describe('AuthService.signUp', () => {
       options: { data: { ad: 'Ayşe', rol: 'sade' } },
     });
     expect(from).toHaveBeenCalledWith('profiles');
-    expect(JSON.parse(cache.items.get(AuthService.PROFILE_CACHE_KEY)!)).toEqual(PROFILE);
+    expect(JSON.parse(cache.items.get(ProfileCache.KEY)!)).toEqual(PROFILE);
   });
 
   it('geçersiz bilgide sunucuya gitmeden ValidationError atar', async () => {
@@ -163,7 +172,7 @@ describe('AuthService.signOut', () => {
     await service.signIn('ayse@mail.com', 'gizli1234');
     await service.signOut();
     expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
-    expect(cache.items.has(AuthService.PROFILE_CACHE_KEY)).toBe(false);
+    expect(cache.items.has(ProfileCache.KEY)).toBe(false);
   });
 });
 
@@ -199,7 +208,7 @@ describe('AuthService.currentProfile', () => {
 
   it('internet yoksa ve kopya başka kullanıcınınsa hatayı iletir', async () => {
     const { service, query, cache } = setup();
-    cache.items.set(AuthService.PROFILE_CACHE_KEY, JSON.stringify({ ...PROFILE, id: 'baska' }));
+    cache.items.set(ProfileCache.KEY, JSON.stringify({ ...PROFILE, id: 'baska' }));
     query.maybeSingle.mockResolvedValue({
       data: null,
       error: { message: 'Network request failed' },
@@ -219,8 +228,13 @@ describe('AuthService.updateRole', () => {
 
 describe('AuthService yapılandırılmamışsa', () => {
   it('istek göndermez, anlaşılır hata verir; oturum null sayılır', async () => {
-    const { backend, auth } = makeBackend();
-    const service = new AuthService(backend, new MemoryCache(), false);
+    const { authApi, db, auth } = makeBackend();
+    const service = new AuthService(
+      authApi,
+      new ProfileRepository(db),
+      new ProfileCache(new MemoryCache()),
+      false,
+    );
     await expect(service.signIn('ayse@mail.com', 'gizli1234')).rejects.toMatchObject({
       kind: 'not_configured',
     });
@@ -250,7 +264,7 @@ describe('AuthService oturum olayları', () => {
   });
 });
 
-describe('AuthService.toAuthError', () => {
+describe('toAuthError', () => {
   it.each([
     [{ name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' }, 'offline'],
     [{ name: 'AuthWeakPasswordError', code: 'weak_password', status: 422 }, 'weak_password'],
@@ -261,14 +275,14 @@ describe('AuthService.toAuthError', () => {
     [new TypeError('Network request failed'), 'offline'],
     [undefined, 'unknown'],
   ])('%j → %s', (error, kind) => {
-    const mapped = AuthService.toAuthError(error);
+    const mapped = toAuthError(error);
     expect(mapped).toBeInstanceOf(AuthError);
     expect(mapped.kind).toBe(kind);
     expect(mapped.userMessage).toMatch(/\S/);
   });
 
   it('internet yok mesajı Türkçedir', () => {
-    expect(AuthService.toAuthError({ status: 0 }).userMessage).toBe(
+    expect(toAuthError({ status: 0 }).userMessage).toBe(
       'İnternet bağlantısı yok. Bağlantınızı kontrol edip yeniden deneyin.',
     );
   });
@@ -306,23 +320,23 @@ describe('AuthService.toAuthError (karakterizasyon)', () => {
     ],
     ['bilinmeyen', 'unknown', 'Bir sorun oluştu. Lütfen biraz sonra yeniden deneyin.'],
   ])('%s kodu %s türüne ve Türkçe mesaja çevrilir', (code, kind, userMessage) => {
-    const mapped = AuthService.toAuthError({ name: 'AuthApiError', code, message: 'm' });
+    const mapped = toAuthError({ name: 'AuthApiError', code, message: 'm' });
     expect(mapped).toMatchObject({ kind, userMessage });
     expect(mapped.message).toBe(`AuthApiError ${code}: m`);
   });
 
   it('ağ hatası metinleri internet yok sayılır', () => {
     for (const message of ['Failed to fetch', 'NetworkError', 'network error']) {
-      expect(AuthService.toAuthError({ message }).kind).toBe('offline');
+      expect(toAuthError({ message }).kind).toBe('offline');
     }
   });
 
   it('AuthError olduğu gibi döner, diğerlerinde asıl hata cause olarak saklanır', () => {
     const own = new AuthError('offline', 't', 'k');
-    expect(AuthService.toAuthError(own)).toBe(own);
+    expect(toAuthError(own)).toBe(own);
     const raw = { code: 'weak_password' };
-    expect(AuthService.toAuthError(raw).cause).toBe(raw);
-    expect(AuthService.toAuthError(null).message).toBe('Hata :');
+    expect(toAuthError(raw).cause).toBe(raw);
+    expect(toAuthError(null).message).toBe('Hata :');
   });
 });
 
@@ -332,15 +346,15 @@ describe('AuthService profil kopyası (karakterizasyon)', () => {
   it('giriş profili cihaza yazar, çıkış siler', async () => {
     const { service, cache } = setup();
     await service.signIn('ayse@mail.com', 'gizli1234');
-    expect(JSON.parse(cache.items.get(AuthService.PROFILE_CACHE_KEY)!)).toEqual(PROFILE);
+    expect(JSON.parse(cache.items.get(ProfileCache.KEY)!)).toEqual(PROFILE);
     await service.signOut();
-    expect(cache.items.has(AuthService.PROFILE_CACHE_KEY)).toBe(false);
+    expect(cache.items.has(ProfileCache.KEY)).toBe(false);
   });
 
   it('bozuk, rolü geçersiz veya okunamayan kopya kullanılmaz', async () => {
     for (const raw of ['{bozuk', JSON.stringify({ ...PROFILE, role: 'yonetici' }), '[]']) {
       const { service, query, cache } = setup();
-      cache.items.set(AuthService.PROFILE_CACHE_KEY, raw);
+      cache.items.set(ProfileCache.KEY, raw);
       query.maybeSingle.mockResolvedValue(offline);
       await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'offline' });
     }
@@ -353,7 +367,7 @@ describe('AuthService profil kopyası (karakterizasyon)', () => {
   it('kayıt anı olmayan kopya boş kayıt anıyla kullanılır', async () => {
     const { service, query, cache } = setup();
     const { createdAt: _createdAt, ...withoutDate } = PROFILE;
-    cache.items.set(AuthService.PROFILE_CACHE_KEY, JSON.stringify(withoutDate));
+    cache.items.set(ProfileCache.KEY, JSON.stringify(withoutDate));
     query.maybeSingle.mockResolvedValue(offline);
     await expect(service.currentProfile()).resolves.toEqual({ ...PROFILE, createdAt: '' });
   });
@@ -368,7 +382,7 @@ describe('AuthService profil kopyası (karakterizasyon)', () => {
 
   it('sunucu hatası internet yok değilse kopyaya bakılmaz', async () => {
     const { service, query, cache } = setup();
-    cache.items.set(AuthService.PROFILE_CACHE_KEY, JSON.stringify(PROFILE));
+    cache.items.set(ProfileCache.KEY, JSON.stringify(PROFILE));
     query.maybeSingle.mockResolvedValue({ data: null, error: { code: 'bilinmeyen' } });
     await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'unknown' });
   });
