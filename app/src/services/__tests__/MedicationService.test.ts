@@ -252,3 +252,18 @@ describe('MedicationService.update / remove', () => {
     await expect(service.update([], 'yok', {})).rejects.toBeInstanceOf(AppError);
   });
 });
+
+describe('MedicationService.update hatırlatma hatası', () => {
+  it('eski hatırlatmalar kaldırılamasa da yeni saatler kurulur', async () => {
+    const { service, reminders } = setup();
+    reminders.cancelMedication.mockRejectedValue(new Error('iptal edilemedi'));
+    const current = [makeMedication()];
+
+    const result = await service.update(current, 'ilac1', { times: ['09:00'] });
+
+    expect(reminders.sync).toHaveBeenCalledWith(result.medications);
+    expect(result.notice).toBe(
+      'Değişiklik kaydedildi, ancak hatırlatma kurulamadı. Bildirim iznini kontrol edin.',
+    );
+  });
+});
