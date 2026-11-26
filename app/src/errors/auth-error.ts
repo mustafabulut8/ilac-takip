@@ -10,6 +10,7 @@ export type AuthErrorKind =
   | 'rate_limited'
   | 'not_configured'
   | 'profile_missing'
+  | 'session_expired'
   | 'unknown';
 
 /** Kayıt, giriş, çıkış ve şifre sıfırlama hataları. */

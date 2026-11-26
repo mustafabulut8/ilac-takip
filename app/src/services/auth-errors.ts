@@ -11,6 +11,10 @@ const EMAIL_TAKEN: ErrorRule = {
   kind: 'email_taken',
   userMessage: 'Bu e-posta adresiyle zaten bir hesap var. Giriş yapmayı deneyin.',
 };
+const SESSION_EXPIRED: ErrorRule = {
+  kind: 'session_expired',
+  userMessage: 'Oturumunuz kapanmış. Lütfen yeniden giriş yapın.',
+};
 const RATE_LIMITED: ErrorRule = {
   kind: 'rate_limited',
   userMessage: 'Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden deneyin.',
@@ -34,6 +38,19 @@ const RULES_BY_CODE: Readonly<Record<string, ErrorRule>> = {
   email_address_invalid: { kind: 'invalid_email', userMessage: 'E-posta adresi geçerli değil.' },
   over_request_rate_limit: RATE_LIMITED,
   over_email_send_rate_limit: RATE_LIMITED,
+  // Oturum süresi doldu veya başka cihazdan kapatıldı (Auth ve PostgREST JWT kodları).
+  session_expired: SESSION_EXPIRED,
+  session_not_found: SESSION_EXPIRED,
+  refresh_token_not_found: SESSION_EXPIRED,
+  refresh_token_already_used: SESSION_EXPIRED,
+  bad_jwt: SESSION_EXPIRED,
+  PGRST301: SESSION_EXPIRED,
+  PGRST303: SESSION_EXPIRED,
+};
+
+/** Kodu olmayan, adından tanınan hatalar. */
+const RULES_BY_NAME: Readonly<Record<string, ErrorRule>> = {
+  AuthSessionMissingError: SESSION_EXPIRED,
 };
 
 const OFFLINE_RULE: ErrorRule = { kind: 'offline', userMessage: OFFLINE_MESSAGE };
@@ -51,7 +68,8 @@ function isOffline({ name, status }: ErrorLike, text: string) {
 function ruleOf(error: ErrorLike, text: string): ErrorRule {
   if (isOffline(error, text)) return OFFLINE_RULE;
   const byCode = typeof error.code === 'string' ? RULES_BY_CODE[error.code] : undefined;
-  return byCode ?? UNKNOWN_RULE;
+  const byName = typeof error.name === 'string' ? RULES_BY_NAME[error.name] : undefined;
+  return byCode ?? byName ?? UNKNOWN_RULE;
 }
 
 /** Supabase veya ağ hatasını kullanıcıya gösterilecek Türkçe mesajlı AuthError'a çevirir. */
