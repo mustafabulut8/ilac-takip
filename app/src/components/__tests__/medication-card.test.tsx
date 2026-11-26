@@ -7,16 +7,17 @@ import { MedicationCard } from '../medication-card';
 // Fotoğraf adresi servis katmanından gelir; bileşen testinde gerekmez.
 jest.mock('@/hooks/useMedicationPhoto', () => ({ useMedicationPhoto: () => null }));
 
-// Karakterizasyon: "Süresi tamamlandı" kuralı bileşenden çıkarılmadan önce.
 describe('MedicationCard', () => {
   const course = makeMedication({ startDate: '2026-11-10', duration: { kind: 'days', count: 7 } });
-  const renderCard = (now: Date) => {
-    jest.useFakeTimers({ now });
-    return render(
-      <MedicationCard medication={course} onToggleMarkedLow={jest.fn()} onRemove={jest.fn()} />,
+  const renderCard = (now: Date) =>
+    render(
+      <MedicationCard
+        medication={course}
+        now={now}
+        onToggleMarkedLow={jest.fn()}
+        onRemove={jest.fn()}
+      />,
     );
-  };
-  afterEach(() => jest.useRealTimers());
 
   it('kürün son günü bitince "Süresi tamamlandı" yazar', async () => {
     await renderCard(new Date(2026, 10, 17, 9, 0));
@@ -33,6 +34,7 @@ describe('MedicationCard', () => {
     await render(
       <MedicationCard
         medication={makeMedication({ stock: 3 })}
+        now={new Date(2030, 0, 1)}
         onToggleMarkedLow={jest.fn()}
         onRemove={jest.fn()}
       />,

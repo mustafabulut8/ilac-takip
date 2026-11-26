@@ -3,8 +3,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 
 import { Colors, Spacing } from '@/constants/theme';
 import { getMedicationForm, type Medication } from '@/models';
-import { formatDate } from '@/utils/date';
-import { describeDuration, describeSchedule, lastDayOf } from '@/utils/schedule';
+import { describeDuration, describeSchedule, isCourseFinished } from '@/utils/schedule';
 
 import { AppText } from './app-text';
 import { Card } from './card';
@@ -16,6 +15,8 @@ import { SecondaryButton } from './secondary-button';
 
 type MedicationCardProps = {
   medication: Medication;
+  /** Şu anki zaman; kürün bitip bitmediği buna göre yazılır. */
+  now: Date;
   onToggleMarkedLow: () => void;
   onRemove: () => void;
 };
@@ -32,12 +33,16 @@ function InfoRow({ icon, text, color }: { icon: IconName; text: string; color?: 
 }
 
 /** İlaçlarım ekranındaki kart: plan, stok ve işlemler. */
-export function MedicationCard({ medication, onToggleMarkedLow, onRemove }: MedicationCardProps) {
+export function MedicationCard({
+  medication,
+  now,
+  onToggleMarkedLow,
+  onRemove,
+}: MedicationCardProps) {
   const form = getMedicationForm(medication.form);
   const isLow = form.isRunningLow(medication);
   const stockLabel = form.stockLabel(medication.stock);
-  const lastDay = lastDayOf(medication);
-  const isFinished = lastDay !== null && formatDate(lastDay) < formatDate(new Date());
+  const isFinished = isCourseFinished(medication, now);
   const schedule = [medication.times.join(' · '), describeSchedule(medication)]
     .filter(Boolean)
     .join(' · ');

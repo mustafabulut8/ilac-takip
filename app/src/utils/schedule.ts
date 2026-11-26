@@ -14,6 +14,12 @@ export function lastDayOf({ duration, startDate }: DayRule): Date | null {
   return addDays(start, duration.count - 1);
 }
 
+/** Süreli kürün son günü geçti mi? Son gün bitene kadar kür sürüyor sayılır. */
+export function isCourseFinished(rule: DayRule, now: Date): boolean {
+  const last = lastDayOf(rule);
+  return last !== null && formatDate(last) < formatDate(now);
+}
+
 /** İlaç bu gün alınır mı? (sıklık ve süre) */
 export function isScheduledOn(rule: DayRule, day: Date): boolean {
   const { schedule } = rule;

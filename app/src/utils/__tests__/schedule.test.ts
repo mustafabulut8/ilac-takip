@@ -4,6 +4,7 @@ import { addDays, formatDateRange, formatLongDate, parseDate, startOfWeek } from
 import {
   describeDuration,
   describeSchedule,
+  isCourseFinished,
   isScheduledOn,
   lastDayOf,
   nextOccurrence,
@@ -100,5 +101,23 @@ describe('tarih ve saat metinleri', () => {
       'İyi akşamlar',
       'İyi akşamlar',
     ]);
+  });
+});
+
+describe('isCourseFinished', () => {
+  const course = {
+    schedule: { kind: 'daily' as const },
+    duration: { kind: 'days' as const, count: 7 },
+    startDate: '2026-11-10',
+  };
+
+  it('son gün (16 Kasım) bitene kadar sürüyor sayılır', () => {
+    expect(isCourseFinished(course, new Date(2026, 10, 16, 23, 59))).toBe(false);
+    expect(isCourseFinished(course, new Date(2026, 10, 17, 0, 0))).toBe(true);
+  });
+
+  it('sürekli kullanım hiç bitmez', () => {
+    const continuous = { ...course, duration: { kind: 'continuous' as const } };
+    expect(isCourseFinished(continuous, new Date(2030, 0, 1))).toBe(false);
   });
 });

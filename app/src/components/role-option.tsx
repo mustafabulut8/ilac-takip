@@ -4,23 +4,50 @@ import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';
 import type { UserRole } from '@/models';
 
 import { AppText } from './app-text';
-import { Icon } from './icon';
+import { Icon, type IconName } from './icon';
 
-/** Rol seçimi kartlarının metinleri (Stitch 09). */
-export const ROLE_OPTIONS: Record<UserRole, { label: string; detail: string }> = {
+type RoleOptionContent = {
+  label: string;
+  detail: string;
+  /** Dairedeki simge: yazı ("Aa") veya ikon. */
+  symbol: { text: string } | { icon: IconName };
+  /** Kartta rozet olarak gösterilen öneri; yoksa rozet çıkmaz. */
+  recommendation?: string;
+};
+
+/**
+ * Rol seçimi kartlarının içeriği (Stitch 09). Açık/kapalı ilkesi: yeni rol bu tabloya
+ * bir satır eklenerek tanıtılır; kart bileşeni role göre dallanmaz.
+ */
+export const ROLE_OPTIONS: Record<UserRole, RoleOptionContent> = {
   sade: {
     label: 'Sade kullanım',
     detail: 'Büyük yazılar, tek dokunuşla onay. İlaçlarımı yakınım ekler.',
+    symbol: { text: 'Aa' },
+    recommendation: 'İleri yaş için önerilir',
   },
   standart: {
     label: 'Standart kullanım',
     detail: 'İlaçlarımı kendim ekler ve takip ederim.',
+    symbol: { icon: 'pills' },
   },
   aile: {
     label: 'Yakınımı takip etmek istiyorum',
     detail: 'Yakınımın ilaçlarını eklerim, kaçırılan dozlardan haberdar olurum.',
+    symbol: { icon: 'family' },
   },
 };
+
+function RoleSymbol({ symbol }: Pick<RoleOptionContent, 'symbol'>) {
+  if ('text' in symbol) {
+    return (
+      <AppText size="heading" weight="bold" color={Colors.primary}>
+        {symbol.text}
+      </AppText>
+    );
+  }
+  return <Icon name={symbol.icon} size={26} color={Colors.primary} />;
+}
 
 type RoleOptionProps = {
   role: UserRole;
@@ -33,11 +60,12 @@ type RoleOptionProps = {
  * "Aa" dairesi beyaz zeminli, 1px turkuaz çerçevelidir ki seçili zeminde de görünsün.
  */
 export function RoleOption({ role, selected, onPress }: RoleOptionProps) {
-  const { label, detail } = ROLE_OPTIONS[role];
+  const { label, detail, symbol, recommendation } = ROLE_OPTIONS[role];
+  const spoken = [label, recommendation?.toLocaleLowerCase('tr-TR'), detail].filter(Boolean);
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityLabel={`${label}${role === 'sade' ? ', ileri yaş için önerilir' : ''}, ${detail}`}
+      accessibilityLabel={spoken.join(', ')}
       accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={({ pressed }) => [
@@ -46,20 +74,14 @@ export function RoleOption({ role, selected, onPress }: RoleOptionProps) {
         pressed && styles.pressed,
       ]}>
       <View style={styles.circle}>
-        {role === 'sade' ? (
-          <AppText size="heading" weight="bold" color={Colors.primary}>
-            Aa
-          </AppText>
-        ) : (
-          <Icon name={role === 'standart' ? 'pills' : 'family'} size={26} color={Colors.primary} />
-        )}
+        <RoleSymbol symbol={symbol} />
       </View>
       <View style={styles.texts}>
         <AppText weight="bold">{label}</AppText>
-        {role === 'sade' && (
+        {recommendation && (
           <View style={styles.badge}>
             <AppText size="small" weight="semibold" color={Colors.primary}>
-              İleri yaş için önerilir
+              {recommendation}
             </AppText>
           </View>
         )}
