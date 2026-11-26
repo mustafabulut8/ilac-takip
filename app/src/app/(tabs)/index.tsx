@@ -2,19 +2,17 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
-import { Banner } from '@/components/banner';
 import { Card } from '@/components/card';
 import { DoseCard } from '@/components/dose-card';
+import { HomeAlerts } from '@/components/home-alerts';
 import { Icon } from '@/components/icon';
 import { LowStockBanner } from '@/components/low-stock-banner';
 import { ProgressCard } from '@/components/progress-card';
-import { SecondaryButton } from '@/components/secondary-button';
 import { SectionHeader } from '@/components/section-header';
 import { TabScreen } from '@/components/tab-screen';
 import { Colors, MinTouchSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useMedications } from '@/hooks/useMedications';
-import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useTodayDoses } from '@/hooks/useTodayDoses';
 import type { Dose } from '@/models';
 import { formatLongDate } from '@/utils/date';
@@ -25,29 +23,13 @@ function openDose({ medication, time, date }: Dose) {
 }
 
 export default function TodayScreen() {
-  const { medications, storageWarnings } = useMedications();
+  const { medications } = useMedications();
   const { now, doses, groups, progress, nextDose } = useTodayDoses();
   const { profile } = useAuth();
-  const permission = useNotificationPermission();
 
   return (
     <TabScreen title="Bugün">
-      {storageWarnings.map((warning) => (
-        <Banner key={warning} tone="danger" icon="warning" title={warning} />
-      ))}
-      {permission.missing && (
-        <Banner
-          tone="danger"
-          icon="bell"
-          title="Bildirim izni kapalı"
-          detail="İzin vermezseniz ilaç saatinde hatırlatma alamazsınız.">
-          <SecondaryButton
-            label={permission.status === 'denied' ? 'Ayarları aç' : 'İzin ver'}
-            variant="danger"
-            onPress={permission.request}
-          />
-        </Banner>
-      )}
+      <HomeAlerts />
 
       <View style={styles.greeting}>
         <AppText size="title" weight="bold">

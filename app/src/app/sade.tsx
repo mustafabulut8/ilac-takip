@@ -1,5 +1,3 @@
-import * as Haptics from 'expo-haptics';
-import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,15 +5,13 @@ import { AppText } from '@/components/app-text';
 import { Banner } from '@/components/banner';
 import { ButtonBase } from '@/components/button-base';
 import { Card } from '@/components/card';
+import { HomeAlerts } from '@/components/home-alerts';
 import { Icon } from '@/components/icon';
-import { SecondaryButton } from '@/components/secondary-button';
 import { SettingsButton } from '@/components/settings-button';
 import { SimpleDoseCard } from '@/components/simple/simple-dose-card';
 import { SimpleProgress } from '@/components/simple/simple-progress';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { useMedications } from '@/hooks/useMedications';
-import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useSimpleHome } from '@/hooks/useSimpleHome';
 import { getMedicationForm } from '@/models';
 import { formatLongDate } from '@/utils/date';
@@ -28,33 +24,8 @@ import { greetingFor } from '@/utils/time';
 export default function SimpleHomeScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
-  const { storageWarnings } = useMedications();
-  const permission = useNotificationPermission();
   const home = useSimpleHome();
-  const { now, focus, progress } = home;
-  const confirming = useRef(false);
-  const [lastTaken, setLastTaken] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
   if (!home.isLoaded) return null;
-
-  const confirm = async () => {
-    // Hızlı çift dokunuş stoğu iki kez düşürmesin.
-    if (!focus || confirming.current) return;
-    confirming.current = true;
-    try {
-      await home.confirm(focus.medication.id, focus.date, focus.time);
-      setLastTaken(focus.medication.name);
-      setError(null);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      setError('Kaydedilemedi. Lütfen tekrar deneyin.');
-    } finally {
-      confirming.current = false;
-    }
-  };
-
-  const form = focus ? getMedicationForm(focus.medication.form) : null;
 
   return (
     <ScrollView
@@ -66,69 +37,75 @@ export default function SimpleHomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTexts}>
           <AppText size="display" weight="bold" accessibilityRole="header">
-            {greetingFor(now, profile?.name)}
+            {greetingFor(home.now, profile?.name)}
           </AppText>
           <AppText size="large" color={Colors.textSecondary}>
-            {formatLongDate(now)}
+            {formatLongDate(home.now)}
           </AppText>
         </View>
         <SettingsButton />
       </View>
 
-      {storageWarnings.map((warning) => (
-        <Banner key={warning} tone="danger" icon="warning" title={warning} />
-      ))}
-      {permission.missing && (
-        <Banner
-          tone="danger"
-          icon="bell"
-          title="Bildirim izni kapalı"
-          detail="İzin vermezseniz ilaç saatinde hatırlatma alamazsınız.">
-          <SecondaryButton
-            label={permission.status === 'denied' ? 'Ayarları aç' : 'İzin ver'}
-            variant="danger"
-            onPress={permission.request}
-          />
-        </Banner>
-      )}
-      {lastTaken && (
-        <Banner tone="success" icon="check" title={`${lastTaken} alındı olarak kaydedildi.`} />
+      <HomeAlerts />
+      {home.lastTaken && (
+        <Banner tone="success" icon="check" title={`${home.lastTaken} alındı olarak kaydedildi.`} />
       )}
 
-      {focus && form ? (
-        <>
-          <SimpleDoseCard dose={focus} lateMinutes={home.lateMinutes} />
-          {error && (
-            <AppText size="large" weight="bold" color={Colors.danger}>
-              {error}
-            </AppText>
-          )}
-          <ButtonBase
-            label={form.confirmLabel()}
-            accessibilityLabel={form.confirmAccessibilityLabel(focus.medication.name)}
-            icon="checkCircle"
-            variant="primary"
-            onPress={confirm}
-            style={styles.confirm}
-          />
-        </>
-      ) : home.allTaken ? (
-        <AllTakenCard tomorrowFirstTime={home.tomorrowFirstTime} />
-      ) : (
-        <Card style={styles.emptyCard}>
-          <AppText size="subtitle" weight="bold" center>
-            {home.hasMedications ? 'Bugün için başka ilacınız yok.' : 'Henüz ilacınız yok.'}
-          </AppText>
-          <AppText size="large" center color={Colors.textSecondary}>
-            {home.hasMedications
-              ? 'Yeni ilaç saati gelince burada görünür.'
-              : 'İlaçlarınızı yakınınız ekleyecek.'}
-          </AppText>
-        </Card>
-      )}
+      <FocusSection home={home} />
 
-      {progress.total > 0 && <SimpleProgress taken={progress.taken} total={progress.total} />}
+      {home.progress.total > 0 && (
+        <SimpleProgress taken={home.progress.taken} total={home.progress.total} />
+      )}
     </ScrollView>
+  );
+}
+
+type SimpleHome = ReturnType<typeof useSimpleHome>;
+
+/** Gösterilecek doz ve büyük onay düğmesi; doz yoksa tebrik veya boş kart. */
+function FocusSection({ home }: { home: SimpleHome }) {
+  const { focus } = home;
+  if (!focus) {
+    return home.allTaken ? (
+      <AllTakenCard tomorrowFirstTime={home.tomorrowFirstTime} />
+    ) : (
+      <EmptyCard hasMedications={home.hasMedications} />
+    );
+  }
+  const form = getMedicationForm(focus.medication.form);
+  return (
+    <>
+      <SimpleDoseCard dose={focus} lateMinutes={home.lateMinutes} />
+      {home.error && (
+        <AppText size="large" weight="bold" color={Colors.danger}>
+          {home.error}
+        </AppText>
+      )}
+      <ButtonBase
+        label={form.confirmLabel()}
+        accessibilityLabel={form.confirmAccessibilityLabel(focus.medication.name)}
+        icon="checkCircle"
+        variant="primary"
+        onPress={home.confirmFocus}
+        style={styles.confirm}
+      />
+    </>
+  );
+}
+
+/** Bugün gösterilecek doz yok: ilaç hiç yoksa yakının ekleyeceği söylenir. */
+function EmptyCard({ hasMedications }: { hasMedications: boolean }) {
+  return (
+    <Card style={styles.emptyCard}>
+      <AppText size="subtitle" weight="bold" center>
+        {hasMedications ? 'Bugün için başka ilacınız yok.' : 'Henüz ilacınız yok.'}
+      </AppText>
+      <AppText size="large" center color={Colors.textSecondary}>
+        {hasMedications
+          ? 'Yeni ilaç saati gelince burada görünür.'
+          : 'İlaçlarınızı yakınınız ekleyecek.'}
+      </AppText>
+    </Card>
   );
 }
 
