@@ -387,3 +387,58 @@ describe('AuthService profil kopyası (karakterizasyon)', () => {
     await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'unknown' });
   });
 });
+
+describe('AuthService çevrimdışı açılış ve oturum süresi', () => {
+  const OFFLINE = { message: 'TypeError: Network request failed' };
+
+  /** Aynı cihaz belleğiyle uygulamayı yeniden açar (yeni servis örneği). */
+  function relaunch(cache: MemoryCache, rowError: unknown) {
+    const mocks = makeBackend(null, rowError);
+    const service = new AuthService(
+      mocks.authApi,
+      new ProfileRepository(mocks.db),
+      new ProfileCache(cache),
+      true,
+    );
+    return { ...mocks, service };
+  }
+
+  it('önceki açılışta kaydedilen profil, internetsiz yeniden açılışta kullanılır', async () => {
+    const first = setup();
+    await first.service.currentProfile();
+    const { service } = relaunch(first.cache, OFFLINE);
+    await expect(service.currentProfile()).resolves.toEqual(PROFILE);
+  });
+
+  it('cihazda profil hiç yoksa internetsiz açılış anlaşılır hata verir', async () => {
+    const { service } = relaunch(new MemoryCache(), OFFLINE);
+    await expect(service.currentProfile()).rejects.toMatchObject({
+      kind: 'offline',
+      userMessage: 'İnternet bağlantısı yok. Bağlantınızı kontrol edip yeniden deneyin.',
+    });
+  });
+
+  it('bozuk önbellek kullanılmaz', async () => {
+    const cache = new MemoryCache();
+    cache.items.set(ProfileCache.KEY, '{bozuk');
+    const { service } = relaunch(cache, OFFLINE);
+    await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'offline' });
+  });
+
+  it('süresi dolan oturumda önbellek kullanılmaz, yeniden giriş istenir', async () => {
+    const first = setup();
+    await first.service.currentProfile();
+    const { service } = relaunch(first.cache, { code: 'PGRST303', message: 'JWT expired' });
+    await expect(service.currentProfile()).rejects.toMatchObject({
+      kind: 'session_expired',
+      userMessage: 'Oturumunuz kapanmış. Lütfen yeniden giriş yapın.',
+    });
+  });
+
+  it('oturum okunamazsa oturum yok sayılır', async () => {
+    const { service, auth } = setup();
+    auth.getSession.mockResolvedValue({ data: { session: null }, error: { code: 'bad_jwt' } });
+    await expect(service.getSession()).resolves.toBeNull();
+    await expect(service.currentProfile()).resolves.toBeNull();
+  });
+});

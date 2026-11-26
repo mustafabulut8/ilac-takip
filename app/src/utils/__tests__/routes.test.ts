@@ -25,3 +25,31 @@ describe('homeRouteOf', () => {
     expect(homeRouteOf({ ...base, role: 'aile', onboarding: true })).toBe('/bildirim-izni');
   });
 });
+
+describe('homeRouteOf: bütün birleşimler', () => {
+  const roles = [null, 'sade', 'standart', 'aile'] as const;
+  const flags = [false, true];
+  const cases = flags.flatMap((hasSession) =>
+    roles.flatMap((role) =>
+      flags.flatMap((profileLoading) =>
+        flags.map((onboarding) => ({ hasSession, role, profileLoading, onboarding })),
+      ),
+    ),
+  );
+
+  /** Kuralların düz anlatımı: öncelik sırası oturum → profil → izin ekranı → rol. */
+  const expected = ({ hasSession, role, profileLoading, onboarding }: (typeof cases)[number]) => {
+    if (!hasSession) return '/hos-geldiniz';
+    if (role === null) return profileLoading ? '/hos-geldiniz' : '/profil-hatasi';
+    if (onboarding) return '/bildirim-izni';
+    return { sade: '/sade', standart: '/', aile: '/aile' }[role];
+  };
+
+  it.each(cases)('%o', (state) => {
+    expect(homeRouteOf(state)).toBe(expected(state));
+  });
+
+  it('önbellekteki profil varken yükleme sürse de rolün ekranı açılır (çevrimdışı açılış)', () => {
+    expect(homeRouteOf({ ...base, role: 'sade', profileLoading: true })).toBe('/sade');
+  });
+});

@@ -394,4 +394,23 @@ describe('DoseCalculator.focusDose', () => {
     const logs = ['08:00', '13:00', '20:00'].map((time) => log(medication.id, today, time));
     expect(focusAt(at(21), logs)).toBeUndefined();
   });
+
+  it('hiç doz yoksa doz göstermez', () => {
+    expect(calculator.focusDose([], at(9))).toBeUndefined();
+  });
+
+  it('günün bütün saatleri geçtiyse en son kaçırılanı gösterir', () => {
+    expect(focusAt(at(23, 30))).toBe('20:00');
+  });
+
+  it('sonraki doz alındıysa önceki geciken doz yine öne çıkar', () => {
+    expect(focusAt(at(13, 5), [log(medication.id, today, '13:00')])).toBe('08:00');
+  });
+
+  it('saati gelmiş doz yoksa ve hepsi kaçırıldıysa doz göstermez', () => {
+    const doses = calculator
+      .getTodayDoses([medication], [], at(23, 30))
+      .map((dose) => ({ ...dose, time: '23:59' }));
+    expect(calculator.focusDose(doses, at(23, 30))).toBeUndefined();
+  });
 });
