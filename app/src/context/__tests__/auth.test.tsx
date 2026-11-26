@@ -4,7 +4,6 @@ import { AppState } from 'react-native';
 
 import { AuthError } from '@/errors';
 import type { Profile } from '@/models';
-import type { AuthService } from '@/services';
 
 import { AuthProvider, useAuth } from '../auth';
 
@@ -34,7 +33,7 @@ function fakeService(session: unknown = SESSION) {
 
 async function setup(fake = fakeService()) {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <AuthProvider service={fake.service as unknown as AuthService}>{children}</AuthProvider>
+    <AuthProvider service={fake.service}>{children}</AuthProvider>
   );
   const hook = await renderHook(() => useAuth(), { wrapper });
   await waitFor(() => expect(hook.result.current.isLoading).toBe(false));

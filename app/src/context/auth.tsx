@@ -30,6 +30,20 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Sağlayıcının AuthService'ten kullandığı metotlar; testte sahtesi verilir. */
+export type AuthSessionService = Pick<
+  AuthService,
+  | 'getSession'
+  | 'currentProfile'
+  | 'onSessionChange'
+  | 'setAutoRefresh'
+  | 'signUp'
+  | 'signIn'
+  | 'signOut'
+  | 'resetPassword'
+  | 'updateRole'
+>;
+
 /**
  * Oturum ve profilin React durumu. İş kuralı AuthService'tedir; bu bileşen
  * servisi çağırır ve oturum değişikliklerini dinler.
@@ -39,7 +53,7 @@ export function AuthProvider({
   service = defaultAuthService,
 }: {
   children: ReactNode;
-  service?: AuthService;
+  service?: AuthSessionService;
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);

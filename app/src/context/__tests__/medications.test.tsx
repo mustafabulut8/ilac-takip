@@ -5,7 +5,7 @@ import { StorageError } from '@/errors';
 import type { DoseLog } from '@/models';
 import { makeMedication } from '@/test-utils/fakes';
 
-import { MedicationsProvider, useMedications, type MedicationsServices } from '../medications';
+import { MedicationsProvider, useMedications } from '../medications';
 
 // Gerçek servisler (composition root) bu testte kurulmaz; sahteleri sağlayıcıya verilir.
 jest.mock('@/services', () => ({}));
@@ -33,11 +33,9 @@ function fakeServices() {
   };
 }
 
-async function setup(services = fakeServices()) {
+async function setup(services: ReturnType<typeof fakeServices> = fakeServices()) {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <MedicationsProvider services={services as unknown as MedicationsServices}>
-      {children}
-    </MedicationsProvider>
+    <MedicationsProvider services={services}>{children}</MedicationsProvider>
   );
   const hook = await renderHook(() => useMedications(), { wrapper });
   await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));

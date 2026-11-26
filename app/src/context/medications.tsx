@@ -11,10 +11,13 @@ import {
 } from '@/services';
 import { logger } from '@/utils/logger';
 
-/** Sağlayıcıya verilebilen servisler; testte sahteleri verilebilir. */
+/**
+ * Sağlayıcının servislerden kullandığı metotlar. Somut sınıf değil bu metotlar beklenir;
+ * böylece testte tip zorlaması olmadan sahte nesne verilebilir.
+ */
 export type MedicationsServices = {
-  medications: MedicationService;
-  doses: DoseService;
+  medications: Pick<MedicationService, 'load' | 'add' | 'update' | 'remove'>;
+  doses: Pick<DoseService, 'confirmDose'>;
 };
 
 type MedicationsContextValue = {
