@@ -1,5 +1,3 @@
-import * as Notifications from 'expo-notifications';
-
 import type { Medication } from '@/models';
 import { addDays, atTime, formatDate, parseDate } from '@/utils/date';
 import { logger } from '@/utils/logger';
@@ -14,17 +12,35 @@ type DoseNotificationData = {
   date?: string;
 };
 
+/** Bildirimin başlığı, metni ve dokununca açılacak doz. */
+export type ReminderContent = {
+  title: string;
+  body: string;
+  data: DoseNotificationData;
+};
+
+/**
+ * Bildirimin ne zaman geleceği. Bildirim kütüphanesinden bağımsızdır; cihaza kurarken
+ * NotificationService bunu kütüphanenin biçimine çevirir (Adapter).
+ */
+export type ReminderTrigger =
+  | { kind: 'daily'; hour: number; minute: number }
+  /** `weekday`: 1 = Pazar … 7 = Cumartesi (bildirim kütüphanesinin sayımı). */
+  | { kind: 'weekly'; weekday: number; hour: number; minute: number }
+  | { kind: 'date'; date: Date };
+
 /** Cihaza kurulacak tek bir hatırlatma. */
 export type Reminder = {
   identifier: string;
-  content: Notifications.NotificationContentInput;
-  trigger: Notifications.SchedulableNotificationTriggerInput;
+  content: ReminderContent;
+  trigger: ReminderTrigger;
   /** Yalnızca süreli ilaçlarda: bildirimin geleceği an. */
   at?: Date;
 };
 
 /**
- * Hangi hatırlatmanın ne zaman kurulacağını hesaplar. Saf sınıftır: cihaza dokunmaz,
+ * Hangi hatırlatmanın ne zaman kurulacağını hesaplar. Saf sınıftır: cihaza ve bildirim
+ * kütüphanesine dokunmaz,
  * yalnızca ilaç listesinden ve verilen andan bildirim listesi üretir. Kurmak ve
  * eşitlemek NotificationService'in işidir.
  */
@@ -39,16 +55,11 @@ export class ReminderPlanner {
   }
 
   /** Doz bildiriminin başlığı, metni ve dokunulunca açılacak doz. */
-  doseContent(
-    medication: Medication,
-    time: string,
-    date?: string,
-  ): Notifications.NotificationContentInput {
+  doseContent(medication: Medication, time: string, date?: string): ReminderContent {
     const data: DoseNotificationData = { medicationId: medication.id, time, ...(date && { date }) };
     return {
       title: `İlaç saati: ${medication.name}`,
       body: `${time} dozunuz: ${medication.dose}. Onaylamak için dokunun.`,
-      sound: true,
       data,
     };
   }
@@ -80,18 +91,16 @@ export class ReminderPlanner {
     const { schedule } = medication;
     const identifier = ReminderPlanner.notificationId(medication.id, time);
     const content = this.doseContent(medication, time);
-    const clock = { ...parseTime(time), channelId: ReminderPlanner.CHANNEL_ID };
+    const clock = parseTime(time);
 
     if (schedule.kind === 'daily') {
-      const type = Notifications.SchedulableTriggerInputTypes.DAILY as const;
-      return [{ identifier, content, trigger: { type, ...clock } }];
+      return [{ identifier, content, trigger: { kind: 'daily', ...clock } }];
     }
-    const type = Notifications.SchedulableTriggerInputTypes.WEEKLY as const;
     return schedule.days.map((day) => ({
       identifier: `${identifier}-g${day}`,
       content,
-      // expo-notifications haftayı 1 = Pazar ile başlatır; Date.getDay'de Pazar 0'dır.
-      trigger: { type, weekday: day + 1, ...clock },
+      // Bildirim kütüphanesi haftayı 1 = Pazar ile başlatır; Date.getDay'de Pazar 0'dır.
+      trigger: { kind: 'weekly', weekday: day + 1, ...clock },
     }));
   }
 
@@ -116,11 +125,7 @@ export class ReminderPlanner {
     return {
       identifier: `${id}-${formatDate(day)}`,
       content: this.doseContent(medication, time),
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: at,
-        channelId: ReminderPlanner.CHANNEL_ID,
-      },
+      trigger: { kind: 'date', date: at },
       at,
     };
   }

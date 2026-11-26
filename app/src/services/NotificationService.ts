@@ -6,7 +6,12 @@ import { formatDate, parseDate } from '@/utils/date';
 import { isValidTime } from '@/utils/time';
 
 import type { Clock, ReminderScheduler, SnoozeCanceller } from './ports';
-import { ReminderPlanner } from './ReminderPlanner';
+import {
+  ReminderPlanner,
+  type Reminder,
+  type ReminderContent,
+  type ReminderTrigger,
+} from './ReminderPlanner';
 
 /** Bildirime dokununca açılacak ALDIM sayfasının parametreleri. */
 export type DoseTarget = { medicationId: string; time: string; date: string };
@@ -135,9 +140,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
       await Promise.all(
         expected
           .filter(({ identifier }) => !scheduledIds.has(identifier))
-          .map(({ identifier, content, trigger }) =>
-            this.api.scheduleNotificationAsync({ identifier, content, trigger }),
-          ),
+          .map((reminder) => this.api.scheduleNotificationAsync(this.requestOf(reminder))),
       );
     } catch (error) {
       throw new NotificationError(
@@ -159,7 +162,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
       await this.ensureChannel();
       await this.api.scheduleNotificationAsync({
         identifier: NotificationService.snoozeId(medication.id, date, time),
-        content: this.planner.doseContent(medication, time, date),
+        content: this.contentOf(this.planner.doseContent(medication, time, date)),
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: NotificationService.SNOOZE_MINUTES * 60,
@@ -182,7 +185,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
     await this.ensureChannel();
     await this.api.scheduleNotificationAsync({
       identifier: `${NotificationService.TEST_ID_PREFIX}${this.now().getTime()}`,
-      content: this.planner.doseContent(medication, time),
+      content: this.contentOf(this.planner.doseContent(medication, time)),
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: NotificationService.TEST_DELAY_SECONDS,
@@ -231,6 +234,38 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
   }
 
   /** Android 13 izin penceresi kanal olmadan çıkmaz; kanal ayarları sonradan değiştirilemez. */
+  /** Planlayıcının hatırlatmasını bildirim kütüphanesinin isteğine çevirir (Adapter). */
+  private requestOf({
+    identifier,
+    content,
+    trigger,
+  }: Reminder): Notifications.NotificationRequestInput {
+    return { identifier, content: this.contentOf(content), trigger: this.triggerOf(trigger) };
+  }
+
+  private contentOf(content: ReminderContent): Notifications.NotificationContentInput {
+    return { ...content, sound: true };
+  }
+
+  private triggerOf(trigger: ReminderTrigger): Notifications.SchedulableNotificationTriggerInput {
+    const channelId = NotificationService.CHANNEL_ID;
+    const types = Notifications.SchedulableTriggerInputTypes;
+    switch (trigger.kind) {
+      case 'daily':
+        return { type: types.DAILY, hour: trigger.hour, minute: trigger.minute, channelId };
+      case 'weekly':
+        return {
+          type: types.WEEKLY,
+          weekday: trigger.weekday,
+          hour: trigger.hour,
+          minute: trigger.minute,
+          channelId,
+        };
+      case 'date':
+        return { type: types.DATE, date: trigger.date, channelId };
+    }
+  }
+
   private async ensureChannel() {
     if (this.platform !== 'android') return;
     await this.api.setNotificationChannelAsync(NotificationService.CHANNEL_ID, {

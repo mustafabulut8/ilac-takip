@@ -5,6 +5,17 @@
  */
 const TESTS = '(^|/)(__tests__|test-utils)/';
 
+/**
+ * Saf alan katmanı: modeller ve iş kuralları. Platform ve kütüphane bilmez; bu yüzden
+ * telefon olmadan, yalnızca Node'da test edilir ve 2. parçada aynen kullanılır.
+ * Servislerden yalnızca dış dünyaya bağlanan adaptörler (bildirim, dosya, Supabase ve
+ * bağlantıların kurulduğu index.ts) bu kuralın dışındadır.
+ */
+const DOMAIN =
+  '^src/(models|validation|utils|errors|types)/|^src/services/(?!(index|supabase|NotificationService|PhotoService|AuthService|ProfileRepository)\\.ts$)[^/]+\\.ts$|^src/services/local/';
+const PLATFORM =
+  '^node_modules/(react|react-native|expo|expo-[^/]+|@expo|@react-native[^/]*|@supabase)/';
+
 module.exports = {
   forbidden: [
     {
@@ -45,6 +56,14 @@ module.exports = {
       to: {
         path: '^node_modules/(@supabase/supabase-js|@react-native-async-storage|expo-notifications|expo-file-system)/',
       },
+    },
+    {
+      name: 'saf-alan-katmani',
+      comment:
+        'Modeller ve iş kuralları React, React Native, Expo ve Supabase’i import edemez. Platforma bağlanan kod adaptör servislerindedir.',
+      severity: 'error',
+      from: { path: DOMAIN, pathNot: TESTS },
+      to: { path: PLATFORM },
     },
     {
       name: 'servis-arayuzu-bilmez',
