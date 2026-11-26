@@ -193,31 +193,57 @@ export function changesOf(original: Medication, draft: MedicationDraft): Medicat
   return draft.photoFile === original.photoFile ? changes : { ...changes, photoSourceUri: null };
 }
 
+/** Değişiklikteki bir alanın denetimi: hangi alan, hangi mesaj alanına, hangi kural. */
+type ChangeRule = readonly [
+  key: keyof MedicationChanges,
+  field: MedicationField,
+  validate: (value: unknown) => string | undefined,
+];
+
+const requiredText = (message: string) => (value: unknown) =>
+  typeof value === 'string' && value.trim() ? undefined : message;
+
+/**
+ * Servis katmanındaki alan kuralları; sıra önemlidir: miktar hatası doz mesajının yerine
+ * yazılır. Sıklık ve süre verilmemişse (undefined) denetlenmez.
+ */
+const CHANGE_RULES: readonly ChangeRule[] = [
+  ['name', 'name', requiredText('Lütfen ilacın adını yazın.')],
+  ['dose', 'dose', requiredText('Lütfen dozu yazın.')],
+  [
+    'amount',
+    'dose',
+    (value) =>
+      typeof value === 'number' && Number.isFinite(value) && value > 0
+        ? undefined
+        : 'Lütfen geçerli bir miktar seçin.',
+  ],
+  ['form', 'form', (value) => (isMedicationFormKind(value) ? undefined : 'İlaç formu geçersiz.')],
+  ['times', 'times', validateTimes],
+  ['schedule', 'schedule', (value) => (value ? validateSchedule(value as Schedule) : undefined)],
+  ['duration', 'duration', (value) => (value ? validateDuration(value as Duration) : undefined)],
+  [
+    'mealTiming',
+    'mealTiming',
+    (value) =>
+      typeof value === 'string' && Object.hasOwn(MEAL_TIMING_LABELS, value)
+        ? undefined
+        : 'Lütfen birini seçin.',
+  ],
+  ['stock', 'stock', (value) => validateStock(typeof value === 'number' ? value : Number.NaN)],
+];
+
 /**
  * Servis katmanındaki ikinci kontrol: ekran dışından (ileride Supabase, test) gelen
  * veri de aynı kurallardan geçer. Yalnızca verilen alanlar denetlenir.
  */
 export function assertValidChanges(changes: MedicationChanges) {
   const errors: MedicationFieldErrors = {};
-  const check = (field: MedicationField, message: string | undefined) => {
+  for (const [key, field, validate] of CHANGE_RULES) {
+    if (!(key in changes)) continue;
+    const message = validate(changes[key]);
     if (message) errors[field] = message;
-  };
-  if ('name' in changes)
-    check('name', changes.name?.trim() ? undefined : 'Lütfen ilacın adını yazın.');
-  if ('dose' in changes) check('dose', changes.dose?.trim() ? undefined : 'Lütfen dozu yazın.');
-  if ('amount' in changes && !(Number.isFinite(changes.amount) && changes.amount! > 0)) {
-    errors.dose = 'Lütfen geçerli bir miktar seçin.';
   }
-  if ('form' in changes && !isMedicationFormKind(changes.form)) {
-    errors.form = 'İlaç formu geçersiz.';
-  }
-  if ('times' in changes) check('times', validateTimes(changes.times));
-  if (changes.schedule) check('schedule', validateSchedule(changes.schedule));
-  if (changes.duration) check('duration', validateDuration(changes.duration));
-  if ('mealTiming' in changes && !Object.hasOwn(MEAL_TIMING_LABELS, changes.mealTiming ?? '')) {
-    errors.mealTiming = 'Lütfen birini seçin.';
-  }
-  if ('stock' in changes) check('stock', validateStock(changes.stock ?? Number.NaN));
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);
 }
 
