@@ -4,6 +4,29 @@
 
 ## Bugün Tamamlananlar (26 Kasım)
 
+### Kalite turu
+
+Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilmedi). Yeni özellik yok. Ayrıntılar `docs/kalite-raporu.md` (Başlangıç ve Sonuç) ve `docs/kararlar.md` 19. kararda.
+
+- **SOLID:** 11 ihlal giderildi.
+  - `DoseService` üçe ayrıldı: `DoseCalculator`, `HistoryService`, `DoseService`.
+  - Bildirim planı `ReminderPlanner`'a taşındı.
+  - `AuthService` bölündü: `ProfileRepository`, `ProfileCache`, `auth-errors.ts` tablosu.
+  - Saat, depo, bildirim ve Supabase constructor ile veriliyor.
+- **Otomatik kurallar:** `npm run kontrol` artık şunları çalıştırıyor; CI aynısını çalıştırıyor.
+  - tsc (`noUncheckedIndexedAccess`) ve sıkı ESLint (karmaşıklık ≤ 10);
+  - katman kuralları (dependency-cruiser) ve kullanılmayan kod (knip);
+  - kapsam eşikli testler.
+  - Commit öncesi husky ve lint-staged çalışıyor.
+- **Testler:** 303 → 495. Kancalar %0 → %100 satır. Sade, İlaç zamanı ve Ayarlar ekran testleri eklendi. Gece yarısı ve yaz saati (Europe/Berlin) testleri de var.
+- **TDD ile düzeltilen hatalar:**
+  - düzenlemede yeni saatlerin hatırlatması kurulmuyordu;
+  - süresi dolan oturumda genel hata mesajı çıkıyordu;
+  - bozuk kayıt anı Geçmiş'te geri gitmeyi engelliyordu.
+- **Açık bulgu:** Gece yarısından sonra dünün 23:50 dozu 30 dakika boyunca hâlâ alınabilir, ama ana ekranda görünmüyor (yalnızca bildirimden açılıyor).
+
+### 2. tur, 1. parça
+
 2. tur, 1. parça: hesap, rol seçimi ve adla selamlama. Dal: `feature/tur2-hesap` (main'e birleştirilmedi). İlaç verisi bu parçada da cihazda kalıyor.
 
 - **Supabase:** CLI kuruldu (`npm run supabase -- <komut>`, `app/` içinden), proje bağlandı. `profiles` tablosu (ad, rol), kayıtta profili oluşturan tetikleyici ve RLS kuralları `db push --remote` ile uygulandı (`supabase/migrations/`). Tetikleyici fonksiyonu `security definer` ve `set search_path = ''`.
@@ -34,7 +57,7 @@
 
 ## Önceki Tamamlananlar (22 Kasım)
 
-- **Arayüz tasarımı:** Google Stitch'te 14 ekranın 8'i tasarlandı. Tasarım sistemi, ekran listesi ve entegrasyon planı: `docs/arayuz-tasarimi.md`. 
+- **Arayüz tasarımı:** Google Stitch'te 14 ekranın 8'i tasarlandı. Tasarım sistemi, ekran listesi ve entegrasyon planı: `docs/arayuz-tasarimi.md`.
 - **Kararlar:** `docs/kararlar.md` 3-9. kararlar (kim ilaç ekler, sihirbaz, on ilaç formu, sıklık ve süre, alt menü, tavsiye vermeme, logo).
 - **Rapor:** Literatür taraması (#14) ve gereksinim analizi (#15) rapor dokümanında yazıldı, issue'lar kapatıldı.
 - **İkon, açılış ekranı ve ana renk:** Uygulama ikonu ve açılış ekranı yeni logoyla değişti. Ana butonlar `#0F6E6E` zemin ve beyaz yazı (6:1). `#3FA89A` yalnızca vurgu rengi; üzerindeki yazı siyah (7,3:1), çünkü beyaz 2,9:1'de kalıyor. Renk çiftlerinin en az 4,5:1 olduğu testle denetleniyor. Android adaptive ikon kenar boşluklu `adaptive-icon.png` görselini kullanıyor. Kullanılmayan Expo şablon görselleri silindi.

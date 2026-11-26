@@ -8,20 +8,20 @@ Refactor öncesi (`v0.1-sprint1`) kod `app/src/` altında yaklaşık 1300 satır
 
 ### Dosyalar ve görevleri
 
-| Dosya | Görevi |
-| --- | --- |
-| `types.ts` | `Medication` ve `DoseLog` tipleri |
-| `lib/storage.ts` | AsyncStorage okuma/yazma fonksiyonları (`medications`, `doseLogs` anahtarları) |
-| `lib/doses.ts` | `Dose` tipi, tarih biçimleme, doz kimliği, bugünkü dozların durum hesabı |
-| `lib/notifications.ts` | Bildirim izni, kanal, günlük planlama, eşitleme, test bildirimi, iOS/Android tarih farkı |
-| `lib/photos.ts` | Fotoğrafı kalıcı klasöre kopyalama ve dosya adından yol çözme |
-| `context/medications.tsx` | Veriyi yükleme, ilaç ekleme, doz onaylama, stok düşme, hata mesajları, durum |
-| `app/_layout.tsx` | Kök Stack, açılış ekranı, bildirime dokununca ALDIM sayfasına gitme |
-| `app/index.tsx` | Bugünkü dozlar, izin uyarısı, saat yenileme, test bildirimi |
-| `app/ilac-ekle.tsx` | İlaç ekleme formu, fotoğraf seçme, saat ekleme, doğrulama, kaydetme (289 satır) |
-| `app/aldim/[id].tsx` | Tam ekran ALDIM onayı |
-| `components/*` | `BigButton`, `DoseCard`, `TimeStepper` |
-| `constants/theme.ts` | Yüksek kontrastlı tema |
+| Dosya                     | Görevi                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `types.ts`                | `Medication` ve `DoseLog` tipleri                                                        |
+| `lib/storage.ts`          | AsyncStorage okuma/yazma fonksiyonları (`medications`, `doseLogs` anahtarları)           |
+| `lib/doses.ts`            | `Dose` tipi, tarih biçimleme, doz kimliği, bugünkü dozların durum hesabı                 |
+| `lib/notifications.ts`    | Bildirim izni, kanal, günlük planlama, eşitleme, test bildirimi, iOS/Android tarih farkı |
+| `lib/photos.ts`           | Fotoğrafı kalıcı klasöre kopyalama ve dosya adından yol çözme                            |
+| `context/medications.tsx` | Veriyi yükleme, ilaç ekleme, doz onaylama, stok düşme, hata mesajları, durum             |
+| `app/_layout.tsx`         | Kök Stack, açılış ekranı, bildirime dokununca ALDIM sayfasına gitme                      |
+| `app/index.tsx`           | Bugünkü dozlar, izin uyarısı, saat yenileme, test bildirimi                              |
+| `app/ilac-ekle.tsx`       | İlaç ekleme formu, fotoğraf seçme, saat ekleme, doğrulama, kaydetme (289 satır)          |
+| `app/aldim/[id].tsx`      | Tam ekran ALDIM onayı                                                                    |
+| `components/*`            | `BigButton`, `DoseCard`, `TimeStepper`                                                   |
+| `constants/theme.ts`      | Yüksek kontrastlı tema                                                                   |
 
 ### Dört seviyeye göre eksikler
 
@@ -71,7 +71,9 @@ app/src/
 ├── services/                 # İş mantığı sınıfları
 │   ├── StorageService.ts     # IStorage arayüzü + AsyncStorageService
 │   ├── migrations.ts         # Kayıtlı veri sürüm göçleri
-│   ├── MedicationService.ts, DoseService.ts, NotificationService.ts, PhotoService.ts
+│   ├── MedicationService.ts, DoseService.ts, DoseCalculator.ts, HistoryService.ts
+│   ├── NotificationService.ts, ReminderPlanner.ts, PhotoService.ts
+│   ├── AuthService.ts, ProfileRepository.ts, ProfileCache.ts, auth-errors.ts, ports.ts
 │   └── index.ts              # Bağımlılıkların kurulduğu tek yer
 ├── models/                   # Tipler ve form sınıfları
 │   ├── medication.ts, schedule.ts (plan), dose-log.ts, dose.ts
@@ -88,12 +90,12 @@ Testler ilgili klasörün `__tests__/` alt klasöründedir (örn. `services/__te
 
 ### Dört seviye
 
-| Seviye | Projedeki karşılığı | Örnekler |
-| --- | --- | --- |
-| **1. Fonksiyon** | Her fonksiyon tek iş yapar; saf fonksiyonlar yan etkisizdir ve tek başına test edilir. | `formatDate`, `atTime` (`utils/date.ts`); `isValidTime`, `formatTime` (`utils/time.ts`); `safeJsonParse` (`utils/json.ts`); `isScheduledOn`, `nextOccurrence` (`utils/schedule.ts`); `validateMedicationDraft`, `changesOf` (`validation/medication-input.ts`) |
-| **2. Sınıf** | Birbiriyle ilgili veri ve davranış bir sınıfta toplanır; iç durum `private`. | `DoseService` (doz kimliği, durum, onay), `MedicationService` (ekle/sil/güncelle/listele), `NotificationService`, `PhotoService`, `AsyncStorageService`, `Logger`, `MedicationForm` ve alt sınıfları, `ErrorBoundary` |
-| **3. Paket / dosya** | Klasörler katmanlara karşılık gelir; her klasör `index.ts` ile dışa açtığı şeyi belirler. | `models/`, `services/`, `validation/`, `errors/`, `utils/`, `hooks/`, `components/`, `app/` |
-| **4. Sistem** | Uygulama, sunucu ve dış servisler ayrı bileşenlerdir; aralarında arayüz vardır. | Mobil uygulama ↔ `IStorage` ↔ Supabase; Edge Functions ↔ Claude API; e-posta servisi (aşağıda) |
+| Seviye               | Projedeki karşılığı                                                                       | Örnekler                                                                                                                                                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Fonksiyon**     | Her fonksiyon tek iş yapar; saf fonksiyonlar yan etkisizdir ve tek başına test edilir.    | `formatDate`, `atTime` (`utils/date.ts`); `isValidTime`, `formatTime` (`utils/time.ts`); `safeJsonParse` (`utils/json.ts`); `isScheduledOn`, `nextOccurrence` (`utils/schedule.ts`); `validateMedicationDraft`, `changesOf` (`validation/medication-input.ts`)                           |
+| **2. Sınıf**         | Birbiriyle ilgili veri ve davranış bir sınıfta toplanır; iç durum `private`.              | `DoseCalculator` (günün dozları ve durumları), `HistoryService` (Geçmiş haftası), `DoseService` (doz onayı), `MedicationService` (ekle/sil/güncelle/listele), `NotificationService`, `PhotoService`, `AsyncStorageService`, `Logger`, `MedicationForm` ve alt sınıfları, `ErrorBoundary` |
+| **3. Paket / dosya** | Klasörler katmanlara karşılık gelir; her klasör `index.ts` ile dışa açtığı şeyi belirler. | `models/`, `services/`, `validation/`, `errors/`, `utils/`, `hooks/`, `components/`, `app/`                                                                                                                                                                                              |
+| **4. Sistem**        | Uygulama, sunucu ve dış servisler ayrı bileşenlerdir; aralarında arayüz vardır.           | Mobil uygulama ↔ `IStorage` ↔ Supabase; Edge Functions ↔ Claude API; e-posta servisi (aşağıda)                                                                                                                                                                                           |
 
 Ekran dosyaları incedir: `ilac-ekle.tsx` 5 satırdır; sihirbazın durumu `useMedicationWizard`, kuralları `validation/`, görünümü `components/wizard/` içindedir.
 
@@ -103,19 +105,22 @@ Bağımlılık yönü tek yönlüdür: üst katman alttakini bilir, alttaki üst
 
 **Kural: Ekranlar servislere yalnızca kancalar üzerinden erişir.** `src/app/` ve `src/components/` altındaki dosyalar `@/services`'i, `expo-notifications`'ı veya depolamayı doğrudan import etmez. Servis çağrısı gereken her yer için `src/hooks/` altında bir kanca yazılır:
 
-| Kanca | Arkasındaki servis | Kullanan |
-| --- | --- | --- |
-| `useMedications` | context → `MedicationService`, `DoseService` | Tüm ekranlar |
-| `useTodayDoses` | `DoseService.getTodayDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün |
-| `useHistoryWeek` | `DoseService.getWeek` | Geçmiş |
-| `useDose` | Doz onayı, sıradaki doz | `aldim/[id].tsx` |
-| `useSnooze` | `NotificationService.snooze` | `aldim/[id].tsx` |
-| `useMedicationWizard` | context → `MedicationService.add/update` | Sihirbaz |
-| `useMedicationPhoto` | `PhotoService.photoUri` | `MedicationPhoto`, `DosePrompt`, sihirbaz |
-| `useReminderSync` | `MedicationService.syncReminders` | `_layout.tsx` |
-| `useTestNotification` | `NotificationService.scheduleTest` | Ayarlar (`__DEV__`) |
-| `useNotificationPermission` | `NotificationService` izin metotları | Bugün, Ayarlar |
-| `useDoseNotificationTaps` | `NotificationService.subscribeToDoseTaps` | `_layout.tsx` |
+| Kanca                       | Arkasındaki servis                                                           | Kullanan                                  |
+| --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------- |
+| `useMedications`            | context → `MedicationService`, `DoseService`                                 | Tüm ekranlar                              |
+| `useTodayDoses`             | `DoseCalculator.getTodayDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün                                     |
+| `useHistoryWeek`            | `HistoryService.getWeek`                                                     | Geçmiş                                    |
+| `useDose`                   | Doz onayı (`useConfirmDose`), sıradaki doz                                   | `aldim/[id].tsx`                          |
+| `useConfirmDose`            | context → `DoseService.confirmDose`; çift dokunuş koruması, titreşim         | `useDose`, `useSimpleHome`                |
+| `useSimpleHome`             | `DoseCalculator.focusDose`, `progressOf`                                     | Sade ana ekran                            |
+| `useMedicationList`         | context → `MedicationService.update/remove`                                  | İlaçlarım                                 |
+| `useSnooze`                 | `NotificationService.snooze`                                                 | `aldim/[id].tsx`                          |
+| `useMedicationWizard`       | context → `MedicationService.add/update`                                     | Sihirbaz                                  |
+| `useMedicationPhoto`        | `PhotoService.photoUri`                                                      | `MedicationPhoto`, `DosePrompt`, sihirbaz |
+| `useReminderSync`           | `MedicationService.syncReminders`                                            | `_layout.tsx`                             |
+| `useTestNotification`       | `NotificationService.scheduleTest`                                           | Ayarlar (`__DEV__`)                       |
+| `useNotificationPermission` | `NotificationService` izin metotları                                         | Bugün, Ayarlar                            |
+| `useDoseNotificationTaps`   | `NotificationService.subscribeToDoseTaps`                                    | `_layout.tsx`                             |
 
 Gerekçe: Ekranlar yalnızca görünümle ilgilenir. Bir servis değişirse (örneğin Supabase'e geçişte) sadece kanca güncellenir. Bildirim kütüphanesi değişirse yalnızca `NotificationService` etkilenir. Bildirimin genel ayarı (`notificationService.configure()`) da ekranda değil, bağımlılıkların kurulduğu `services/index.ts`'de yapılır.
 
@@ -205,7 +210,7 @@ Ekran formun türüne bakmaz, `if/switch` yoktur:
 
 ```tsx
 const form = getMedicationForm(medication.form);
-<PrimaryButton label={form.confirmLabel()} /> // Tablet: Aldım, Şurup: İçtim, Damla: Damlattım
+<PrimaryButton label={form.confirmLabel()} />; // Tablet: Aldım, Şurup: İçtim, Damla: Damlattım
 ```
 
 `DoseService` de stoğu aynı şekilde düşürür: `getMedicationForm(medication.form).stockAfterDose(stock, amount)`. Tablet doz kadar (yarım olabilir) azaltır, şurup azaltmaz. Sihirbazın dozaj ve stok adımları da formun `doseUnits()`, `presetAmounts()`, `locations()`, `isCountable()` metotlarından kurulur; yeni form eklemek ekranı değiştirmez. Türden sınıfa geçiş de `switch` yerine bir tabloyla (`FORMS` kaydı, `models/forms/index.ts`) yapılır.
@@ -217,13 +222,21 @@ Servisler bağımlılıklarını constructor ile alır. Gerçek nesneler tek bir
 ```ts
 export const storage: IStorage = new AsyncStorageService(AsyncStorage);
 export const doseService = new DoseService(storage, notificationService);
-export const medicationService = new MedicationService(storage, photoService, notificationService);
+export const medicationService = new MedicationService(
+  storage,
+  photoService,
+  notificationService,
+);
 ```
 
 Testte sahteleri verilir:
 
 ```ts
-const service = new DoseService(new FakeStorage(), sahteErteleme, () => new Date(2026, 10, 16, 9, 0));
+const service = new DoseService(
+  new FakeStorage(),
+  sahteErteleme,
+  () => new Date(2026, 10, 16, 9, 0),
+);
 ```
 
 `MedicationsProvider` da isteğe bağlı `services` özelliği alır.
@@ -366,15 +379,15 @@ Kök düzeyde tüm ekranları sarar. Bir ekran çizilirken hata çıkarsa "Bir s
 
 Aşağıdaki paketler uygulama kodunda doğrudan kullanılmıyor. Bu refactor'da **silinmedi**; kaldırmadan önce `npx expo-doctor` ve telefonda deneme yapılmalı.
 
-| Paket | Kodda kullanım | Not |
-| --- | --- | --- |
-| `expo-web-browser` | Yok | Hiçbir paket buna bağlı değil. **Güvenle kaldırılabilir.** |
-| `expo-device` | Yok | Hiçbir paket buna bağlı değil. **Güvenle kaldırılabilir.** |
-| `expo-linking` | Yok (`Linking` react-native'den geliyor) | **Dolaylı:** `expo-router`'ın zorunlu peer bağımlılığı. Kalmalı. |
-| `expo-glass-effect` | Yok | **Dolaylı:** `expo-router`'ın doğrudan bağımlılığı; package.json'dan silinse de kurulur. |
-| `expo-symbols` | `components/icon.tsx` | 1. turdan beri kullanılıyor. Kalmalı. |
-| `@expo/ui` | Yok | **Dolaylı:** `expo-router`'ın isteğe bağlı peer bağımlılığı. Kaldırılabilir. |
-| `react-native-reanimated` | Yok | **Dolaylı:** `expo-router` (drawer) isteğe bağlı peer. Animasyon eklenirse gerekir. |
-| `react-native-worklets` | Yok | **Dolaylı:** `react-native-reanimated`'ın zorunlu peer bağımlılığı. Reanimated ile birlikte gider. |
-| `react-native-gesture-handler` | Yok | **Dolaylı:** `expo-router` (drawer) isteğe bağlı peer. |
-| `react-native-web`, `react-dom` | Yok | **Dolaylı:** `expo`, `expo-router`, `expo-image` web desteği için isteğe bağlı peer. Web hedef dışı; kaldırılabilir ama `app.json`'daki `web` ayarı da temizlenmeli. |
+| Paket                           | Kodda kullanım                           | Not                                                                                                                                                                  |
+| ------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `expo-web-browser`              | Yok                                      | Hiçbir paket buna bağlı değil. **Güvenle kaldırılabilir.**                                                                                                           |
+| `expo-device`                   | Yok                                      | Hiçbir paket buna bağlı değil. **Güvenle kaldırılabilir.**                                                                                                           |
+| `expo-linking`                  | Yok (`Linking` react-native'den geliyor) | **Dolaylı:** `expo-router`'ın zorunlu peer bağımlılığı. Kalmalı.                                                                                                     |
+| `expo-glass-effect`             | Yok                                      | **Dolaylı:** `expo-router`'ın doğrudan bağımlılığı; package.json'dan silinse de kurulur.                                                                             |
+| `expo-symbols`                  | `components/icon.tsx`                    | 1. turdan beri kullanılıyor. Kalmalı.                                                                                                                                |
+| `@expo/ui`                      | Yok                                      | **Dolaylı:** `expo-router`'ın isteğe bağlı peer bağımlılığı. Kaldırılabilir.                                                                                         |
+| `react-native-reanimated`       | Yok                                      | **Dolaylı:** `expo-router` (drawer) isteğe bağlı peer. Animasyon eklenirse gerekir.                                                                                  |
+| `react-native-worklets`         | Yok                                      | **Dolaylı:** `react-native-reanimated`'ın zorunlu peer bağımlılığı. Reanimated ile birlikte gider.                                                                   |
+| `react-native-gesture-handler`  | Yok                                      | **Dolaylı:** `expo-router` (drawer) isteğe bağlı peer.                                                                                                               |
+| `react-native-web`, `react-dom` | Yok                                      | **Dolaylı:** `expo`, `expo-router`, `expo-image` web desteği için isteğe bağlı peer. Web hedef dışı; kaldırılabilir ama `app.json`'daki `web` ayarı da temizlenmeli. |
