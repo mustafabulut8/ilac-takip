@@ -1,5 +1,15 @@
 export type LogLevel = 'info' | 'warn' | 'error';
 
+/**
+ * Kayıt (log) arayüzü. Kod `Logger` sınıfına değil buna bağlıdır; testte sahte kayıtçı
+ * verilir. `details` teknik ayrıntıdır (hata nesnesi gibi), kullanıcıya gösterilmez.
+ */
+export interface ILogger {
+  info(message: string, details?: unknown): void;
+  warn(message: string, details?: unknown): void;
+  error(message: string, details?: unknown): void;
+}
+
 /** Kayıtların gönderileceği hedef. İleride uzak bir servis (ör. Supabase tablosu) eklenebilir. */
 export interface LogSink {
   write(level: LogLevel, message: string, details?: unknown): void;
@@ -13,8 +23,11 @@ class ConsoleSink implements LogSink {
   }
 }
 
-/** Uygulamanın tek kayıt noktası; doğrudan console.error çağrılmaz. */
-export class Logger {
+/**
+ * Uygulamanın tek kayıt noktası; doğrudan console.error çağrılmaz. Kayıtlar bir veya
+ * daha çok hedefe (`LogSink`) gider; uzak bir hedef eklemek için sınıf değişmez.
+ */
+export class Logger implements ILogger {
   private readonly sinks: LogSink[];
 
   constructor(sinks: LogSink[] = [new ConsoleSink()]) {
@@ -48,4 +61,4 @@ export class Logger {
   }
 }
 
-export const logger = new Logger();
+export const logger: ILogger = new Logger();

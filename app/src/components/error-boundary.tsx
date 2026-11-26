@@ -6,14 +6,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/components/app-text';
 import { PrimaryButton } from '@/components/primary-button';
 import { Colors, Spacing } from '@/constants/theme';
-import { logger } from '@/utils/logger';
+import { logger as appLogger, type ILogger } from '@/utils/logger';
 
-type Props = { children: ReactNode };
+type Props = {
+  children: ReactNode;
+  /** Hatanın yazılacağı kayıtçı; testte sahtesi verilir. */
+  logger?: ILogger;
+};
 type State = { hasError: boolean };
 
 /**
  * Bir ekran çizilirken hata çıkarsa uygulama beyaz ekranda kalmaz;
- * Türkçe mesaj ve "Yeniden dene" butonu gösterilir. React'te hata sınırı
+ * Türkçe mesaj ve "Tekrar dene" butonu gösterilir. React'te hata sınırı
  * yalnızca sınıf bileşeniyle yazılabilir.
  */
 export class ErrorBoundary extends Component<Props, State> {
@@ -24,7 +28,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    logger.error('Ekran çizilirken hata oluştu:', { error, componentStack: info.componentStack });
+    (this.props.logger ?? appLogger).error('Ekran çizilirken hata oluştu:', {
+      error,
+      componentStack: info.componentStack,
+    });
     // Hata açılışta olduysa açılış ekranı kapanmazdı.
     SplashScreen.hideAsync().catch(() => {});
   }
@@ -37,13 +44,13 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <SafeAreaView style={styles.container}>
-        <AppText size="title" weight="bold" color={Colors.danger} center>
-          Bir sorun oluştu
+        <AppText size="title" weight="bold" color={Colors.danger} center accessibilityRole="header">
+          Bir sorun oldu
         </AppText>
         <AppText center>
           Ekran açılırken beklenmeyen bir hata oldu. İlaç bilgileriniz silinmedi.
         </AppText>
-        <PrimaryButton label="Yeniden dene" onPress={this.retry} />
+        <PrimaryButton label="Tekrar dene" onPress={this.retry} />
       </SafeAreaView>
     );
   }
