@@ -35,7 +35,7 @@ function setup() {
     cancelMedication: jest.fn().mockResolvedValue(undefined),
     sync: jest.fn().mockResolvedValue(undefined),
   } satisfies ReminderScheduler;
-  const service = new MedicationService(storage, photos, reminders, () => NOW);
+  const service = new MedicationService(storage.repositories, photos, reminders, () => NOW);
   return { storage, photos, reminders, service };
 }
 
@@ -215,6 +215,7 @@ describe('MedicationService.update / remove', () => {
 
   it('hatırlatma kurulamazsa değişiklik yine kaydedilir, kullanıcı uyarılır', async () => {
     const { storage, reminders, service } = setup();
+    storage.medications = [makeMedication()];
     reminders.cancelMedication.mockRejectedValue(new Error('bildirim yok'));
     const { notice } = await service.update([makeMedication()], 'ilac1', { times: ['09:30'] });
     expect(storage.medications[0]?.times).toEqual(['09:30']);
@@ -224,6 +225,7 @@ describe('MedicationService.update / remove', () => {
   it('silmede hatırlatmaları ve fotoğrafı kaldırır', async () => {
     const { storage, photos, reminders, service } = setup();
     const existing = makeMedication();
+    storage.medications = [existing, makeMedication({ id: 'ilac2' })];
     const { medications, notice } = await service.remove(
       [existing, makeMedication({ id: 'ilac2' })],
       'ilac1',

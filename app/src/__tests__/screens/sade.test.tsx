@@ -36,7 +36,7 @@ async function renderHome(medications: Medication[]) {
   const storage = new FakeStorage();
   storage.medications = medications;
   const doses = new DoseService(
-    storage,
+    storage.doseLogRepository,
     { cancelSnooze: jest.fn().mockResolvedValue(undefined) },
     new DoseCalculator(),
     () => NOW,

@@ -31,7 +31,7 @@ describe('gece yarısını aşan dozlar', () => {
     const storage = new FakeStorage();
     const now = moment('2026-11-17', '00:05');
     const service = new DoseService(
-      storage,
+      storage.doseLogRepository,
       { cancelSnooze: jest.fn().mockResolvedValue(undefined) },
       calculator,
       () => now,

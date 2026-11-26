@@ -49,9 +49,10 @@ describe('useSimpleHome', () => {
   it('kayıt bitmeden gelen ikinci dokunuş dozu iki kez kaydetmez', async () => {
     const { result, storage } = await setup(at(8, 5));
     let finishSave = () => {};
-    const save = storage.saveDoseConfirmation.bind(storage);
+    const repository = storage.doseLogRepository;
+    const save = repository.recordDose.bind(repository);
     const spy = jest
-      .spyOn(storage, 'saveDoseConfirmation')
+      .spyOn(repository, 'recordDose')
       .mockImplementation(
         (...args) => new Promise((resolve) => (finishSave = () => resolve(save(...args)))),
       );

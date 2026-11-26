@@ -2,7 +2,9 @@ import { StorageError } from '@/errors';
 import { makeMedication, MemoryKeyValueStore } from '@/test-utils/fakes';
 
 import { CURRENT_SCHEMA_VERSION, MIGRATIONS, runMigrations } from '../migrations';
-import { AsyncStorageService } from '../StorageService';
+import { LocalDeviceStore } from '../local/LocalDeviceStore';
+import { LocalDoseLogRepository } from '../local/LocalDoseLogRepository';
+import { LocalMedicationRepository } from '../local/LocalMedicationRepository';
 
 const NOW = new Date(2026, 10, 16, 9, 0);
 
@@ -42,11 +44,22 @@ const migratedMedication = {
 
 function setup(initial: Record<string, string> = {}) {
   const store = new MemoryKeyValueStore(initial);
-  const storage = new AsyncStorageService(store, () => NOW);
-  return { store, storage };
+  const device = new LocalDeviceStore(store, () => NOW);
+  const medications = new LocalMedicationRepository(device);
+  const doseLogs = new LocalDoseLogRepository(device);
+  /** İki repository'yi açılıştaki gibi birlikte okur (MedicationService.load). */
+  const load = async () => {
+    const [meds, logs] = await Promise.all([medications.load(), doseLogs.load()]);
+    return {
+      medications: meds.items,
+      doseLogs: logs.items,
+      warnings: [...meds.warnings, ...logs.warnings],
+    };
+  };
+  return { store, storage: { load }, medications, doseLogs };
 }
 
-describe('AsyncStorageService.load', () => {
+describe('cihaz repository’leri: okuma ve göç', () => {
   it('ilk kurulumda boş liste döner, uyarı vermez', async () => {
     const { storage } = setup();
     expect(await storage.load()).toEqual({ medications: [], doseLogs: [], warnings: [] });
@@ -173,21 +186,24 @@ describe('AsyncStorageService.load', () => {
   });
 
   it('depolama hiç okunamazsa StorageError fırlatır ve yazmayı kapatır', async () => {
-    const { store, storage } = setup({ medications: JSON.stringify([legacyMedication]) });
+    const { store, storage, medications } = setup({
+      medications: JSON.stringify([legacyMedication]),
+    });
     store.failReads = true;
 
     await expect(storage.load()).rejects.toBeInstanceOf(StorageError);
-    await expect(storage.saveMedications([])).rejects.toBeInstanceOf(StorageError);
+    store.failReads = false;
+    await expect(medications.add(makeMedication())).rejects.toBeInstanceOf(StorageError);
     expect(JSON.parse(store.data.get('medications')!)).toEqual([legacyMedication]);
   });
 
   it('bozuk veri yedeklenemezse üzerine yazılmaz', async () => {
-    const { store, storage } = setup({ medications: 'bozuk' });
+    const { store, storage, medications } = setup({ medications: 'bozuk' });
     store.failWrites = true;
     await storage.load();
     store.failWrites = false;
 
-    await expect(storage.saveMedications([makeMedication()])).rejects.toBeInstanceOf(StorageError);
+    await expect(medications.add(makeMedication())).rejects.toBeInstanceOf(StorageError);
     expect(store.data.get('medications')).toBe('bozuk');
   });
 
@@ -199,24 +215,73 @@ describe('AsyncStorageService.load', () => {
   });
 });
 
-describe('AsyncStorageService kaydetme', () => {
-  it('ilaç listesini mevcut anahtara yazar', async () => {
-    const { store, storage } = setup();
-    await storage.saveMedications([makeMedication()]);
-    expect(JSON.parse(store.data.get('medications')!)).toEqual([makeMedication()]);
+describe('cihaz repository’leri: yazma', () => {
+  const aspirin = makeMedication();
+  const other = makeMedication({ id: 'ilac2', name: 'Coraspin' });
+  const saved = (store: MemoryKeyValueStore, key: string) => JSON.parse(store.data.get(key)!);
+
+  it('ilaç ekleme, güncelleme ve silme mevcut anahtara bütün listeyi yazar', async () => {
+    const { store, medications } = setup({
+      medications: JSON.stringify([aspirin]),
+      schemaVersion: String(CURRENT_SCHEMA_VERSION),
+    });
+    await medications.load();
+    await medications.add(other);
+    expect(saved(store, 'medications')).toEqual([aspirin, other]);
+    await medications.update({ ...aspirin, stock: 3 });
+    expect(saved(store, 'medications')).toEqual([{ ...aspirin, stock: 3 }, other]);
+    await medications.remove('ilac2');
+    expect(saved(store, 'medications')).toEqual([{ ...aspirin, stock: 3 }]);
   });
 
   it('doz onayı ve stok tek seferde birlikte yazılır', async () => {
-    const { store, storage } = setup();
-    await storage.saveDoseConfirmation([makeMedication()], [legacyLog]);
+    const { store, doseLogs } = setup({
+      medications: JSON.stringify([aspirin, other]),
+      schemaVersion: String(CURRENT_SCHEMA_VERSION),
+    });
+    await doseLogs.load();
+    await doseLogs.recordDose(legacyLog, { ...aspirin, stock: 9 });
     expect(store.multiSetCalls).toBe(1);
-    expect(JSON.parse(store.data.get('doseLogs')!)).toEqual([legacyLog]);
+    expect(saved(store, 'doseLogs')).toEqual([legacyLog]);
+    expect(saved(store, 'medications')).toEqual([{ ...aspirin, stock: 9 }, other]);
+  });
+
+  it('okunmadan yazılırsa önce diskteki kayıtlar okunur, hiçbiri kaybolmaz', async () => {
+    const { store, medications } = setup({
+      medications: JSON.stringify([aspirin]),
+      schemaVersion: String(CURRENT_SCHEMA_VERSION),
+    });
+    await medications.add(other);
+    expect(saved(store, 'medications')).toEqual([aspirin, other]);
+  });
+
+  it('iki repository aynı anda okursa disk bir kez okunur, bozuk veri bir kez yedeklenir', async () => {
+    const { store, storage } = setup({ medications: 'bozuk' });
+    const getItem = jest.spyOn(store, 'getItem');
+    const setItem = jest.spyOn(store, 'setItem');
+    await storage.load();
+    expect(getItem).toHaveBeenCalledTimes(3);
+    expect(setItem).toHaveBeenCalledTimes(1);
+  });
+
+  it('yazma başarısızsa bellekteki liste değişmez', async () => {
+    const { store, medications } = setup({
+      medications: JSON.stringify([aspirin]),
+      schemaVersion: String(CURRENT_SCHEMA_VERSION),
+    });
+    await medications.load();
+    store.failWrites = true;
+    await expect(medications.add(other)).rejects.toBeInstanceOf(StorageError);
+    store.failWrites = false;
+    await medications.update({ ...aspirin, stock: 1 });
+    expect(saved(store, 'medications')).toEqual([{ ...aspirin, stock: 1 }]);
   });
 
   it('yazma hatası Türkçe mesajlı StorageError olur', async () => {
-    const { store, storage } = setup();
+    const { store, medications } = setup();
+    await medications.load();
     store.failWrites = true;
-    await expect(storage.saveMedications([])).rejects.toMatchObject({
+    await expect(medications.add(aspirin)).rejects.toMatchObject({
       userMessage: 'Bilgiler telefona kaydedilemedi. Lütfen tekrar deneyin.',
     });
   });

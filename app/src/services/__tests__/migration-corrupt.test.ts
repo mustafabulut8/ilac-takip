@@ -2,7 +2,8 @@ import { makeMedication, MemoryKeyValueStore } from '@/test-utils/fakes';
 
 import { DoseCalculator } from '../DoseCalculator';
 import { HistoryService } from '../HistoryService';
-import { AsyncStorageService } from '../StorageService';
+import { LocalDeviceStore } from '../local/LocalDeviceStore';
+import { LocalMedicationRepository } from '../local/LocalMedicationRepository';
 
 const NOW = new Date(2026, 10, 16, 9, 0);
 const history = new HistoryService(new DoseCalculator());
@@ -12,8 +13,8 @@ async function loadV1(medications: unknown[]) {
     medications: JSON.stringify(medications),
     schemaVersion: '1',
   });
-  const data = await new AsyncStorageService(store, () => NOW).load();
-  return { data, store };
+  const loaded = await new LocalMedicationRepository(new LocalDeviceStore(store, () => NOW)).load();
+  return { data: { medications: loaded.items }, store };
 }
 
 describe('v1 → v2 göçü: bozuk ve eksik veri', () => {

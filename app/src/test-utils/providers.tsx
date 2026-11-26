@@ -27,7 +27,7 @@ export function makeMedicationsHarness(
       update: jest.fn().mockResolvedValue({ medications, notice: 'Değişiklik kaydedildi' }),
       remove: jest.fn().mockResolvedValue({ medications: [], notice: 'İlaç silindi' }),
     },
-    doses: new DoseService(storage, snoozes, new DoseCalculator(), now),
+    doses: new DoseService(storage.doseLogRepository, snoozes, new DoseCalculator(), now),
   };
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MedicationsProvider services={services}>{children}</MedicationsProvider>

@@ -13,7 +13,7 @@ function setup(now = at(9)) {
   const storage = new FakeStorage();
   const snoozes = { cancelSnooze: jest.fn().mockResolvedValue(undefined) };
   const calculator = new DoseCalculator();
-  const service = new DoseService(storage, snoozes, calculator, () => now);
+  const service = new DoseService(storage.doseLogRepository, snoozes, calculator, () => now);
   return { storage, service, snoozes, calculator, history: new HistoryService(calculator) };
 }
 

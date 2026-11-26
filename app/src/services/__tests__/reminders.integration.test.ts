@@ -31,7 +31,12 @@ function setup(initial: string[] = []) {
   const device = deviceNotifications(initial);
   const notifications = new NotificationService(device.api, 'ios', () => NOW);
   const photos = { savePhoto: jest.fn(), deletePhoto: jest.fn() };
-  const service = new MedicationService(new FakeStorage(), photos, notifications, () => NOW);
+  const service = new MedicationService(
+    new FakeStorage().repositories,
+    photos,
+    notifications,
+    () => NOW,
+  );
   return { ...device, service };
 }
 

@@ -1,5 +1,5 @@
 import { AppError, StorageError, userMessageOf } from '@/errors';
-import type { Medication, NewMedication, DosePlan } from '@/models';
+import type { DoseLog, DosePlan, Medication, NewMedication } from '@/models';
 import { formatDate } from '@/utils/date';
 import { createId } from '@/utils/id';
 import { logger } from '@/utils/logger';
@@ -11,9 +11,16 @@ import {
 } from '@/validation/medication-input';
 
 import type { Clock, PhotoStore, ReminderScheduler } from './ports';
-import type { IStorage, StoredData } from './StorageService';
+import type { DoseLogRepository, MedicationRepository } from './repositories';
 
 export type { MedicationChanges };
+
+/** Açılışta okunan veri ve kullanıcıya gösterilecek Türkçe uyarılar. */
+export type StoredData = {
+  medications: Medication[];
+  doseLogs: DoseLog[];
+  warnings: string[];
+};
 
 export type MedicationResult = {
   medications: Medication[];
@@ -28,13 +35,20 @@ const REMINDER_FAILED = 'hatırlatma kurulamadı. Bildirim iznini kontrol edin.'
  * yeni listeyi kaydedip döner. Durum React context'inde tutulur.
  */
 export class MedicationService {
-  private readonly storage: IStorage;
+  private readonly medications: MedicationRepository;
+  private readonly doseLogs: DoseLogRepository;
   private readonly photos: PhotoStore;
   private readonly reminders: ReminderScheduler;
   private readonly now: Clock;
 
-  constructor(storage: IStorage, photos: PhotoStore, reminders: ReminderScheduler, now: Clock) {
-    this.storage = storage;
+  constructor(
+    repositories: { medications: MedicationRepository; doseLogs: DoseLogRepository },
+    photos: PhotoStore,
+    reminders: ReminderScheduler,
+    now: Clock,
+  ) {
+    this.medications = repositories.medications;
+    this.doseLogs = repositories.doseLogs;
     this.photos = photos;
     this.reminders = reminders;
     this.now = now;
@@ -42,10 +56,17 @@ export class MedicationService {
 
   /** Kayıtlı ilaçları ve doz onaylarını getirir; hatırlatmaları arka planda eşitler. */
   async load(): Promise<StoredData> {
-    const data = await this.storage.load();
+    const [medications, doseLogs] = await Promise.all([
+      this.medications.load(),
+      this.doseLogs.load(),
+    ]);
     // Örneğin izin sonradan verildiyse eksik hatırlatmalar burada tamamlanır.
-    this.syncReminders(data.medications);
-    return data;
+    this.syncReminders(medications.items);
+    return {
+      medications: medications.items,
+      doseLogs: doseLogs.items,
+      warnings: [...medications.warnings, ...doseLogs.warnings],
+    };
   }
 
   /** Hatırlatmaları arka planda eşitler; izin yoksa uygulama çalışmaya devam eder. */
@@ -71,7 +92,10 @@ export class MedicationService {
       pastPlans: [],
     };
     const medications = [...current, medication];
-    await this.save(medications, 'İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.');
+    await this.save(
+      () => this.medications.add(medication),
+      'İlaç bilgileri telefona kaydedilemedi. Lütfen tekrar deneyin.',
+    );
 
     // Bildirim planlanamasa da ilaç kaydı korunur, ama kullanıcı bunu öğrenir.
     const reminded = await this.trySync(medications);
@@ -104,7 +128,10 @@ export class MedicationService {
       }),
     };
     const medications = current.map((item) => (item.id === id ? updated : item));
-    await this.save(medications, 'Değişiklik kaydedilemedi. Lütfen tekrar deneyin.');
+    await this.save(
+      () => this.medications.update(updated),
+      'Değişiklik kaydedilemedi. Lütfen tekrar deneyin.',
+    );
 
     // Eski fotoğraf ancak yeni kayıt yazıldıktan sonra silinir.
     if (updated.photoFile !== existing.photoFile) this.tryDeletePhoto(existing.photoFile);
@@ -126,7 +153,7 @@ export class MedicationService {
   async remove(current: Medication[], id: string): Promise<MedicationResult> {
     const existing = this.findOrThrow(current, id);
     const medications = current.filter((item) => item.id !== id);
-    await this.save(medications, 'İlaç silinemedi. Lütfen tekrar deneyin.');
+    await this.save(() => this.medications.remove(id), 'İlaç silinemedi. Lütfen tekrar deneyin.');
 
     await this.tryCancel(existing);
     this.tryDeletePhoto(existing.photoFile);
@@ -209,9 +236,9 @@ export class MedicationService {
     }
   }
 
-  private async save(medications: Medication[], fallbackMessage: string) {
+  private async save(write: () => Promise<void>, fallbackMessage: string) {
     try {
-      await this.storage.saveMedications(medications);
+      await write();
     } catch (error) {
       logger.error('İlaç listesi kaydedilemedi:', error);
       throw new StorageError('İlaç listesi kaydedilemedi', userMessageOf(error, fallbackMessage), {

@@ -4,26 +4,15 @@ import { logger } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/json';
 import { parseDoseLogRecord, parseMedicationRecord } from '@/validation/stored-records';
 
-import { CURRENT_SCHEMA_VERSION, runMigrations, type RawStoredData } from './migrations';
-import type { Clock } from './ports';
+import { CURRENT_SCHEMA_VERSION, runMigrations, type RawStoredData } from '../migrations';
+import type { Clock } from '../ports';
+import type { Loaded } from '../repositories';
 
-/** Açılışta okunan veri ve kullanıcıya gösterilecek Türkçe uyarılar. */
-export type StoredData = {
-  medications: Medication[];
-  doseLogs: DoseLog[];
-  warnings: string[];
+/** Cihazdaki iki listenin okunmuş hali; her listenin uyarıları kendisiyle gelir. */
+export type DeviceData = {
+  medications: Loaded<Medication>;
+  doseLogs: Loaded<DoseLog>;
 };
-
-/**
- * Kalıcı depolamanın soyutlaması. Servisler ve ekranlar yalnızca bu arayüzü bilir;
- * bugün AsyncStorage, ileride Supabase sınıfı aynı arayüzü uygulayacak.
- */
-export interface IStorage {
-  load(): Promise<StoredData>;
-  saveMedications(medications: Medication[]): Promise<void>;
-  /** Doz kaydı ve stok birlikte yazılır; biri yazılıp diğeri kaybolmasın. */
-  saveDoseConfirmation(medications: Medication[], doseLogs: DoseLog[]): Promise<void>;
-}
 
 /** AsyncStorage'ın kullandığımız kısmı. Testlerde bellekte çalışan sahte nesne verilir. */
 export interface KeyValueStore {
@@ -33,6 +22,10 @@ export interface KeyValueStore {
 }
 
 type ListResult<T> = { items: T[]; warning?: string };
+
+function warningsOf(...results: ListResult<unknown>[]): string[] {
+  return results.map((result) => result.warning).filter((warning): warning is string => !!warning);
+}
 
 /** Telefondaki mevcut anahtarlar; değiştirilirse kullanıcının ilaçları kaybolur. */
 const KEYS = {
@@ -44,18 +37,65 @@ const KEYS = {
 const READ_FAILED_MESSAGE =
   'Kayıtlı veriler telefondan okunamadı. Verilerinizin üzerine yazılmaması için yeni kayıt kapatıldı. Lütfen uygulamayı kapatıp yeniden açın.';
 
-export class AsyncStorageService implements IStorage {
+/**
+ * Cihaz deposu (AsyncStorage üzerine Adapter). İki repository bunu paylaşır; çünkü
+ * göç iki listeyi birlikte yükseltir ve doz onayı iki anahtarı tek seferde yazar.
+ * Okunan ve yazılan son liste bellekte tutulur; tek kayıtlık değişiklikler onun
+ * üzerine uygulanıp bütün liste yazılır.
+ */
+export class LocalDeviceStore {
   private readonly store: KeyValueStore;
   private readonly now: Clock;
   /** Okuma tamamen başarısız olduysa bilinmeyen verinin üzerine yazılmaz. */
   private writable = true;
+  /** Diskteki listelerin bellekteki kopyası; yalnızca başarılı okuma ve yazmadan sonra değişir. */
+  private current: { medications: Medication[]; doseLogs: DoseLog[] } | null = null;
+  /** İki repository aynı anda okursa disk bir kez okunur, bozuk veri bir kez yedeklenir. */
+  private reading: Promise<DeviceData> | null = null;
 
   constructor(store: KeyValueStore, now: Clock) {
     this.store = store;
     this.now = now;
   }
 
-  async load(): Promise<StoredData> {
+  read(): Promise<DeviceData> {
+    this.reading ??= this.readFromDisk().finally(() => {
+      this.reading = null;
+    });
+    return this.reading;
+  }
+
+  /** İlaç listesini değiştirip yazar. */
+  async writeMedications(change: (medications: Medication[]) => Medication[]) {
+    this.assertWritable();
+    const { medications, doseLogs } = await this.snapshot();
+    const next = change(medications);
+    await this.write([[KEYS.medications, JSON.stringify(next)]]);
+    this.current = { medications: next, doseLogs };
+  }
+
+  /** Doz kaydını ve ilacın yeni halini tek `multiSet` ile birlikte yazar. */
+  async writeDose(log: DoseLog, medication: Medication) {
+    this.assertWritable();
+    const snapshot = await this.snapshot();
+    const medications = snapshot.medications.map((item) =>
+      item.id === medication.id ? medication : item,
+    );
+    const doseLogs = [...snapshot.doseLogs.filter((item) => item.id !== log.id), log];
+    await this.write([
+      [KEYS.medications, JSON.stringify(medications)],
+      [KEYS.doseLogs, JSON.stringify(doseLogs)],
+    ]);
+    this.current = { medications, doseLogs };
+  }
+
+  /** Hiç okunmadan yazılırsa diskteki veri silinmesin diye önce okunur. */
+  private async snapshot() {
+    if (!this.current) await this.read();
+    return this.current ?? { medications: [], doseLogs: [] };
+  }
+
+  private async readFromDisk(): Promise<DeviceData> {
     let raw: [string | null, string | null, string | null];
     try {
       raw = await Promise.all([
@@ -92,33 +132,31 @@ export class AsyncStorageService implements IStorage {
       (count) => `Kayıtlı ${count} doz onayı okunamadı.`,
     );
 
-    const warnings = [medicationsJson, doseLogsJson, medications, doseLogs]
-      .map((result) => result.warning)
-      .filter((warning): warning is string => !!warning);
+    const medicationWarnings = warningsOf(medicationsJson, medications);
+    const doseLogWarnings = warningsOf(doseLogsJson, doseLogs);
 
     // Bozuk veri varsa göç sonucu diske yazılmaz; yedeği alınan ham veri olduğu gibi kalır.
-    if (fromVersion < CURRENT_SCHEMA_VERSION && warnings.length === 0) {
+    const clean = medicationWarnings.length === 0 && doseLogWarnings.length === 0;
+    if (fromVersion < CURRENT_SCHEMA_VERSION && clean) {
       await this.writeMigrated(migrated);
     }
 
-    return { medications: medications.items, doseLogs: doseLogs.items, warnings };
+    this.current = { medications: medications.items, doseLogs: doseLogs.items };
+    return {
+      medications: { items: medications.items, warnings: medicationWarnings },
+      doseLogs: { items: doseLogs.items, warnings: doseLogWarnings },
+    };
   }
 
-  async saveMedications(medications: Medication[]) {
-    await this.write([[KEYS.medications, JSON.stringify(medications)]]);
-  }
-
-  async saveDoseConfirmation(medications: Medication[], doseLogs: DoseLog[]) {
-    await this.write([
-      [KEYS.medications, JSON.stringify(medications)],
-      [KEYS.doseLogs, JSON.stringify(doseLogs)],
-    ]);
-  }
-
-  private async write(pairs: [string, string][]) {
+  /** Okuma başarısız olduysa yeniden okuyup göç yazmadan önce durulur. */
+  private assertWritable() {
     if (!this.writable) {
       throw new StorageError('Okuma başarısız olduğu için yazma kapalı', READ_FAILED_MESSAGE);
     }
+  }
+
+  private async write(pairs: [string, string][]) {
+    this.assertWritable();
     try {
       await this.store.multiSet(pairs);
     } catch (error) {

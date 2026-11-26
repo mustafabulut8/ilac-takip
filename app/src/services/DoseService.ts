@@ -3,7 +3,7 @@ import { logger } from '@/utils/logger';
 
 import type { DoseCalculator } from './DoseCalculator';
 import type { Clock, SnoozeCanceller } from './ports';
-import type { IStorage } from './StorageService';
+import type { DoseLogRepository } from './repositories';
 
 /** Doz onayından sonra kaydedilen yeni durum. */
 export type DoseState = {
@@ -16,13 +16,18 @@ export type DoseState = {
  * kaldırır. Durumun hesabı DoseCalculator'dadır.
  */
 export class DoseService {
-  private readonly storage: IStorage;
+  private readonly doseLogs: DoseLogRepository;
   private readonly snoozes: SnoozeCanceller;
   private readonly doses: DoseCalculator;
   private readonly now: Clock;
 
-  constructor(storage: IStorage, snoozes: SnoozeCanceller, doses: DoseCalculator, now: Clock) {
-    this.storage = storage;
+  constructor(
+    doseLogs: DoseLogRepository,
+    snoozes: SnoozeCanceller,
+    doses: DoseCalculator,
+    now: Clock,
+  ) {
+    this.doseLogs = doseLogs;
     this.snoozes = snoozes;
     this.doses = doses;
     this.now = now;
@@ -48,13 +53,12 @@ export class DoseService {
       time,
       takenAt: this.now().toISOString(),
     };
+    const updated = this.withStockAfterDose(medication);
+    await this.doseLogs.recordDose(log, updated);
     const next: DoseState = {
       doseLogs: [...state.doseLogs, log],
-      medications: state.medications.map((item) =>
-        item.id === medicationId ? this.withStockAfterDose(item) : item,
-      ),
+      medications: state.medications.map((item) => (item.id === medicationId ? updated : item)),
     };
-    await this.storage.saveDoseConfirmation(next.medications, next.doseLogs);
     // Onay kaydedildi; ertelenmiş bildirim kaldırılamazsa bu onayı bozmaz.
     this.snoozes.cancelSnooze(medicationId, date, time).catch((error) => {
       logger.warn('Ertelenmiş bildirim kaldırılamadı:', error);

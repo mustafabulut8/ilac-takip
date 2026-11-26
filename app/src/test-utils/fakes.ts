@@ -1,5 +1,7 @@
 import type { DoseLog, Medication } from '@/models';
-import type { IStorage, KeyValueStore, StoredData } from '@/services/StorageService';
+import type { KeyValueStore } from '@/services/local/LocalDeviceStore';
+import type { StoredData } from '@/services/MedicationService';
+import type { DoseLogRepository, MedicationRepository } from '@/services/repositories';
 
 /** AsyncStorage yerine bellekte çalışan sahte anahtar-değer deposu. */
 export class MemoryKeyValueStore implements KeyValueStore {
@@ -33,26 +35,53 @@ export class MemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-/** Servis testleri için IStorage'ın bellekteki sahtesi. */
-export class FakeStorage implements IStorage {
+/**
+ * Servis testleri için iki repository'nin bellekteki sahtesi. Listeler tek yerde tutulur;
+ * testler `medications`, `doseLogs` ve yazma sayısını doğrudan denetler.
+ */
+export class FakeStorage {
   medications: Medication[] = [];
   doseLogs: DoseLog[] = [];
   saveCount = 0;
   failWrites = false;
 
+  readonly medicationRepository: MedicationRepository = {
+    load: async () => ({ items: this.medications, warnings: [] }),
+    add: async (medication) => {
+      this.write();
+      this.medications = [...this.medications, medication];
+    },
+    update: async (medication) => {
+      this.write();
+      this.medications = this.medications.map((item) =>
+        item.id === medication.id ? medication : item,
+      );
+    },
+    remove: async (id) => {
+      this.write();
+      this.medications = this.medications.filter((item) => item.id !== id);
+    },
+  };
+
+  readonly doseLogRepository: DoseLogRepository = {
+    load: async () => ({ items: this.doseLogs, warnings: [] }),
+    recordDose: async (log, medication) => {
+      this.write();
+      this.medications = this.medications.map((item) =>
+        item.id === medication.id ? medication : item,
+      );
+      this.doseLogs = [...this.doseLogs, log];
+    },
+  };
+
+  /** İki repository birlikte: `MedicationService`'in istediği biçim. */
+  get repositories() {
+    return { medications: this.medicationRepository, doseLogs: this.doseLogRepository };
+  }
+
+  /** Açılıştaki okuma; kanca testlerindeki sahte `load` için. */
   async load(): Promise<StoredData> {
     return { medications: this.medications, doseLogs: this.doseLogs, warnings: [] };
-  }
-
-  async saveMedications(medications: Medication[]) {
-    this.write();
-    this.medications = medications;
-  }
-
-  async saveDoseConfirmation(medications: Medication[], doseLogs: DoseLog[]) {
-    this.write();
-    this.medications = medications;
-    this.doseLogs = doseLogs;
   }
 
   private write() {

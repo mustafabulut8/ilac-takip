@@ -15,7 +15,10 @@ import { MedicationService } from './MedicationService';
 import { NotificationService } from './NotificationService';
 import { PhotoService } from './PhotoService';
 import { systemClock } from './ports';
-import { AsyncStorageService, type IStorage } from './StorageService';
+import { LocalDeviceStore } from './local/LocalDeviceStore';
+import { LocalDoseLogRepository } from './local/LocalDoseLogRepository';
+import { LocalMedicationRepository } from './local/LocalMedicationRepository';
+import type { DoseLogRepository, MedicationRepository } from './repositories';
 
 // Kancaların ve durumun kullandığı tipler. Sınıflar dışarı açılmaz; yalnızca aşağıdaki
 // hazır örnekler kullanılır.
@@ -28,15 +31,20 @@ export type { NotificationPermissionStatus } from './NotificationService';
 /**
  * Bağımlılıkların tek kurulduğu yer (composition root). Servisler depolamayı, saati,
  * bildirimi ve Supabase istemcisini constructor ile alır; somut sınıflar yalnızca burada
- * seçilir. Supabase'e geçişte yalnızca `storage` satırı değişir.
+ * seçilir. 2. parçada ilaç verisi sunucuya taşınınca yalnızca aşağıdaki iki repository
+ * satırı değişir (ör. `new SupabaseMedicationRepository(supabase)`).
  */
-const storage: IStorage = new AsyncStorageService(AsyncStorage, systemClock);
+const device = new LocalDeviceStore(AsyncStorage, systemClock);
+const repositories: { medications: MedicationRepository; doseLogs: DoseLogRepository } = {
+  medications: new LocalMedicationRepository(device),
+  doseLogs: new LocalDoseLogRepository(device),
+};
 export const photoService = new PhotoService();
 export const notificationService = new NotificationService(Notifications, Platform.OS, systemClock);
 export const doseCalculator = new DoseCalculator();
 export const historyService = new HistoryService(doseCalculator);
 export const doseService = new DoseService(
-  storage,
+  repositories.doseLogs,
   notificationService,
   doseCalculator,
   systemClock,
@@ -44,7 +52,7 @@ export const doseService = new DoseService(
 // Uygulama açıkken gelen bildirim de gösterilsin. Uygulama açılırken bir kez çalışır.
 notificationService.configure();
 export const medicationService = new MedicationService(
-  storage,
+  repositories,
   photoService,
   notificationService,
   systemClock,
