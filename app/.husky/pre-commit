@@ -1,0 +1,2 @@
+# Commit öncesi: değişen dosyalarda lint, biçim ve ilgili testler (kararlar.md, 19. karar).
+cd app && npx lint-staged

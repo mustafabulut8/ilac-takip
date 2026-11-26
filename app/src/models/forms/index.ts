@@ -29,7 +29,6 @@ export {
   formatNumber,
   DEFAULT_LOW_STOCK_THRESHOLD,
   UncountableForm,
-  type AmountRange,
   type DoseInput,
 } from './medication-form';
 

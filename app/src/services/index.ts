@@ -17,34 +17,18 @@ import { PhotoService } from './PhotoService';
 import { systemClock } from './ports';
 import { AsyncStorageService, type IStorage } from './StorageService';
 
-export { DoseService, type DoseState } from './DoseService';
-export { DoseCalculator, type DoseGroup } from './DoseCalculator';
-export {
-  HistoryService,
-  type DaySummary,
-  type HistoryDay,
-  type HistoryWeek,
-} from './HistoryService';
-export {
-  MedicationService,
-  type MedicationResult,
-  type MedicationChanges,
-} from './MedicationService';
-export type { Clock, PhotoStore, ReminderScheduler, SnoozeCanceller } from './ports';
-export {
-  NotificationService,
-  type DoseNotificationData,
-  type DoseTarget,
-  type NotificationPermissionStatus,
-  type NotificationsApi,
-} from './NotificationService';
-export { PhotoService } from './PhotoService';
-export { AuthService } from './AuthService';
-export type { IStorage, KeyValueStore, StoredData } from './StorageService';
+// Kancaların ve durumun kullandığı tipler. Sınıflar dışarı açılmaz; yalnızca aşağıdaki
+// hazır örnekler kullanılır.
+export type { AuthService } from './AuthService';
+export type { DoseService } from './DoseService';
+export type { DaySummary, HistoryDay } from './HistoryService';
+export type { MedicationChanges, MedicationService } from './MedicationService';
+export type { NotificationPermissionStatus } from './NotificationService';
 
 /**
- * Bağımlılıkların tek kurulduğu yer (composition root). Servisler depolamayı
- * constructor ile alır; Supabase'e geçişte yalnızca `storage` satırı değişir.
+ * Bağımlılıkların tek kurulduğu yer (composition root). Servisler depolamayı, saati,
+ * bildirimi ve Supabase istemcisini constructor ile alır; somut sınıflar yalnızca burada
+ * seçilir. Supabase'e geçişte yalnızca `storage` satırı değişir.
  */
 const storage: IStorage = new AsyncStorageService(AsyncStorage, systemClock);
 export const photoService = new PhotoService();

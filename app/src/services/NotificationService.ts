@@ -8,8 +8,6 @@ import { isValidTime } from '@/utils/time';
 import type { Clock, ReminderScheduler, SnoozeCanceller } from './ports';
 import { ReminderPlanner } from './ReminderPlanner';
 
-export type { DoseNotificationData } from './ReminderPlanner';
-
 /** Bildirime dokununca açılacak ALDIM sayfasının parametreleri. */
 export type DoseTarget = { medicationId: string; time: string; date: string };
 

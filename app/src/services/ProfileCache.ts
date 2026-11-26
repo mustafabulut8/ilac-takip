@@ -10,7 +10,7 @@ export interface ProfileCacheStore {
 }
 
 /** Kayıtlı metni profile çevirir; bozuksa veya başka kullanıcınınsa null. */
-export function parseCachedProfile(raw: string | null, userId: string): Profile | null {
+function parseCachedProfile(raw: string | null, userId: string): Profile | null {
   const parsed = raw === null ? null : safeJsonParse(raw);
   if (!parsed?.ok || !isRecord(parsed.value)) return null;
   const { id, name, role, createdAt } = parsed.value;

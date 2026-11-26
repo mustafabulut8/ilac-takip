@@ -5,8 +5,7 @@ type ErrorLike = { name?: unknown; code?: unknown; status?: unknown; message?: u
 
 type ErrorRule = { kind: AuthErrorKind; userMessage: string };
 
-export const OFFLINE_MESSAGE =
-  'İnternet bağlantısı yok. Bağlantınızı kontrol edip yeniden deneyin.';
+const OFFLINE_MESSAGE = 'İnternet bağlantısı yok. Bağlantınızı kontrol edip yeniden deneyin.';
 
 const EMAIL_TAKEN: ErrorRule = {
   kind: 'email_taken',

@@ -10,7 +10,6 @@
     "expo": "~58.0.22",
     "expo-constants": "~58.0.14",
     "expo-dev-client": "~58.0.18",
-    "expo-device": "~58.0.5",
     "expo-file-system": "~58.0.13",
     "expo-font": "~58.0.11",
     "expo-glass-effect": "~58.0.5",
@@ -24,7 +23,6 @@
     "expo-status-bar": "~58.0.4",
     "expo-symbols": "~58.0.4",
     "expo-system-ui": "~58.0.7",
-    "expo-web-browser": "~58.0.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
@@ -44,6 +42,7 @@
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
     "jest": "~30.5.2",
     "jest-expo": "~58.0.14",
@@ -61,9 +60,12 @@
     "lint": "expo lint && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "kontrol": "npm run typecheck && npm run lint && npm test",
+    "katman": "depcruise src --config .dependency-cruiser.cjs",
+    "kullanilmayan": "knip --no-progress",
+    "kontrol": "npm run typecheck && npm run lint && npm run katman && npm run kullanilmayan && npm test",
     "test": "jest --coverage",
-    "supabase": "supabase --workdir .."
+    "supabase": "supabase --workdir ..",
+    "prepare": "cd .. && husky app/.husky"
   },
   "private": true,
   "jest": {
@@ -80,17 +82,53 @@
       "src/**/*.{ts,tsx}",
       "!src/app/**",
       "!src/components/**",
-      "!src/hooks/**",
-      "!src/context/**",
+      "!src/**/__tests__/**",
       "!src/services/index.ts",
+      "!src/services/supabase.ts",
       "!src/models/index.ts",
       "!src/errors/index.ts",
+      "!src/config.ts",
       "!src/test-utils/**"
     ],
     "coverageReporters": [
       "text-summary",
       "text",
       "lcov"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 80
+      },
+      "./src/services/": {
+        "lines": 90,
+        "branches": 85
+      },
+      "./src/models/": {
+        "lines": 90,
+        "branches": 85
+      },
+      "./src/validation/": {
+        "lines": 90,
+        "branches": 85
+      },
+      "./src/utils/": {
+        "lines": 90,
+        "branches": 85
+      },
+      "./src/hooks/": {
+        "lines": 90,
+        "branches": 85
+      }
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --max-warnings=-1",
+      "prettier --write",
+      "jest --findRelatedTests --passWithNoTests"
+    ],
+    "*.{js,cjs,json,md}": [
+      "prettier --write"
     ]
   }
 }

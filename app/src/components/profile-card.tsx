@@ -6,7 +6,7 @@ import { AppText } from './app-text';
 import { Card } from './card';
 
 /** Adın ilk harfi (Türkçe büyük harfle); ad yoksa boş. */
-export function initialOf(name?: string) {
+function initialOf(name?: string) {
   return name?.trim().charAt(0).toLocaleUpperCase('tr-TR') ?? '';
 }
 

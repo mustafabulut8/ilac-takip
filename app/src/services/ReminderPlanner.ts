@@ -7,7 +7,7 @@ import { isScheduledOn, lastDayOf } from '@/utils/schedule';
 import { parseTime } from '@/utils/time';
 
 /** Bildirimin içinde taşınan veri; dokununca hangi doza gidileceğini söyler. */
-export type DoseNotificationData = {
+type DoseNotificationData = {
   medicationId: string;
   time: string;
   /** Yalnızca ertelenen bildirimde: dozun asıl günü (gece yarısını geçebilir). */
