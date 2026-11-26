@@ -1,12 +1,12 @@
 import { ValidationError } from '@/errors';
-import { isUserRole, type SignUpInput } from '@/models';
-
-/** Kayıt ekranındaki "En az 8 karakter" ile aynı kural. */
-export const MIN_PASSWORD_LENGTH = 8;
-export const MAX_NAME_LENGTH = 100;
-
-export type SignUpField = 'name' | 'email' | 'password' | 'role' | 'consent';
-export type SignInField = 'email' | 'password';
+import {
+  isUserRole,
+  MAX_NAME_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  type SignInField,
+  type SignUpField,
+  type SignUpInput,
+} from '@/models';
 
 // Basit biçim denetimi; adresin gerçekten var olup olmadığını sunucu bilir.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

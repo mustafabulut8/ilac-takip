@@ -1,8 +1,6 @@
-import {
-  validateMedicationDraft,
-  type MedicationDraft,
-  type MedicationField,
-} from './medication-input';
+import type { MedicationDraft } from '@/models';
+
+import { validateMedicationDraft, type MedicationField } from './medication-input';
 
 /** Sihirbazın adımları ve her adımda denetlenen alanlar (kararlar.md, 4. karar). */
 export const WIZARD_STEPS = [

@@ -1,16 +1,18 @@
 import { ValidationError } from '@/errors';
+import {
+  doseTextOf,
+  draftFromMedication,
+  EMPTY_MEDICATION_DRAFT,
+  type MedicationDraft,
+} from '@/models';
 import { makeMedication } from '@/test-utils/fakes';
 
 import {
   assertValidChanges,
   assertValidNewMedication,
   changesOf,
-  doseTextOf,
-  draftFromMedication,
-  EMPTY_MEDICATION_DRAFT,
   toNewMedication,
   validateMedicationDraft,
-  type MedicationDraft,
 } from '../medication-input';
 
 const validDraft: MedicationDraft = {

@@ -4,7 +4,7 @@ import { Alert, BackHandler } from 'react-native';
 
 import { useMedicationWizard, type MedicationWizard } from '@/hooks/useMedicationWizard';
 import type { Medication } from '@/models';
-import type { WizardStepId } from '@/validation/wizard-steps';
+import type { WizardStepId } from '@/hooks/useMedicationWizard';
 
 import { DoseStep } from './dose-step';
 import { FormStep } from './form-step';

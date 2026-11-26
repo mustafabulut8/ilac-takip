@@ -5,7 +5,7 @@ import { Icon } from '@/components/icon';
 import { Colors, Radius } from '@/constants/theme';
 import { useMedicationPhoto } from '@/hooks/useMedicationPhoto';
 import { getMedicationForm } from '@/models';
-import type { MedicationDraft } from '@/validation/medication-input';
+import type { MedicationDraft } from '@/models';
 
 /** Taslaktaki fotoğraf: yeni seçilen varsa o, yoksa kayıtlı olan; hiç yoksa ikon. */
 export function DraftPhoto({ draft, height }: { draft: MedicationDraft; height: number }) {

@@ -1,15 +1,24 @@
 import { useRef, useState } from 'react';
 
 import { userMessageOf } from '@/errors';
-import { getMedicationForm, type Medication, type MedicationFormKind } from '@/models';
 import {
-  changesOf,
   draftFromMedication,
   EMPTY_MEDICATION_DRAFT,
-  toNewMedication,
+  getMedicationForm,
+  type Medication,
   type MedicationDraft,
-} from '@/validation/medication-input';
-import { firstInvalidStep, stepError, stepIndexOf, WIZARD_STEPS } from '@/validation/wizard-steps';
+  type MedicationFormKind,
+} from '@/models';
+import { changesOf, toNewMedication } from '@/validation/medication-input';
+import {
+  firstInvalidStep,
+  stepError,
+  stepIndexOf,
+  WIZARD_STEPS,
+  type WizardStepId,
+} from '@/validation/wizard-steps';
+
+export type { WizardStepId };
 
 import { useMedications } from './useMedications';
 
@@ -133,6 +142,8 @@ export function useMedicationWizard(original?: Medication) {
     isSaving,
     isDirty: JSON.stringify(draft) !== JSON.stringify(initial),
     canContinue: stepError(step.id, draft) === undefined,
+    /** Bütün adımlar tamam mı? (Özet adımında kaydet düğmesi için) */
+    isComplete: firstInvalidStep(draft) === undefined,
     update,
     selectForm,
     next,

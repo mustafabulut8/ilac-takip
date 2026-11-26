@@ -11,7 +11,7 @@ import { TextLink } from '@/components/text-link';
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
-import type { SignInField } from '@/validation/auth-input';
+import type { SignInField } from '@/models';
 
 /** Giriş yap (Stitch 11). Başarılı girişten sonra kök düzen role göre ana ekranı açar. */
 export default function SignInScreen() {

@@ -5,7 +5,7 @@ import { NumberStepper } from '@/components/number-stepper';
 import { OptionCard } from '@/components/option-card';
 import type { MedicationWizard } from '@/hooks/useMedicationWizard';
 import { WEEK_ORDER, WEEKDAYS, WEEKDAYS_SHORT } from '@/utils/date';
-import { DURATION_DAYS } from '@/validation/medication-input';
+import { DURATION_DAYS } from '@/models';
 
 import { StepTitle } from './step-title';
 

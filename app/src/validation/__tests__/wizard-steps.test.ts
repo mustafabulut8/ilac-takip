@@ -1,10 +1,7 @@
+import { draftFromMedication, EMPTY_MEDICATION_DRAFT } from '@/models';
 import { makeMedication } from '@/test-utils/fakes';
 
-import {
-  draftFromMedication,
-  EMPTY_MEDICATION_DRAFT,
-  MEDICATION_FIELDS,
-} from '../medication-input';
+import { MEDICATION_FIELDS } from '../medication-input';
 import { firstInvalidStep, stepError, stepIndexOf, WIZARD_STEPS } from '../wizard-steps';
 
 describe('sihirbaz adımları', () => {

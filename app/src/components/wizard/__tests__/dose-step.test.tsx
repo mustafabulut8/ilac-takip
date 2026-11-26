@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { MedicationWizard } from '@/hooks/useMedicationWizard';
-import { getMedicationForm, type MedicationFormKind } from '@/models';
-import { EMPTY_MEDICATION_DRAFT, type MedicationDraft } from '@/validation/medication-input';
+import {
+  EMPTY_MEDICATION_DRAFT,
+  getMedicationForm,
+  type MedicationDraft,
+  type MedicationFormKind,
+} from '@/models';
 
 import { DoseStep } from '../dose-step';
 

@@ -1,24 +1,20 @@
 import { ValidationError } from '@/errors';
 import {
-  DEFAULT_LOW_STOCK_THRESHOLD,
+  doseTextOf,
+  DURATION_DAYS,
   getMedicationForm,
   isMedicationFormKind,
+  MAX_STOCK,
   MEAL_TIMING_LABELS,
-  type DoseInput,
   type Duration,
-  type Schedule,
-  type MealTiming,
   type Medication,
-  type MedicationFormKind,
+  type MedicationDraft,
   type NewMedication,
+  type Schedule,
 } from '@/models';
 import { isValidTime } from '@/utils/time';
 
 import { isWeekday } from './stored-records';
-
-/** Belirli gün sayısı seçildiğinde izin verilen aralık. */
-export const DURATION_DAYS = { min: 1, max: 90, step: 1 };
-export const MAX_STOCK = 999;
 
 /** Denetlenen alanlar; sıra sihirbazdaki sıradır. */
 export const MEDICATION_FIELDS = [
@@ -33,70 +29,6 @@ export const MEDICATION_FIELDS = [
 ] as const;
 export type MedicationField = (typeof MEDICATION_FIELDS)[number];
 export type MedicationFieldErrors = Partial<Record<MedicationField, string>>;
-
-/** Sihirbazdaki ham girdi; bazı alanlar henüz seçilmemiş olabilir. */
-export type MedicationDraft = {
-  /** Yeni çekilen veya seçilen fotoğrafın geçici adresi. */
-  photo: string | null;
-  /** Düzenlemede ilacın mevcut fotoğraf dosyası. */
-  photoFile: string;
-  name: string;
-  form: MedicationFormKind | null;
-  dose: DoseInput;
-  /** Eski sürümde serbest yazılmış doz; kullanıcı yeni doz seçene kadar korunur. */
-  keptDose: string | null;
-  schedule: Schedule;
-  duration: Duration;
-  times: string[];
-  mealTiming: MealTiming | null;
-  stock: number;
-  lowStockThreshold: number | null;
-  markedLow: boolean;
-};
-
-export const EMPTY_MEDICATION_DRAFT: MedicationDraft = {
-  photo: null,
-  photoFile: '',
-  name: '',
-  form: null,
-  dose: { amount: 1, unit: '', location: '', text: '' },
-  keptDose: null,
-  schedule: { kind: 'daily' },
-  duration: { kind: 'continuous' },
-  times: [],
-  mealTiming: null,
-  stock: 30,
-  lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
-  markedLow: false,
-};
-
-/** Kayıtlı ilacı sihirbazda düzenlenebilir hale getirir. */
-export function draftFromMedication(medication: Medication): MedicationDraft {
-  const form = getMedicationForm(medication.form);
-  const { amount, unit, location } = medication;
-  const dose: DoseInput = { amount, unit, location, text: medication.dose };
-  const isReadable = form.formatDose(dose) === medication.dose && !form.validateDose(dose);
-  return {
-    photo: null,
-    photoFile: medication.photoFile,
-    name: medication.name,
-    form: form.kind,
-    dose: isReadable ? dose : form.defaultDose(),
-    keptDose: isReadable ? null : medication.dose || null,
-    schedule: medication.schedule,
-    duration: medication.duration,
-    times: medication.times,
-    mealTiming: medication.mealTiming,
-    stock: medication.stock,
-    lowStockThreshold: medication.lowStockThreshold,
-    markedLow: medication.markedLow,
-  };
-}
-
-/** Taslağın ekranda gösterilecek doz metni; form seçilmediyse boş. */
-export function doseTextOf({ form, dose, keptDose }: MedicationDraft): string {
-  return keptDose ?? (form ? getMedicationForm(form).formatDose(dose) : '');
-}
 
 function validateTimes(times: unknown): string | undefined {
   if (!Array.isArray(times) || times.length === 0) return 'Lütfen en az bir saat ekleyin.';

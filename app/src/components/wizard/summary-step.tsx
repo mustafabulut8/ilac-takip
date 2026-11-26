@@ -8,19 +8,16 @@ import { Icon, type IconName } from '@/components/icon';
 import { Pill } from '@/components/pill';
 import { SecondaryButton } from '@/components/secondary-button';
 import { Colors, Spacing } from '@/constants/theme';
-import type { MedicationWizard } from '@/hooks/useMedicationWizard';
-import { formatNumber, getMedicationForm, MEAL_TIMING_LABELS } from '@/models';
+import type { MedicationWizard, WizardStepId } from '@/hooks/useMedicationWizard';
+import { doseTextOf, formatNumber, getMedicationForm, MEAL_TIMING_LABELS } from '@/models';
 import { describeDuration, describeSchedule } from '@/utils/schedule';
-import { doseTextOf } from '@/validation/medication-input';
-import { firstInvalidStep, type WizardStepId } from '@/validation/wizard-steps';
 
 import { DraftPhoto } from './draft-photo';
 import { StepTitle } from './step-title';
 
 export function SummaryStep({ wizard }: { wizard: MedicationWizard }) {
-  const { draft, editStep } = wizard;
+  const { draft, editStep, isComplete } = wizard;
   const form = getMedicationForm(draft.form);
-  const isComplete = !firstInvalidStep(draft);
 
   const row = (step: WizardStepId, icon: IconName, title: string, value: ReactNode) => (
     <Card key={step} style={styles.row}>

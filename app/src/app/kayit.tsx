@@ -14,7 +14,7 @@ import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { isUserRole } from '@/models';
-import type { SignUpField } from '@/validation/auth-input';
+import type { SignUpField } from '@/models';
 
 /** Kayıt ol (Stitch 10). Rol, önceki ekranda seçilir. */
 export default function SignUpScreen() {

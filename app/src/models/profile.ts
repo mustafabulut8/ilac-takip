@@ -16,6 +16,14 @@ export type Profile = {
   createdAt: string;
 };
 
+/** Kayıt ekranındaki "En az 8 karakter" ile aynı kural (sunucuda en az 6). */
+export const MIN_PASSWORD_LENGTH = 8;
+export const MAX_NAME_LENGTH = 100;
+
+/** Kayıt ve giriş formlarının alanları; hata mesajları bu adlarla döner. */
+export type SignUpField = 'name' | 'email' | 'password' | 'role' | 'consent';
+export type SignInField = 'email' | 'password';
+
 /** Kayıt formundan gelen bilgiler. */
 export type SignUpInput = {
   name: string;
