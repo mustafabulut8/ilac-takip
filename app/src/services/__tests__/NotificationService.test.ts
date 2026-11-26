@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 
 import { NotificationError } from '@/errors';
 import { makeMedication } from '@/test-utils/fakes';
+import { logger } from '@/utils/logger';
 
 import { NotificationService, type NotificationsApi } from '../NotificationService';
 
@@ -338,5 +339,67 @@ describe('NotificationService.subscribeToDoseTaps', () => {
     const unsubscribe = new NotificationService(api, 'ios').subscribeToDoseTaps(jest.fn());
     unsubscribe();
     expect(api.removeListener).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Karakterizasyon: plan hesabı ayrı sınıfa taşınmadan önceki davranışı kilitler.
+describe('NotificationService bildirim içeriği ve plan (karakterizasyon)', () => {
+  it('bildirim başlığı, metni, sesi ve kanalı', async () => {
+    const api = fakeApi();
+    await new NotificationService(api, 'android').sync([makeMedication({ times: ['08:00'] })]);
+    const [request] = api.scheduleNotificationAsync.mock.calls[0];
+    expect(request.content).toEqual({
+      title: 'İlaç saati: Aspirin',
+      body: '08:00 dozunuz: 1 tablet. Onaylamak için dokunun.',
+      sound: true,
+      data: { medicationId: 'ilac1', time: '08:00' },
+    });
+    expect(request.trigger).toEqual({
+      type: 'daily',
+      hour: 8,
+      minute: 0,
+      channelId: 'ilac-hatirlatma',
+    });
+  });
+
+  it('süreli ve belirli günlü ilaçta yalnızca seçili günlere, ileri başlangıçtan kurar', async () => {
+    const api = fakeApi();
+    // 16 Kasım 2026 Pazartesi; kür 18 Kasım Çarşamba başlıyor, yalnızca Çarşamba ve Cuma.
+    await new NotificationService(api, 'ios', () => new Date(2026, 10, 16, 9, 0)).sync([
+      makeMedication({
+        times: ['08:00'],
+        startDate: '2026-11-18',
+        schedule: { kind: 'weekdays', days: [3, 5] },
+        duration: { kind: 'days', count: 7 },
+      }),
+    ]);
+    expect(scheduledIdsOf(api)).toEqual(['ilac1-08:00-2026-11-18', 'ilac1-08:00-2026-11-20']);
+  });
+
+  it('başlangıcı bozuk süreli ilaca bildirim kurmaz', async () => {
+    const api = fakeApi();
+    await new NotificationService(api, 'ios', () => new Date(2026, 10, 16)).sync([
+      makeMedication({ startDate: 'bozuk', duration: { kind: 'days', count: 7 } }),
+    ]);
+    expect(api.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  it('sınıra sığmayan süreli bildirimleri kayda yazar', async () => {
+    const info = jest.spyOn(logger, 'info');
+    const api = fakeApi();
+    await new NotificationService(api, 'ios', () => new Date(2026, 10, 16)).sync([
+      makeMedication({ startDate: '2026-11-16', duration: { kind: 'days', count: 90 } }),
+    ]);
+    expect(info).toHaveBeenCalledWith('120 süreli hatırlatma sonraki açılışta kurulacak.');
+  });
+
+  it('izin durumu: verildi, sorulabilir, reddedildi', async () => {
+    const api = fakeApi();
+    const service = new NotificationService(api, 'ios');
+    expect(await service.permissionStatus()).toBe('granted');
+    api.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+    expect(await service.permissionStatus()).toBe('undetermined');
+    api.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+    expect(await service.permissionStatus()).toBe('denied');
   });
 });

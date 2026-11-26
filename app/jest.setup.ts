@@ -9,3 +9,8 @@ beforeEach(() => {
 afterEach(() => {
   jest.restoreAllMocks();
 });
+
+// AsyncStorage'ın yerel modülü testte yok; paketin kendi bellek sahtesi kullanılır.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

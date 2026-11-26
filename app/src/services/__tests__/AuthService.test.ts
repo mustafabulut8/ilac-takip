@@ -273,3 +273,103 @@ describe('AuthService.toAuthError', () => {
     );
   });
 });
+
+// Karakterizasyon: AuthService bölünmeden önceki davranışı kilitler.
+describe('AuthService.toAuthError (karakterizasyon)', () => {
+  it.each([
+    ['invalid_credentials', 'invalid_credentials', 'E-posta adresi veya şifre yanlış.'],
+    [
+      'user_already_exists',
+      'email_taken',
+      'Bu e-posta adresiyle zaten bir hesap var. Giriş yapmayı deneyin.',
+    ],
+    [
+      'email_exists',
+      'email_taken',
+      'Bu e-posta adresiyle zaten bir hesap var. Giriş yapmayı deneyin.',
+    ],
+    [
+      'weak_password',
+      'weak_password',
+      'Şifre çok zayıf. Harf ve rakam içeren, en az 8 karakterli bir şifre seçin.',
+    ],
+    ['email_address_invalid', 'invalid_email', 'E-posta adresi geçerli değil.'],
+    [
+      'over_request_rate_limit',
+      'rate_limited',
+      'Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden deneyin.',
+    ],
+    [
+      'over_email_send_rate_limit',
+      'rate_limited',
+      'Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden deneyin.',
+    ],
+    ['bilinmeyen', 'unknown', 'Bir sorun oluştu. Lütfen biraz sonra yeniden deneyin.'],
+  ])('%s kodu %s türüne ve Türkçe mesaja çevrilir', (code, kind, userMessage) => {
+    const mapped = AuthService.toAuthError({ name: 'AuthApiError', code, message: 'm' });
+    expect(mapped).toMatchObject({ kind, userMessage });
+    expect(mapped.message).toBe(`AuthApiError ${code}: m`);
+  });
+
+  it('ağ hatası metinleri internet yok sayılır', () => {
+    for (const message of ['Failed to fetch', 'NetworkError', 'network error']) {
+      expect(AuthService.toAuthError({ message }).kind).toBe('offline');
+    }
+  });
+
+  it('AuthError olduğu gibi döner, diğerlerinde asıl hata cause olarak saklanır', () => {
+    const own = new AuthError('offline', 't', 'k');
+    expect(AuthService.toAuthError(own)).toBe(own);
+    const raw = { code: 'weak_password' };
+    expect(AuthService.toAuthError(raw).cause).toBe(raw);
+    expect(AuthService.toAuthError(null).message).toBe('Hata :');
+  });
+});
+
+describe('AuthService profil kopyası (karakterizasyon)', () => {
+  const offline = { data: null, error: { message: 'Network request failed' } };
+
+  it('giriş profili cihaza yazar, çıkış siler', async () => {
+    const { service, cache } = setup();
+    await service.signIn('ayse@mail.com', 'gizli1234');
+    expect(JSON.parse(cache.items.get(AuthService.PROFILE_CACHE_KEY)!)).toEqual(PROFILE);
+    await service.signOut();
+    expect(cache.items.has(AuthService.PROFILE_CACHE_KEY)).toBe(false);
+  });
+
+  it('bozuk, rolü geçersiz veya okunamayan kopya kullanılmaz', async () => {
+    for (const raw of ['{bozuk', JSON.stringify({ ...PROFILE, role: 'yonetici' }), '[]']) {
+      const { service, query, cache } = setup();
+      cache.items.set(AuthService.PROFILE_CACHE_KEY, raw);
+      query.maybeSingle.mockResolvedValue(offline);
+      await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'offline' });
+    }
+    const { service, query, cache } = setup();
+    jest.spyOn(cache, 'getItem').mockRejectedValue(new Error('okunamadı'));
+    query.maybeSingle.mockResolvedValue(offline);
+    await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'offline' });
+  });
+
+  it('kayıt anı olmayan kopya boş kayıt anıyla kullanılır', async () => {
+    const { service, query, cache } = setup();
+    const { createdAt: _createdAt, ...withoutDate } = PROFILE;
+    cache.items.set(AuthService.PROFILE_CACHE_KEY, JSON.stringify(withoutDate));
+    query.maybeSingle.mockResolvedValue(offline);
+    await expect(service.currentProfile()).resolves.toEqual({ ...PROFILE, createdAt: '' });
+  });
+
+  it('kopya yazılamaz veya silinemezse işlem yine tamamlanır', async () => {
+    const { service, cache } = setup();
+    jest.spyOn(cache, 'setItem').mockRejectedValue(new Error('dolu'));
+    jest.spyOn(cache, 'removeItem').mockRejectedValue(new Error('hata'));
+    await expect(service.signIn('ayse@mail.com', 'gizli1234')).resolves.toEqual(PROFILE);
+    await expect(service.signOut()).resolves.toBeUndefined();
+  });
+
+  it('sunucu hatası internet yok değilse kopyaya bakılmaz', async () => {
+    const { service, query, cache } = setup();
+    cache.items.set(AuthService.PROFILE_CACHE_KEY, JSON.stringify(PROFILE));
+    query.maybeSingle.mockResolvedValue({ data: null, error: { code: 'bilinmeyen' } });
+    await expect(service.currentProfile()).rejects.toMatchObject({ kind: 'unknown' });
+  });
+});
