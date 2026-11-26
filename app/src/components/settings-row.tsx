@@ -17,23 +17,28 @@ type SettingsRowProps = {
   danger?: boolean;
 };
 
+/** Normal ve tehlikeli (ör. çıkış) satırın renkleri. */
+const NORMAL_TONE = { text: Colors.text, icon: Colors.primary, tile: Colors.primarySoft };
+const DANGER_TONE = { text: Colors.danger, icon: Colors.danger, tile: Colors.dangerSoft };
+
 /** Ayarlar satırı; "Yakında" olanlar basılamaz ve ekran okuyucuya pasif bildirilir. */
 export function SettingsRow({ icon, label, value, onPress, soon, danger }: SettingsRowProps) {
-  const color = danger ? Colors.danger : Colors.text;
+  const tone = danger ? DANGER_TONE : NORMAL_TONE;
+  const opens = !!onPress && !soon;
   return (
     <Pressable
       accessibilityRole={onPress || soon ? 'button' : 'text'}
       accessibilityLabel={[label, value, soon && 'Yakında'].filter(Boolean).join(', ')}
       accessibilityState={{ disabled: !!soon }}
-      disabled={!onPress || soon}
+      disabled={!opens}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-      <View style={[styles.tile, danger && styles.tileDanger]}>
-        <Icon name={icon} size={24} color={danger ? Colors.danger : Colors.primary} />
+      <View style={[styles.tile, { backgroundColor: tone.tile }]}>
+        <Icon name={icon} size={24} color={tone.icon} />
       </View>
       <View style={styles.body}>
         <View style={styles.texts}>
-          <AppText weight="semibold" color={color}>
+          <AppText weight="semibold" color={tone.text}>
             {label}
           </AppText>
           {value && (
@@ -44,7 +49,7 @@ export function SettingsRow({ icon, label, value, onPress, soon, danger }: Setti
         </View>
         {soon && <Pill label="Yakında" align="center" />}
       </View>
-      {onPress && !soon && <Icon name="forward" size={20} color={Colors.textSecondary} />}
+      {opens && <Icon name="forward" size={20} color={Colors.textSecondary} />}
     </Pressable>
   );
 }
@@ -66,10 +71,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: Colors.primarySoft,
-  },
-  tileDanger: {
-    backgroundColor: Colors.dangerSoft,
   },
   // Yazı büyüyünce "Yakında" etiketi alt satıra geçer, ad harf arasından bölünmez.
   body: {

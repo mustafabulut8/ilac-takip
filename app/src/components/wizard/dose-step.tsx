@@ -8,7 +8,7 @@ import { TextField } from '@/components/form/text-field';
 import { NumberStepper } from '@/components/number-stepper';
 import { OptionCard } from '@/components/option-card';
 import type { MedicationWizard } from '@/hooks/useMedicationWizard';
-import { formatAmount, getMedicationForm, type DoseInput } from '@/models';
+import { formatAmount, getMedicationForm, type DoseInput, type MedicationForm } from '@/models';
 
 import { StepTitle } from './step-title';
 
@@ -19,79 +19,41 @@ const PRESET_DETAILS: Record<number, string> = {
   2: 'Çift doz',
 };
 
-/** Dozaj adımı formun kendi seçeneklerinden kurulur; burada forma göre if/switch yoktur. */
-export function DoseStep({ wizard }: { wizard: MedicationWizard }) {
-  const { draft, update } = wizard;
-  const form = getMedicationForm(draft.form);
-  const { dose, keptDose } = draft;
+type DosePartProps = {
+  form: MedicationForm;
+  dose: DoseInput;
+  setDose: (changes: Partial<DoseInput>) => void;
+};
+
+/** Hazır miktar kartları, "Diğer miktar" ve sayaç. Krem gibi miktarsız formda bilgi gösterir. */
+function AmountPicker({ form, dose, setDose, kept }: DosePartProps & { kept: boolean }) {
   const presets = form.presetAmounts();
   const [showsStepper, setShowsStepper] = useState(
     presets.length === 0 || !presets.includes(dose.amount),
   );
-
-  const setDose = (changes: Partial<DoseInput>) =>
-    update({ dose: { ...dose, ...changes }, keptDose: null });
+  const choose = (stepper: boolean, changes: Partial<DoseInput>) => {
+    setShowsStepper(stepper);
+    setDose(changes);
+  };
 
   return (
     <>
-      <StepTitle title="Bir seferde ne kadar?" />
-      {keptDose !== null && (
-        <Banner
-          tone="info"
-          icon="info"
-          title={`Kayıtlı doz: ${keptDose}`}
-          detail="Aşağıdan yeni bir miktar seçmezseniz aynı kalır."
-        />
-      )}
-
-      {form.hasFreeTextDose() && (
-        <TextField
-          label="Doz"
-          value={keptDose ?? dose.text}
-          onChangeText={(text) => setDose({ text })}
-          placeholder="Örn. Bir kapak"
-        />
-      )}
-
       {presets.map((amount) => (
         <OptionCard
           key={amount}
           label={`${formatAmount(amount)} ${form.unitName(dose.unit)}`}
           detail={PRESET_DETAILS[amount]}
-          selected={keptDose === null && !showsStepper && dose.amount === amount}
-          onPress={() => {
-            setShowsStepper(false);
-            setDose({ amount });
-          }}
+          selected={!kept && !showsStepper && dose.amount === amount}
+          onPress={() => choose(false, { amount })}
         />
       ))}
       {presets.length > 0 && (
         <OptionCard
           label="Diğer miktar"
-          selected={keptDose === null && showsStepper}
-          onPress={() => {
-            setShowsStepper(true);
-            setDose({});
-          }}
+          selected={!kept && showsStepper}
+          onPress={() => choose(true, {})}
         />
       )}
-
-      {form.doseUnits().length > 1 && (
-        <>
-          <AppText weight="bold">Ölçü birimi</AppText>
-          <ChipGroup>
-            {form.doseUnits().map((unit) => (
-              <Chip
-                key={unit}
-                label={unit}
-                selected={dose.unit === unit}
-                onPress={() => setDose({ unit })}
-              />
-            ))}
-          </ChipGroup>
-        </>
-      )}
-
       {form.hasAmount() && showsStepper && (
         <Card>
           <NumberStepper
@@ -102,7 +64,6 @@ export function DoseStep({ wizard }: { wizard: MedicationWizard }) {
           />
         </Card>
       )}
-
       {!form.hasAmount() && !form.hasFreeTextDose() && (
         <Banner
           tone="info"
@@ -111,12 +72,41 @@ export function DoseStep({ wizard }: { wizard: MedicationWizard }) {
           detail="Bu ilaç için miktar sayıyla girilmez."
         />
       )}
+    </>
+  );
+}
 
-      {form.locations().length > 0 && (
+/** Birden çok ölçü birimi olan formlarda (şurup) birim seçimi. */
+function UnitPicker({ form, dose, setDose }: DosePartProps) {
+  const units = form.doseUnits();
+  if (units.length <= 1) return null;
+  return (
+    <>
+      <AppText weight="bold">Ölçü birimi</AppText>
+      <ChipGroup>
+        {units.map((unit) => (
+          <Chip
+            key={unit}
+            label={unit}
+            selected={dose.unit === unit}
+            onPress={() => setDose({ unit })}
+          />
+        ))}
+      </ChipGroup>
+    </>
+  );
+}
+
+/** Uygulama bölgesi: hazır seçenekler (damla) veya serbest metin (krem, bant). */
+function LocationPicker({ form, dose, setDose }: DosePartProps) {
+  const locations = form.locations();
+  return (
+    <>
+      {locations.length > 0 && (
         <>
           <AppText weight="bold">Uygulama bölgesi</AppText>
           <ChipGroup>
-            {form.locations().map((location) => (
+            {locations.map((location) => (
               <Chip
                 key={location}
                 label={location}
@@ -135,6 +125,41 @@ export function DoseStep({ wizard }: { wizard: MedicationWizard }) {
           placeholder="Örn. Sol kol"
         />
       )}
+    </>
+  );
+}
+
+/** Dozaj adımı formun kendi seçeneklerinden kurulur; burada forma göre if/switch yoktur. */
+export function DoseStep({ wizard }: { wizard: MedicationWizard }) {
+  const { draft, update } = wizard;
+  const form = getMedicationForm(draft.form);
+  const { dose, keptDose } = draft;
+  const setDose = (changes: Partial<DoseInput>) =>
+    update({ dose: { ...dose, ...changes }, keptDose: null });
+  const parts = { form, dose, setDose };
+
+  return (
+    <>
+      <StepTitle title="Bir seferde ne kadar?" />
+      {keptDose !== null && (
+        <Banner
+          tone="info"
+          icon="info"
+          title={`Kayıtlı doz: ${keptDose}`}
+          detail="Aşağıdan yeni bir miktar seçmezseniz aynı kalır."
+        />
+      )}
+      {form.hasFreeTextDose() && (
+        <TextField
+          label="Doz"
+          value={keptDose ?? dose.text}
+          onChangeText={(text) => setDose({ text })}
+          placeholder="Örn. Bir kapak"
+        />
+      )}
+      <AmountPicker {...parts} kept={keptDose !== null} />
+      <UnitPicker {...parts} />
+      <LocationPicker {...parts} />
     </>
   );
 }
