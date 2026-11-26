@@ -213,9 +213,21 @@ Her hata için önce başarısız test (`test: … (kırmızı)`), sonra düzelt
 2. **Süresi dolan oturumda anlamsız hata mesajı çıkıyordu.** Oturum kapanınca kullanıcı "Bir sorun oluştu" görüyordu. Artık "Oturumunuz kapanmış. Lütfen yeniden giriş yapın." yazıyor. Bu durumda cihazdaki eski profil kopyası da kullanılmıyor.
 3. **Bozuk kayıt anı Geçmiş'i kilitliyordu.** Telefonda okunamayan bir `createdAt` olduğu gibi saklanıyordu; tarih karşılaştırması `NaN` verdiği için Geçmiş'te önceki haftaya geçilemiyordu. Artık okunamayan kayıt anı en eski an sayılıyor (eksik kayıt anı için zaten böyleydi).
 
-### Bulunan ama davranış değişeceği için düzeltilmeyen durum
+### Gece yarısını aşan doz (düzeltildi)
 
-**Gece yarısını aşan doz:** 23:50 dozu gece yarısından sonra 30 dakika boyunca hâlâ "bekliyor" durumundadır; bildirimine dokununca onaylanabiliyor ve doğru günün kaydı oluşuyor (testle kilitlendi). Ancak 00:00'dan sonra Bugün ve Sade ana ekranı yeni günü gösterdiği için bu doz ekranda görünmez. Düzeltmek ana ekranın davranışını değiştireceğinden ayrı bir iş olarak bırakıldı.
+**Durum: düzeltildi** (mimari turu, `test(doz): … (kırmızı)` ve `fix(doz): …` commit'leri).
+
+**Bulgu:** 23:50 dozu gece yarısından sonra 30 dakika boyunca hâlâ "bekliyor" durumundadır; bildirimine dokununca onaylanabiliyor ve doğru günün kaydı oluşuyordu. Ancak 00:00'dan sonra Bugün ve Sade ana ekranı yeni günü gösterdiği için bu doz ekranda görünmüyordu.
+
+**Düzeltme:**
+
+- `DoseCalculator.getVisibleDoses`, bugünün dozlarının önüne dünün hâlâ "bekliyor" olan dozlarını koyar. 30 dakika dolunca doz "kaçırıldı" olur ve listeden kendiliğinden çıkar.
+- İlerleme ("Bugün 1 / 3") yalnızca bugünü sayar.
+- `focusDose` saatleri metin olarak değil, dozun kendi günündeki an olarak karşılaştırır. Böylece dünün 23:50 dozu 00:10'da "saati gelmiş" sayılır.
+- Sade ana ekrandaki gecikme dakikası da dozun gününe göre hesaplanır (20 dakika, −1420 değil).
+- "Aldım" dozu dünün günüyle kaydeder (`ilac1_2026-11-16_23:50`) ve stok bir kez düşer.
+- Bugün ekranındaki kartta saatin önüne "Dün" yazılır, ekran okuyucu da "dün saat 23:50" der. Böylece bugünün 23:50 dozuyla karışmaz.
+- Testler: `hooks/__tests__/midnight.test.tsx` (5 test) ve `DoseCalculator.edges.test.ts`.
 
 ### Veritabanı güvenliği
 
@@ -242,3 +254,144 @@ Her hata için önce başarısız test (`test: … (kırmızı)`), sonra düzelt
   - "Auth RLS initplan" uyarısı olmamalı (kurallar `(select auth.uid())` biçiminde yazıldı);
   - `profiles` için yinelenen dizin veya kural uyarısı olmamalı.
 - **Authentication > Rate limits:** kayıt ve şifre sıfırlama sınırlarının varsayılan olduğunu kontrol edin.
+
+## Mimari iyileştirmeler
+
+Bu tur `feature/mimari` dalında yapıldı. Yeni özellik eklenmedi. Gece yarısı düzeltmesi dışında kullanıcının gördüğü iki küçük değişiklik var:
+
+- KVKK bağlantısı kendi satırına taşındı.
+- Hata ekranının metni değişti.
+
+Her adımdan önce mevcut davranışı kilitleyen test yazıldı. Ayrıntılı gerekçeler `docs/kararlar.md` ADR-020'de.
+
+### Ölçümler
+
+| Ölçüm                                  | Kalite turu sonu | Mimari turu sonu                |
+| -------------------------------------- | ---------------- | ------------------------------- |
+| Test sayısı (dosya)                    | 495 (35)         | 530 (39)                        |
+| Kapsam: bütün ölçülen kod, satır / dal | %98,4 / %94,4    | %98,0 / %93,6                   |
+| Kapsam: `services/`, satır / dal       | %96,2 / %92,7    | %95,1 / %91,1                   |
+| Kapsam: `services/local/`, satır / dal | –                | %97,9 / %97,1                   |
+| Kapsam: kancalar, satır / dal          | %100 / %96,5     | %100 / %95,4                    |
+| Kapsam eşikleri                        | değişmedi        | değişmedi, hepsi geçiyor        |
+| Katman ve saf alan ihlali              | 0                | 0 (227 modül denetlendi)        |
+| ESLint hatası / uyarısı                | 0 / 13           | 0 / 13 (a11y kuralları eklendi) |
+
+`services/` kapsamındaki düşüşün nedeni şu: iyi test edilmiş depolama kodu `services/local/` klasörüne taşındı. Testsiz kalan `PhotoService` (dosya sistemi adaptörü) ise oranda daha büyük yer tuttu. Yeni yazılan kod testli.
+
+### 1. Repository deseni
+
+- **Nedir:** Servisler veriyi nereden okuyup nereye yazdığını bilmez. Yalnızca "ilaçları getir, bu ilacı ekle, bu dozu kaydet" diyen iki arayüz bilir.
+- **Neden:** 2. parçada ilaç verisi Supabase'e taşınacak. Eski `IStorage` iki listeyi birden yazıyordu ("bütün listeyi kaydet"); sunucuda bu, her değişiklikte bütün tabloyu yeniden yazmak demekti. Yeni arayüzler tek kayıt üzerinden çalışır.
+- **Nerede:**
+  - Arayüzler: `services/repositories.ts`:
+    - `MedicationRepository`: `load`, `add`, `update`, `remove`;
+    - `DoseLogRepository`: `load`, `recordDose`.
+  - Cihaz uygulamaları: `services/local/LocalMedicationRepository.ts` ve `LocalDoseLogRepository.ts`.
+  - İkisi de `LocalDeviceStore`'u paylaşır. Anahtarlar, göçler ve yedekleme aynen korundu.
+  - Doz onayı ile stok düşüşü tek `multiSet` ile birlikte yazılır.
+  - Bağlantı `services/index.ts`'de kurulur. Testte `FakeStorage` aynı arayüzleri sağlar.
+- **Kanıt:** `services/__tests__/local-repositories.test.ts`. Testler ekleme, güncelleme, silme, tek yazmada iki anahtar, eşzamanlı okumada diske tek gidiş ve yazma başarısızsa belleğin değişmemesi durumlarını deniyor.
+
+### 2. Saf alan katmanı
+
+- **Nedir:** Modeller ve iş kuralları React, React Native, Expo veya Supabase'i import edemez.
+- **Neden:**
+  - İş kuralları telefon olmadan, yalnızca Node'da test edilebilir.
+  - Bir kütüphane değişince yalnızca adaptör değişir.
+  - Önceden `ReminderPlanner` bildirim kütüphanesinin tiplerini üretiyordu.
+- **Nerede:**
+  - Kural: `.dependency-cruiser.cjs` içindeki `saf-alan-katmani`.
+  - Kapsadığı klasörler: `models/`, `validation/`, `utils/`, `errors/`, `types/`, `services/local/` ve adaptör olmayan servisler.
+  - Adaptörler (kural dışı): `NotificationService`, `PhotoService`, `AuthService`, `ProfileRepository`, `supabase.ts` ve `index.ts`.
+  - `ReminderPlanner` artık kendi `ReminderTrigger` tipini (günlük, haftalık, tarih) üretiyor. Bunu Expo'nun biçimine `NotificationService.triggerOf` çeviriyor.
+- **Kanıt:** Kurala geçici olarak üç ihlal eklendi; üçü de yakalandı.
+
+### 3. Supabase tipleri
+
+- **Nedir:** Veritabanı tablolarının TypeScript tipleri elle yazılmaz, şemadan üretilir.
+- **Neden:** Sütun adı yanlış yazılırsa veya şema değişirse hata çalışırken değil, derlemede görülür.
+- **Nerede:**
+  - `npm run tipler` komutu `supabase gen types` ile `src/types/database.ts` dosyasını üretir.
+  - `supabase.ts`, `createClient<Database>` kullanır. `ProfileRepository` de `SupabaseClient<Database>` tipini kullanır.
+
+### 4. Sınır doğrulaması (zod)
+
+- **Nedir:** Telefondan ve sunucudan okunan her veri, kullanılmadan önce bir şemayla denetlenir.
+- **Neden:** Tip sistemi yalnızca kodu denetler; diskten veya ağdan gelen veriye güvenemez. Bozuk veri uygulamayı çökertmemeli. Bunun yerine hata kaydedilmeli ve güvenli varsayılan kullanılmalı.
+- **Nerede:**
+  - Ortak sözlük `validation/schemas.ts`'dedir: saat, hafta günü, rol, aç/tok, e-posta ve an.
+  - Cihaz kayıtları: `validation/stored-records.ts`. Geçersiz alan `.catch` ile varsayılana döner. Kimliği olmayan kayıt atlanır ve `logger.warn` ile yazılır.
+  - Sunucu ve önbellek profili: `validation/profile-records.ts`.
+  - Form doğrulaması (`medication-input.ts`, `auth-input.ts`) aynı şemaları kullanır. Böylece iki ayrı doğrulama sistemi yok.
+- **Kanıt:** `validation/__tests__/boundary.test.ts` ve eski `stored-records` testleri. Eski testler değiştirilmeden geçti.
+
+### 5. Hata yönetimi
+
+- **Nedir:** Bir ekran çizilirken hata çıkarsa uygulama beyaz ekranda kalmaz.
+- **Neden:** Yaşlı kullanıcı teknik mesajı anlamaz. Ona tek ve açık bir çıkış yolu gerekir.
+- **Nerede:**
+  - `components/error-boundary.tsx` kök düzende bütün ekranları sarar. Ekranda "Bir sorun oldu" başlığı ve "Tekrar dene" düğmesi bulunur.
+  - Hata `ILogger` ile kaydedilir. Arayüz `utils/logger.ts`'dedir; `Logger` sınıfı bu arayüzü uygular.
+  - Testte sahte kaydedici verilir.
+- **Kanıt:** `components/__tests__/error-boundary.test.tsx`.
+
+### 6. Erişilebilirlik
+
+- **Nedir:** Her dokunulabilir öğenin ekran okuyucu için bir adı (`accessibilityLabel`) ve rolü (`accessibilityRole`) vardır. Dokunma alanı en az 48pt'dir.
+- **Neden:**
+  - VoiceOver ve TalkBack kullanan yaşlı kullanıcı, adı olmayan düğmeyi "düğme" diye duyar.
+  - Küçük hedefe titreyen elle basmak zordur.
+- **Nerede:**
+  - ESLint: `eslint-plugin-react-native-a11y` ve yerel `eslint-rules/touchable-a11y.js` kuralı. Yerel kural `Pressable` ve Touchable öğelerinde etiket ile rol ister.
+  - Eklenti resmî olarak ESLint 8'i destekliyor. ESLint 9 ile `package.json`'daki `overrides` sayesinde çalışıyor ve kuralların tetiklendiği denendi.
+  - Ölçüm testi: `components/__tests__/touch-targets.test.tsx`. Test 13 bileşeni çizer ve her etkileşimli öğenin yüksekliğini ve `hitSlop` payını ölçer.
+- **Bulunanlar:**
+  - KVKK onay cümlesinin içindeki bağlantının etiketi yoktu ve 48pt'den küçüktü. Bağlantı cümlenin altında kendi satırına taşındı.
+  - `DoseCard`'ın en küçük yüksekliği güvence altında değildi.
+
+### 7. Kararlar ADR biçiminde
+
+- **Nedir:** `docs/kararlar.md`'deki 19 kararın her biri Bağlam, Karar, Sonuçlar ve Durum bölümlerine ayrıldı. Bu turun kararı ADR-020 olarak eklendi.
+- **Neden:** Bir kararın neden alındığı ve hâlâ geçerli olup olmadığı tek bakışta görülür. Yerini başka karara bırakan kayıt silinmez, durumu güncellenir.
+- **Nerede:**
+  - `docs/kararlar.md`. Başında durum tablosu vardır.
+  - İçerik korundu. Numaralar aynı kaldı: "15. karar", ADR-015 demektir.
+
+### 8. Commit standardı
+
+- **Nedir:** Commit mesajları `tür(kapsam): açıklama` biçimindedir (Conventional Commits).
+- **Neden:**
+  - Geçmişte hangi commit'in özellik, hangisinin düzeltme olduğu görülür.
+  - TDD'nin kırmızı ve yeşil adımları ayırt edilir.
+  - Kullanıcının fark ettiği değişiklikler tek yerde toplanır.
+- **Nerede:**
+  - Kural: CLAUDE.md, "Commit standardı" bölümü.
+  - Denetim: `app/commitlint.config.js` ve `.husky/commit-msg`.
+  - `CHANGELOG.md`: değişiklik günlüğü.
+  - `.github/dependabot.yml`: haftalık npm ve GitHub Actions güncellemeleri.
+
+### 9. Gece yarısı düzeltmesi
+
+Yukarıda, "Gece yarısını aşan doz (düzeltildi)" bölümünde.
+
+### 10. Bölge ve güvenlik notları
+
+- Sunucu bölgesi ADR-016'da "AB – İrlanda (eu-west-1)" olarak düzeltildi. KVKK notu aynen kaldı.
+- Supabase Security Advisor'da kalan tek uyarı, sızdırılmış şifre denetimidir. ADR-016'ya bilinen sınırlılık olarak yazıldı.
+
+### Tasarım desenleri
+
+| Desen                            | Projede nerede                                                                                                                | Ne işe yarıyor                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Repository                       | `MedicationRepository` → `LocalMedicationRepository`; `DoseLogRepository` → `LocalDoseLogRepository`                          | Servisler verinin nerede durduğunu bilmez; Supabase'e geçişte yalnızca uygulama değişir.                     |
+| Adapter                          | `LocalDeviceStore` (AsyncStorage), `NotificationService.triggerOf` (Expo bildirimleri), `PhotoService`, `ProfileRepository`   | Dış kütüphanenin biçimini uygulamanın kendi tiplerine çevirir; kütüphane değişince yalnızca adaptör değişir. |
+| Strategy                         | `MedicationForm` alt sınıfları: `Tablet`, `Syrup`, `Drops`, `Cream` …                                                         | Onay metni, doz birimi ve stok kuralı forma göre değişir; ekranda `if/switch` yok.                           |
+| Factory                          | `getMedicationForm(kind)` (`FORMS` tablosu)                                                                                   | Kayıttaki form adından doğru sınıfı üretir; bilinmeyen form Tablet sayılır.                                  |
+| Template Method                  | `UncountableForm`                                                                                                             | Sayılamayan beş form stok kuralını tek yerden devralır.                                                      |
+| Dependency Injection             | Bütün servislerin constructor'ları; saat `Clock`, kaydedici `ILogger`                                                         | Testte sahte depo, sahte saat ve sahte bildirim verilir.                                                     |
+| Composition Root                 | `services/index.ts`                                                                                                           | Gerçek nesneler yalnızca burada kurulur ve birbirine bağlanır.                                               |
+| Observer                         | `AuthService.onSessionChange`, `NotificationService.subscribeToDoseTaps`, AppState dinleyicisi (`useReminderSync`), `LogSink` | Oturum, bildirim dokunuşu ve uygulamanın öne gelmesi olay olarak dinlenir.                                   |
+| Table-driven (tablo ile seçim)   | `auth-errors.ts` (`toAuthError`), `HOME_ROUTES`, `ROLE_OPTIONS`                                                               | Yeni hata kodu veya rol için kod değil, satır eklenir (Açık/kapalı ilkesi).                                  |
+| Ports and Adapters               | `services/ports.ts` (`Clock`, `PhotoStore`, `ReminderScheduler`, `SnoozeCanceller`), `KeyValueStore`                          | Servisler dış dünyadan yalnızca kullandıkları birkaç metodu bekler.                                          |
+| Null Object / güvenli varsayılan | `stored-records.ts` şemalarındaki `.catch` varsayılanları                                                                     | Bozuk alan uygulamayı çökertmez; "her gün, sürekli" gibi güvenli değere döner.                               |
