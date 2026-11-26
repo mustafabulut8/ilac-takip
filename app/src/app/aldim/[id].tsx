@@ -1,6 +1,5 @@
-import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { DoseDone } from '@/components/dose-done';
 import { DosePrompt } from '@/components/dose-prompt';
@@ -27,28 +26,14 @@ export default function TakeDoseScreen() {
   }>();
   const dose = useDose(id, date, time);
   const { isSnoozed, error: snoozeError, snooze } = useSnooze();
-  const isConfirming = useRef(false);
   const [justConfirmed, setJustConfirmed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { isLoaded, medication, now } = dose;
 
   if (!isLoaded) return null;
   if (!medication || !time) return <NotFoundMessage />;
 
   const confirm = async () => {
-    // Hızlı çift dokunuş stoğu iki kez düşürmesin.
-    if (isConfirming.current) return;
-    isConfirming.current = true;
-    try {
-      await dose.confirm();
-      setJustConfirmed(true);
-      setError(null);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      setError('Kaydedilemedi. Lütfen tekrar deneyin.');
-    } finally {
-      isConfirming.current = false;
-    }
+    if (await dose.confirm()) setJustConfirmed(true);
   };
 
   if (dose.isTaken) {
@@ -68,7 +53,7 @@ export default function TakeDoseScreen() {
       date={date}
       time={time}
       now={now}
-      error={error ?? snoozeError}
+      error={dose.error ?? snoozeError}
       isSnoozed={isSnoozed}
       onConfirm={confirm}
       onSnooze={() => snooze(medication, date, time)}

@@ -5,6 +5,8 @@
 
 export const Colors = {
   text: '#000000',
+  // Onay penceresinin arkasındaki karartma.
+  overlay: 'rgba(0, 0, 0, 0.5)',
   // İkincil (gri) yazı; daha açık gri kullanılmaz.
   textSecondary: '#3D4947',
   textOnColor: '#FFFFFF',

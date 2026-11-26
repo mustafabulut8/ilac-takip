@@ -1,19 +1,18 @@
-import * as Haptics from 'expo-haptics';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { doseCalculator } from '@/services';
 import { addDays, atTime } from '@/utils/date';
 
+import { useConfirmDose } from './useConfirmDose';
 import { useMedications } from './useMedications';
 import { useNow } from './useNow';
 
 /** Sade mod ana ekranı: gösterilecek tek doz, günün ilerlemesi, yarının ilk dozu ve onay. */
 export function useSimpleHome() {
-  const { isLoaded, medications, doseLogs, confirmDose } = useMedications();
+  const { isLoaded, medications, doseLogs } = useMedications();
   const now = useNow();
-  const confirming = useRef(false);
+  const { confirm, error } = useConfirmDose();
   const [lastTaken, setLastTaken] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const today = doseCalculator.getTodayDoses(medications, doseLogs, now);
   const progress = doseCalculator.progressOf(today);
@@ -27,17 +26,9 @@ export function useSimpleHome() {
 
   /** Gösterilen dozu onaylar. Hızlı çift dokunuş stoğu iki kez düşürmez. */
   const confirmFocus = async () => {
-    if (!focus || confirming.current) return;
-    confirming.current = true;
-    try {
-      await confirmDose(focus.medication.id, focus.date, focus.time);
+    if (!focus) return;
+    if (await confirm(focus.medication.id, focus.date, focus.time)) {
       setLastTaken(focus.medication.name);
-      setError(null);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      setError('Kaydedilemedi. Lütfen tekrar deneyin.');
-    } finally {
-      confirming.current = false;
     }
   };
 

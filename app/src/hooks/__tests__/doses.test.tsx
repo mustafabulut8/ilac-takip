@@ -14,6 +14,10 @@ import { useNotice } from '../useNotice';
 import { useNow } from '../useNow';
 import { useTodayDoses } from '../useTodayDoses';
 
+jest.mock('expo-haptics', () => ({
+  notificationAsync: jest.fn().mockResolvedValue(undefined),
+  NotificationFeedbackType: { Success: 'success' },
+}));
 jest.mock('@/services', () => {
   const { DoseCalculator } = jest.requireActual('@/services/DoseCalculator');
   const { HistoryService } = jest.requireActual('@/services/HistoryService');
