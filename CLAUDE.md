@@ -21,6 +21,16 @@ Sprint 1 (issues #1–#4) is implemented; see `docs/sprint1-plan.md` for its dec
 - Commit mesajlarına Co-Authored-By veya Claude imzası eklenmez.
 - Yaptığın önemli değişiklikleri kullanıcıya kısaca açıkla; bu kodu hocasına savunması gerekecek.
 
+## Geliştirme yöntemi: TDD
+
+Bu kurallar her işte geçerlidir (2. parça dahil bütün yeni özellikler önce test yazılarak geliştirilir):
+
+- **Yeni özellik:** Önce istenen davranışı anlatan test yazılır ve başarısız olduğu görülür; sonra onu geçiren en küçük kod yazılır, ardından temizlenir (kırmızı → yeşil → refactor).
+- **Hata düzeltme:** Önce hatayı gösteren ve başarısız olan test yazılır, çalıştırılıp kırmızı olduğu görülür. Sonra en küçük düzeltme yapılır (yeşil), en son temizlenir. Her hata için iki ayrı commit atılır: önce `test: ... (kırmızı)`, ardından `fix: ...`; böylece TDD geçmişte görünür.
+- **Yeniden düzenleme (refactor):** Önce mevcut davranışı kilitleyen karakterizasyon testleri yazılır ve geçtiği görülür, sonra kod düzenlenir. Testler her adımda yeşil kalır.
+- **Kalite kapıları:** `npm run kontrol` tip kontrolü, lint, katman kuralları (dependency-cruiser), kullanılmayan kod (knip) ve kapsam eşikli testleri çalıştırır; biri başarısızsa iş bitmiş sayılmaz. Commit öncesi husky ve lint-staged değişen dosyaları denetler.
+- **Soyutlama:** Arayüz yalnızca ikinci bir uygulaması (test sahtesi dahil) olan yerlere eklenir; bağlantılar yalnızca `src/services/index.ts`'de kurulur. Ayrıntılar: `docs/kalite-raporu.md` ve `docs/kararlar.md` 19. karar.
+
 ## Commands
 
 The repo has no root `package.json`, so run all of these from `app/`:
