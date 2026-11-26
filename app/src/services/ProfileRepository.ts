@@ -1,16 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { AuthError } from '@/errors';
-import { isUserRole, type Profile, type UserRole } from '@/models';
-import type { Database, Tables } from '@/types/database';
+import type { Profile, UserRole } from '@/models';
+import type { Database } from '@/types/database';
+import { parseProfileRow } from '@/validation/profile-records';
 
 import { toAuthError } from './auth-errors';
 
 /** `profiles` tablosuna erişim için Supabase istemcisinden kullanılan kısım. */
 export type ProfilesBackend = Pick<SupabaseClient<Database>, 'from'>;
-
-/** `profiles` tablosundaki satır (üretilen tipten); sütun adları veritabanındaki gibidir. */
-type ProfileRow = Tables<'profiles'>;
 
 /**
  * `profiles` tablosunun okunması ve güncellenmesi. Veritabanının Türkçe sütun adlarını
@@ -32,7 +30,8 @@ export class ProfileRepository {
       .eq('id', userId)
       .maybeSingle();
     if (error) throw toAuthError(error);
-    const profile = ProfileRepository.profileOf(data);
+    // Üretilen tip `rol`ü metin sayar; geçerli rol olduğunu şema denetler.
+    const profile = parseProfileRow(data);
     if (!profile) {
       throw new AuthError(
         'profile_missing',
@@ -46,10 +45,5 @@ export class ProfileRepository {
   async updateRole(userId: string, role: UserRole): Promise<void> {
     const { error } = await this.db.from('profiles').update({ rol: role }).eq('id', userId);
     if (error) throw toAuthError(error);
-  }
-
-  private static profileOf(row: ProfileRow | null): Profile | null {
-    if (!row || typeof row.ad !== 'string' || !isUserRole(row.rol)) return null;
-    return { id: row.id, name: row.ad, role: row.rol, createdAt: row.olusturma_zamani };
   }
 }

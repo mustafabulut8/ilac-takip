@@ -1,6 +1,5 @@
 import { ValidationError } from '@/errors';
 import {
-  isUserRole,
   MAX_NAME_LENGTH,
   MIN_PASSWORD_LENGTH,
   type SignInField,
@@ -8,8 +7,7 @@ import {
   type SignUpInput,
 } from '@/models';
 
-// Basit biçim denetimi; adresin gerçekten var olup olmadığını sunucu bilir.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { emailSchema, matches, userRoleSchema } from './schemas';
 
 /** Boşlukları atar ve küçük harfe çevirir; "Ali@Mail.com " → "ali@mail.com". */
 export function normalizeEmail(email: string) {
@@ -19,7 +17,8 @@ export function normalizeEmail(email: string) {
 function emailError(email: string): string | undefined {
   const normalized = normalizeEmail(email);
   if (!normalized) return 'E-posta adresinizi yazın.';
-  if (!EMAIL_PATTERN.test(normalized))
+  // Basit biçim denetimi; adresin gerçekten var olup olmadığını sunucu bilir.
+  if (!matches(emailSchema, normalized))
     return 'E-posta adresi doğru görünmüyor. Örnek: ornek@mail.com';
   return undefined;
 }
@@ -38,7 +37,7 @@ export function validateSignUp(input: SignUpInput): void {
   if (input.password.length < MIN_PASSWORD_LENGTH) {
     errors.password = `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`;
   }
-  if (!isUserRole(input.role)) errors.role = 'Kullanım biçimini seçin.';
+  if (!matches(userRoleSchema, input.role)) errors.role = 'Kullanım biçimini seçin.';
   if (!input.consent) errors.consent = 'Devam etmek için aydınlatma metnini onaylayın.';
 
   if (Object.keys(errors).length > 0) throw new ValidationError(errors);

@@ -5,16 +5,16 @@ import {
   getMedicationForm,
   isMedicationFormKind,
   MAX_STOCK,
-  MEAL_TIMING_LABELS,
   type Duration,
   type Medication,
   type MedicationDraft,
   type NewMedication,
   type Schedule,
 } from '@/models';
-import { isValidTime } from '@/utils/time';
+import { matches, mealTimingSchema, timeSchema, weekdaySchema } from './schemas';
 
-import { isWeekday } from './stored-records';
+const isValidTime = (value: unknown) => matches(timeSchema, value);
+const isWeekday = (value: unknown) => matches(weekdaySchema, value);
 
 /** Denetlenen alanlar; sıra sihirbazdaki sıradır. */
 export const MEDICATION_FIELDS = [
@@ -157,10 +157,7 @@ const CHANGE_RULES: readonly ChangeRule[] = [
   [
     'mealTiming',
     'mealTiming',
-    (value) =>
-      typeof value === 'string' && Object.hasOwn(MEAL_TIMING_LABELS, value)
-        ? undefined
-        : 'Lütfen birini seçin.',
+    (value) => (matches(mealTimingSchema, value) ? undefined : 'Lütfen birini seçin.'),
   ],
   ['stock', 'stock', (value) => validateStock(typeof value === 'number' ? value : Number.NaN)],
 ];
