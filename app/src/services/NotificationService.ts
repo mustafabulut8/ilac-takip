@@ -2,32 +2,16 @@ import * as Notifications from 'expo-notifications';
 
 import { NotificationError } from '@/errors';
 import type { Dose, Medication } from '@/models';
-import { addDays, atTime, formatDate, parseDate } from '@/utils/date';
-import { logger } from '@/utils/logger';
-import { isScheduledOn, lastDayOf } from '@/utils/schedule';
-import { isValidTime, parseTime } from '@/utils/time';
+import { formatDate, parseDate } from '@/utils/date';
+import { isValidTime } from '@/utils/time';
 
 import type { Clock, ReminderScheduler, SnoozeCanceller } from './ports';
+import { ReminderPlanner } from './ReminderPlanner';
 
-/** Bildirimin içinde taşınan veri; dokununca hangi doza gidileceğini söyler. */
-export type DoseNotificationData = {
-  medicationId: string;
-  time: string;
-  /** Yalnızca ertelenen bildirimde: dozun asıl günü (gece yarısını geçebilir). */
-  date?: string;
-};
+export type { DoseNotificationData } from './ReminderPlanner';
 
 /** Bildirime dokununca açılacak ALDIM sayfasının parametreleri. */
 export type DoseTarget = { medicationId: string; time: string; date: string };
-
-/** Cihaza kurulacak tek bir hatırlatma. */
-type Reminder = {
-  identifier: string;
-  content: Notifications.NotificationContentInput;
-  trigger: Notifications.SchedulableNotificationTriggerInput;
-  /** Yalnızca süreli ilaçlarda: bildirimin geleceği an. */
-  at?: Date;
-};
 
 /** expo-notifications'ın kullandığımız kısmı; testte sahte nesne verilebilir. */
 export type NotificationsApi = Pick<
@@ -47,21 +31,22 @@ export type NotificationsApi = Pick<
 export type NotificationPermissionStatus = 'granted' | 'undetermined' | 'denied';
 
 /**
- * Yerel ilaç hatırlatmaları: izin, günlük planlama, kayıtlı veriyle eşitleme ve
- * bildirim tarihini platformdan bağımsız hale getirme. Ağ gerektirmez.
+ * Yerel bildirim sistemiyle konuşan tek sınıf (adaptör): izin, kanal, planın cihaza
+ * kurulması ve eşitlenmesi, erteleme ve dokunuşlar. Hangi bildirimin ne zaman kurulacağını
+ * ReminderPlanner hesaplar. Ağ gerektirmez.
  */
 export class NotificationService implements ReminderScheduler, SnoozeCanceller {
-  private static readonly CHANNEL_ID = 'ilac-hatirlatma';
   private static readonly TEST_DELAY_SECONDS = 60;
   private static readonly TEST_ID_PREFIX = 'test-';
   private static readonly SNOOZE_ID_PREFIX = 'ertele-';
   static readonly SNOOZE_MINUTES = 10;
-  /** iOS en fazla 64 bekleyen bildirim tutar; erteleme ve test için yer bırakılır. */
-  private static readonly MAX_PENDING = 60;
+  private static readonly CHANNEL_ID = ReminderPlanner.CHANNEL_ID;
 
   private readonly api: NotificationsApi;
   private readonly platform: string;
   private readonly now: Clock;
+  /** Saf hesap; tek uygulaması olduğu ve testte sahtesi gerekmediği için burada kurulur. */
+  private readonly planner = new ReminderPlanner();
   /** Son işlenen dokunuş; aynı dokunuş iki kez sayfa açmasın. */
   private lastHandledTapKey: string | null = null;
 
@@ -69,11 +54,6 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
     this.api = api;
     this.platform = platform;
     this.now = now;
-  }
-
-  /** Her gün tekrarlanan hatırlatmanın kimliği; diğer türlerde sonuna ek gelir. */
-  static notificationId(medicationId: string, time: string) {
-    return `${medicationId}-${time}`;
   }
 
   /** Belirleyici kimlik: aynı doz yeniden ertelenirse bildirim çoğalmaz. */
@@ -146,7 +126,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
       await this.ensureChannel();
       const scheduled = await this.api.getAllScheduledNotificationsAsync();
       const scheduledIds = new Set(scheduled.map((request) => request.identifier));
-      const expected = this.plan(medications);
+      const expected = this.planner.plan(medications, this.now());
       const expectedIds = new Set(expected.map((reminder) => reminder.identifier));
 
       await Promise.all(
@@ -181,7 +161,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
       await this.ensureChannel();
       await this.api.scheduleNotificationAsync({
         identifier: NotificationService.snoozeId(medication.id, date, time),
-        content: this.doseContent(medication, time, date),
+        content: this.planner.doseContent(medication, time, date),
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: NotificationService.SNOOZE_MINUTES * 60,
@@ -204,7 +184,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
     await this.ensureChannel();
     await this.api.scheduleNotificationAsync({
       identifier: `${NotificationService.TEST_ID_PREFIX}${this.now().getTime()}`,
-      content: this.doseContent(medication, time),
+      content: this.planner.doseContent(medication, time),
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: NotificationService.TEST_DELAY_SECONDS,
@@ -269,89 +249,5 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
       id.startsWith(NotificationService.TEST_ID_PREFIX) ||
       id.startsWith(NotificationService.SNOOZE_ID_PREFIX)
     );
-  }
-
-  private doseContent(
-    medication: Medication,
-    time: string,
-    date?: string,
-  ): Notifications.NotificationContentInput {
-    const data: DoseNotificationData = { medicationId: medication.id, time, ...(date && { date }) };
-    return {
-      title: `İlaç saati: ${medication.name}`,
-      body: `${time} dozunuz: ${medication.dose}. Onaylamak için dokunun.`,
-      sound: true,
-      data,
-    };
-  }
-
-  /**
-   * Cihazda olması gereken hatırlatmalar. Sürekli ilaçlar tekrarlanan bildirimdir.
-   * Süreli ilaçlar bitince susmalı, bu yüzden gün gün kurulur; sınıra sığmayanlar
-   * uygulama her açıldığında eşitlemeyle tamamlanır.
-   */
-  private plan(medications: Medication[]): Reminder[] {
-    const repeating = medications
-      .filter((medication) => medication.duration.kind === 'continuous')
-      .flatMap((medication) =>
-        medication.times.flatMap((time) => this.repeatingReminders(medication, time)),
-      );
-    const dated = medications
-      .filter((medication) => medication.duration.kind === 'days')
-      .flatMap((medication) => this.datedReminders(medication))
-      .sort((a, b) => a.at!.getTime() - b.at!.getTime());
-
-    const room = Math.max(NotificationService.MAX_PENDING - repeating.length, 0);
-    if (dated.length > room) {
-      logger.info(`${dated.length - room} süreli hatırlatma sonraki açılışta kurulacak.`);
-    }
-    return [...repeating, ...dated.slice(0, room)];
-  }
-
-  private repeatingReminders(medication: Medication, time: string): Reminder[] {
-    const { schedule } = medication;
-    const identifier = NotificationService.notificationId(medication.id, time);
-    const content = this.doseContent(medication, time);
-    const clock = { ...parseTime(time), channelId: NotificationService.CHANNEL_ID };
-
-    if (schedule.kind === 'daily') {
-      const type = Notifications.SchedulableTriggerInputTypes.DAILY as const;
-      return [{ identifier, content, trigger: { type, ...clock } }];
-    }
-    const type = Notifications.SchedulableTriggerInputTypes.WEEKLY as const;
-    return schedule.days.map((day) => ({
-      identifier: `${identifier}-g${day}`,
-      content,
-      // expo-notifications haftayı 1 = Pazar ile başlatır; Date.getDay'de Pazar 0'dır.
-      trigger: { type, weekday: day + 1, ...clock },
-    }));
-  }
-
-  private datedReminders(medication: Medication): Reminder[] {
-    const now = this.now();
-    const last = lastDayOf(medication);
-    const start = parseDate(medication.startDate);
-    if (!last || !start) return [];
-
-    const reminders: Reminder[] = [];
-    for (let day = start > now ? start : addDays(now, 0); day <= last; day = addDays(day, 1)) {
-      if (!isScheduledOn(medication, day)) continue;
-      for (const time of medication.times) {
-        const date = atTime(day, time);
-        if (date <= now) continue;
-        const id = NotificationService.notificationId(medication.id, time);
-        reminders.push({
-          identifier: `${id}-${formatDate(day)}`,
-          content: this.doseContent(medication, time),
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date,
-            channelId: NotificationService.CHANNEL_ID,
-          },
-          at: date,
-        });
-      }
-    }
-    return reminders;
   }
 }
