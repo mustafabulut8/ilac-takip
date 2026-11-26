@@ -17,7 +17,7 @@ Sprint 1 (issues #1–#4) is implemented; see `docs/sprint1-plan.md` for its dec
 - `.env` dosyası asla commit edilmez; API anahtarları ve şifreler koda yazılmaz.
 - Her değişiklikten sonra `npm run kontrol` ile kontrol et (tsc + lint + test).
 - Yeni kod bu modüler ve OOP yapısına uymalı: iş mantığı services/ altında sınıflarda, tipler ve form sınıfları models/, doğrulama validation/, saf fonksiyonlar utils/, ekranlar ince. Kod İngilizce, yorum ve dokümanlar Türkçe. Her değişiklikte npm run kontrol geçmeli.
-- Commit mesajları kısa ve Türkçe olsun.
+- Commit mesajları kısa ve Türkçe olsun; biçim Conventional Commits (aşağıda "Commit standardı").
 - Commit mesajlarına Co-Authored-By veya Claude imzası eklenmez.
 - Yaptığın önemli değişiklikleri kullanıcıya kısaca açıkla; bu kodu hocasına savunması gerekecek.
 
@@ -30,6 +30,17 @@ Bu kurallar her işte geçerlidir (2. parça dahil bütün yeni özellikler önc
 - **Yeniden düzenleme (refactor):** Önce mevcut davranışı kilitleyen karakterizasyon testleri yazılır ve geçtiği görülür, sonra kod düzenlenir. Testler her adımda yeşil kalır.
 - **Kalite kapıları:** `npm run kontrol` tip kontrolü, lint, katman kuralları (dependency-cruiser), kullanılmayan kod (knip) ve kapsam eşikli testleri çalıştırır; biri başarısızsa iş bitmiş sayılmaz. Commit öncesi husky ve lint-staged değişen dosyaları denetler.
 - **Soyutlama:** Arayüz yalnızca ikinci bir uygulaması (test sahtesi dahil) olan yerlere eklenir; bağlantılar yalnızca `src/services/index.ts`'de kurulur. Ayrıntılar: `docs/kalite-raporu.md` ve `docs/kararlar.md` 19. karar.
+
+## Commit standardı
+
+Commit mesajları [Conventional Commits](https://www.conventionalcommits.org/tr/v1.0.0/) biçimindedir: `tür(kapsam): kısa Türkçe açıklama`. `.husky/commit-msg` kancası commitlint ile denetler (`app/commitlint.config.js`).
+
+- **Türler:** `feat` (yeni özellik), `fix` (hata düzeltme), `refactor` (davranışı değiştirmeyen düzenleme), `test`, `docs`, `chore` (araç, paket), `ci`, `build`, `perf`, `style`, `revert`.
+- **Kapsam (isteğe bağlı):** Etkilenen bölüm, örn. `fix(sade): …`, `refactor(depolama): …`.
+- **TDD commit'leri:** Hata için önce `test(kapsam): … (kırmızı)`, sonra `fix(kapsam): …`. Kırmızı commit başarısız test içerdiğinden yalnızca o `--no-verify` ile atılır.
+- **Kırıcı değişiklik:** Türden sonra `!` (örn. `refactor!: …`) ve gövdede `BREAKING CHANGE:` satırı.
+- **Değişiklik günlüğü:** Kullanıcının fark edeceği her değişiklik `CHANGELOG.md`'de "Yayımlanmadı" başlığına eklenir.
+- **Bağımlılıklar:** Dependabot her hafta npm güncellemesi için PR açar (`.github/dependabot.yml`). Birleştirmeden önce `npx expo install --check` ve `npm run kontrol` çalıştırılır.
 
 ## Commands
 

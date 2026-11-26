@@ -1,0 +1,24 @@
+# Bağımlılık güncellemeleri (kararlar.md, ADR-020). Haftalık PR açılır; Expo SDK ile uyumlu
+# sürüm `npx expo install --check` ile denetlendikten sonra birleştirilir.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Istanbul
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      gelistirme-araclari:
+        dependency-type: development
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
