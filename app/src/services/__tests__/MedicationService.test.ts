@@ -3,7 +3,8 @@ import type { NewMedication } from '@/models';
 import { FakeStorage, makeMedication } from '@/test-utils/fakes';
 import { logger } from '@/utils/logger';
 
-import { MedicationService, type PhotoStore, type ReminderScheduler } from '../MedicationService';
+import { MedicationService } from '../MedicationService';
+import type { PhotoStore, ReminderScheduler } from '../ports';
 
 const NOW = new Date(2026, 10, 16, 9, 0);
 

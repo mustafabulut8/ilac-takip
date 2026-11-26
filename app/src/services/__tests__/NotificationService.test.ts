@@ -46,6 +46,9 @@ function response(
   } as unknown as Notifications.NotificationResponse;
 }
 
+/** Saat verilmeyen testlerde sabit an: 16 Kasım 2026 09:00. */
+const FIXED_NOW = () => new Date(2026, 10, 16, 9, 0);
+
 const scheduledIdsOf = (api: ReturnType<typeof fakeApi>) =>
   api.scheduleNotificationAsync.mock.calls.map(([request]) => request.identifier);
 
@@ -63,7 +66,7 @@ describe('NotificationService.normalizeDate', () => {
 });
 
 describe('NotificationService.doseTargetFromResponse', () => {
-  const service = new NotificationService(fakeApi(), 'ios');
+  const service = new NotificationService(fakeApi(), 'ios', FIXED_NOW);
   const sent = new Date(2026, 10, 16, 23, 59);
   const data = { medicationId: 'ilac1', time: '23:59' };
 
@@ -99,7 +102,7 @@ describe('NotificationService.doseTargetFromResponse', () => {
 describe('NotificationService planlama', () => {
   it('her saat için ilacId-saat kimlikli günlük bildirim kurar', async () => {
     const api = fakeApi();
-    await new NotificationService(api, 'ios').sync([makeMedication()]);
+    await new NotificationService(api, 'ios', FIXED_NOW).sync([makeMedication()]);
     expect(scheduledIdsOf(api)).toEqual(['ilac1-08:00', 'ilac1-20:00']);
     expect(api.scheduleNotificationAsync.mock.calls[0][0].trigger).toMatchObject({
       hour: 8,
@@ -110,8 +113,8 @@ describe('NotificationService planlama', () => {
   it('Android de önce bildirim kanalı oluşturur, iOS ta oluşturmaz', async () => {
     const android = fakeApi();
     const ios = fakeApi();
-    await new NotificationService(android, 'android').requestPermission();
-    await new NotificationService(ios, 'ios').requestPermission();
+    await new NotificationService(android, 'android', FIXED_NOW).requestPermission();
+    await new NotificationService(ios, 'ios', FIXED_NOW).requestPermission();
     expect(android.setNotificationChannelAsync).toHaveBeenCalledTimes(1);
     expect(ios.setNotificationChannelAsync).not.toHaveBeenCalled();
   });
@@ -120,13 +123,13 @@ describe('NotificationService planlama', () => {
     const api = fakeApi();
     api.scheduleNotificationAsync.mockRejectedValue(new Error('izin yok'));
     await expect(
-      new NotificationService(api, 'ios').sync([makeMedication()]),
+      new NotificationService(api, 'ios', FIXED_NOW).sync([makeMedication()]),
     ).rejects.toBeInstanceOf(NotificationError);
   });
 
   it('eşitleme: fazlaları siler, test bildirimine dokunmaz, eksikleri kurar', async () => {
     const api = fakeApi(['ilac1-08:00', 'silinmis-09:00', 'test-123']);
-    await new NotificationService(api, 'ios').sync([makeMedication()]);
+    await new NotificationService(api, 'ios', FIXED_NOW).sync([makeMedication()]);
 
     expect(api.cancelScheduledNotificationAsync.mock.calls).toEqual([['silinmis-09:00']]);
     expect(scheduledIdsOf(api)).toEqual(['ilac1-20:00']);
@@ -134,7 +137,7 @@ describe('NotificationService planlama', () => {
 
   it('eşitleme ertelenmiş bildirime dokunmaz', async () => {
     const api = fakeApi(['ertele-ilac1_2026-11-16_08:00']);
-    await new NotificationService(api, 'ios').sync([]);
+    await new NotificationService(api, 'ios', FIXED_NOW).sync([]);
     expect(api.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
   });
 
@@ -146,13 +149,13 @@ describe('NotificationService planlama', () => {
       'ertele-ilac1_2026-11-16_08:00',
     ];
     const api = fakeApi([...own, 'ilac10-08:00', 'ertele-ilac10_2026-11-16_08:00', 'test-1']);
-    await new NotificationService(api, 'ios').cancelMedication(makeMedication());
+    await new NotificationService(api, 'ios', FIXED_NOW).cancelMedication(makeMedication());
     expect(api.cancelScheduledNotificationAsync.mock.calls.map(([id]) => id)).toEqual(own);
   });
 
   it('belirli günlerde haftalık bildirim kurar (1 = Pazar)', async () => {
     const api = fakeApi();
-    await new NotificationService(api, 'ios').sync([
+    await new NotificationService(api, 'ios', FIXED_NOW).sync([
       makeMedication({ times: ['08:00'], schedule: { kind: 'weekdays', days: [0, 3] } }),
     ]);
     expect(scheduledIdsOf(api)).toEqual(['ilac1-08:00-g0', 'ilac1-08:00-g3']);
@@ -202,21 +205,21 @@ describe('NotificationService planlama', () => {
 
   it('test bildirimi test- önekiyle 60 saniye sonraya kurulur', async () => {
     const api = fakeApi();
-    await new NotificationService(api, 'ios').scheduleTest({
+    await new NotificationService(api, 'ios', FIXED_NOW).scheduleTest({
       medication: makeMedication(),
       date: '2026-11-16',
       time: '08:00',
       status: 'bekliyor',
     });
     const [request] = api.scheduleNotificationAsync.mock.calls[0];
-    expect(request.identifier).toMatch(/^test-/);
+    expect(request.identifier).toBe(`test-${FIXED_NOW().getTime()}`);
     expect(request.trigger).toMatchObject({ seconds: 60 });
     expect(request.content.data).toEqual({ medicationId: 'ilac1', time: '08:00' });
   });
 
   it('izin durumunu okur ve configure işleyiciyi kurar', async () => {
     const api = fakeApi();
-    const service = new NotificationService(api, 'ios');
+    const service = new NotificationService(api, 'ios', FIXED_NOW);
     service.configure();
     expect(api.setNotificationHandler).toHaveBeenCalledTimes(1);
     expect(await service.hasPermission()).toBe(true);
@@ -229,7 +232,7 @@ describe('NotificationService erteleme', () => {
 
   it('10 dakika sonraya tek seferlik bildirim kurar', async () => {
     const api = fakeApi();
-    await new NotificationService(api, 'ios').snooze(dose);
+    await new NotificationService(api, 'ios', FIXED_NOW).snooze(dose);
     const [request] = api.scheduleNotificationAsync.mock.calls[0];
     expect(request.identifier).toBe('ertele-ilac1_2026-11-16_23:55');
     expect(request.trigger).toMatchObject({ type: 'timeInterval', seconds: 600 });
@@ -243,7 +246,7 @@ describe('NotificationService erteleme', () => {
 
   it('aynı doz yeniden ertelenince kimlik değişmez, bildirim çoğalmaz', async () => {
     const api = fakeApi();
-    const service = new NotificationService(api, 'ios');
+    const service = new NotificationService(api, 'ios', FIXED_NOW);
     await service.snooze(dose);
     await service.snooze(dose);
     expect(new Set(scheduledIdsOf(api)).size).toBe(1);
@@ -252,7 +255,7 @@ describe('NotificationService erteleme', () => {
   it('gece yarısını geçen ertelemede doz asıl gününe yazılır', () => {
     const afterMidnight = new Date(2026, 10, 17, 0, 5).getTime();
     const data = { medicationId: 'ilac1', time: '23:55', date: '2026-11-16' };
-    const service = new NotificationService(fakeApi(), 'ios');
+    const service = new NotificationService(fakeApi(), 'ios', FIXED_NOW);
     expect(service.doseTargetFromResponse(response(afterMidnight, data))?.date).toBe('2026-11-16');
     expect(
       service.doseTargetFromResponse(response(afterMidnight, { ...data, date: 'bozuk' }))?.date,
@@ -262,21 +265,25 @@ describe('NotificationService erteleme', () => {
   it('izin yoksa veya planlanamazsa NotificationError verir', async () => {
     const denied = fakeApi();
     denied.getPermissionsAsync.mockResolvedValue({ granted: false });
-    await expect(new NotificationService(denied, 'ios').snooze(dose)).rejects.toBeInstanceOf(
-      NotificationError,
-    );
+    await expect(
+      new NotificationService(denied, 'ios', FIXED_NOW).snooze(dose),
+    ).rejects.toBeInstanceOf(NotificationError);
     expect(denied.scheduleNotificationAsync).not.toHaveBeenCalled();
 
     const failing = fakeApi();
     failing.scheduleNotificationAsync.mockRejectedValue(new Error('hata'));
-    await expect(new NotificationService(failing, 'ios').snooze(dose)).rejects.toBeInstanceOf(
-      NotificationError,
-    );
+    await expect(
+      new NotificationService(failing, 'ios', FIXED_NOW).snooze(dose),
+    ).rejects.toBeInstanceOf(NotificationError);
   });
 
   it('onaylanan dozun ertelemesini kaldırır', async () => {
     const api = fakeApi();
-    await new NotificationService(api, 'ios').cancelSnooze('ilac1', '2026-11-16', '23:55');
+    await new NotificationService(api, 'ios', FIXED_NOW).cancelSnooze(
+      'ilac1',
+      '2026-11-16',
+      '23:55',
+    );
     expect(api.cancelScheduledNotificationAsync).toHaveBeenCalledWith(
       'ertele-ilac1_2026-11-16_23:55',
     );
@@ -293,7 +300,7 @@ describe('NotificationService.subscribeToDoseTaps', () => {
     api.getLastNotificationResponse.mockReturnValue(response(sent, data));
     const onTap = jest.fn();
 
-    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+    new NotificationService(api, 'ios', FIXED_NOW).subscribeToDoseTaps(onTap);
 
     expect(onTap).toHaveBeenCalledWith(target);
     expect(api.clearLastNotificationResponseAsync).toHaveBeenCalledTimes(1);
@@ -302,7 +309,7 @@ describe('NotificationService.subscribeToDoseTaps', () => {
   it('uygulama açıkken gelen dokunuşu bildirir', () => {
     const api = fakeApi();
     const onTap = jest.fn();
-    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+    new NotificationService(api, 'ios', FIXED_NOW).subscribeToDoseTaps(onTap);
 
     api.emitTap(response(sent, data));
 
@@ -313,7 +320,7 @@ describe('NotificationService.subscribeToDoseTaps', () => {
     const api = fakeApi();
     api.getLastNotificationResponse.mockReturnValue(response(sent, data));
     const onTap = jest.fn();
-    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+    new NotificationService(api, 'ios', FIXED_NOW).subscribeToDoseTaps(onTap);
 
     api.emitTap(response(sent, data));
     expect(onTap).toHaveBeenCalledTimes(1);
@@ -325,7 +332,7 @@ describe('NotificationService.subscribeToDoseTaps', () => {
   it('bozuk veri veya başka eylemde sayfa açmaz ve yanıtı temizlemez', () => {
     const api = fakeApi();
     const onTap = jest.fn();
-    new NotificationService(api, 'ios').subscribeToDoseTaps(onTap);
+    new NotificationService(api, 'ios', FIXED_NOW).subscribeToDoseTaps(onTap);
 
     api.emitTap(response(sent, {}));
     api.emitTap(response(sent, data, 'ertele'));
@@ -336,7 +343,9 @@ describe('NotificationService.subscribeToDoseTaps', () => {
 
   it('dönen fonksiyon dinlemeyi bırakır', () => {
     const api = fakeApi();
-    const unsubscribe = new NotificationService(api, 'ios').subscribeToDoseTaps(jest.fn());
+    const unsubscribe = new NotificationService(api, 'ios', FIXED_NOW).subscribeToDoseTaps(
+      jest.fn(),
+    );
     unsubscribe();
     expect(api.removeListener).toHaveBeenCalledTimes(1);
   });
@@ -346,7 +355,9 @@ describe('NotificationService.subscribeToDoseTaps', () => {
 describe('NotificationService bildirim içeriği ve plan (karakterizasyon)', () => {
   it('bildirim başlığı, metni, sesi ve kanalı', async () => {
     const api = fakeApi();
-    await new NotificationService(api, 'android').sync([makeMedication({ times: ['08:00'] })]);
+    await new NotificationService(api, 'android', FIXED_NOW).sync([
+      makeMedication({ times: ['08:00'] }),
+    ]);
     const [request] = api.scheduleNotificationAsync.mock.calls[0];
     expect(request.content).toEqual({
       title: 'İlaç saati: Aspirin',
@@ -395,7 +406,7 @@ describe('NotificationService bildirim içeriği ve plan (karakterizasyon)', () 
 
   it('izin durumu: verildi, sorulabilir, reddedildi', async () => {
     const api = fakeApi();
-    const service = new NotificationService(api, 'ios');
+    const service = new NotificationService(api, 'ios', FIXED_NOW);
     expect(await service.permissionStatus()).toBe('granted');
     api.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
     expect(await service.permissionStatus()).toBe('undetermined');

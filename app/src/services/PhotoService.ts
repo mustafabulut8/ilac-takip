@@ -1,10 +1,12 @@
 import { Directory, File, Paths } from 'expo-file-system';
 
+import type { PhotoStore } from './ports';
+
 /**
  * İlaç fotoğraflarını uygulamanın kalıcı klasöründe tutar.
  * Kayıtta tam yol değil dosya adı saklanır; iOS'ta uygulama klasörünün yolu değişebilir.
  */
-export class PhotoService {
+export class PhotoService implements PhotoStore {
   private readonly directoryName: string;
 
   constructor(directoryName = 'photos') {

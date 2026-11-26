@@ -10,13 +10,8 @@ import {
   type MedicationChanges,
 } from '@/validation/medication-input';
 
-import type { NotificationService } from './NotificationService';
-import type { PhotoService } from './PhotoService';
+import type { Clock, PhotoStore, ReminderScheduler } from './ports';
 import type { IStorage, StoredData } from './StorageService';
-
-/** MedicationService'in fotoğraf ve bildirimden beklediği kadarı; testte sahtesi verilir. */
-export type PhotoStore = Pick<PhotoService, 'savePhoto' | 'deletePhoto'>;
-export type ReminderScheduler = Pick<NotificationService, 'cancelMedication' | 'sync'>;
 
 export type { MedicationChanges };
 
@@ -36,14 +31,9 @@ export class MedicationService {
   private readonly storage: IStorage;
   private readonly photos: PhotoStore;
   private readonly reminders: ReminderScheduler;
-  private readonly now: () => Date;
+  private readonly now: Clock;
 
-  constructor(
-    storage: IStorage,
-    photos: PhotoStore,
-    reminders: ReminderScheduler,
-    now: () => Date = () => new Date(),
-  ) {
+  constructor(storage: IStorage, photos: PhotoStore, reminders: ReminderScheduler, now: Clock) {
     this.storage = storage;
     this.photos = photos;
     this.reminders = reminders;

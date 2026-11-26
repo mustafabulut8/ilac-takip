@@ -5,6 +5,7 @@ import { safeJsonParse } from '@/utils/json';
 import { parseDoseLogRecord, parseMedicationRecord } from '@/validation/stored-records';
 
 import { CURRENT_SCHEMA_VERSION, runMigrations, type RawStoredData } from './migrations';
+import type { Clock } from './ports';
 
 /** Açılışta okunan veri ve kullanıcıya gösterilecek Türkçe uyarılar. */
 export type StoredData = {
@@ -45,11 +46,11 @@ const READ_FAILED_MESSAGE =
 
 export class AsyncStorageService implements IStorage {
   private readonly store: KeyValueStore;
-  private readonly now: () => Date;
+  private readonly now: Clock;
   /** Okuma tamamen başarısız olduysa bilinmeyen verinin üzerine yazılmaz. */
   private writable = true;
 
-  constructor(store: KeyValueStore, now: () => Date = () => new Date()) {
+  constructor(store: KeyValueStore, now: Clock) {
     this.store = store;
     this.now = now;
   }

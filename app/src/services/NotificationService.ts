@@ -1,5 +1,4 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 
 import { NotificationError } from '@/errors';
 import type { Dose, Medication } from '@/models';
@@ -7,6 +6,8 @@ import { addDays, atTime, formatDate, parseDate } from '@/utils/date';
 import { logger } from '@/utils/logger';
 import { isScheduledOn, lastDayOf } from '@/utils/schedule';
 import { isValidTime, parseTime } from '@/utils/time';
+
+import type { Clock, ReminderScheduler, SnoozeCanceller } from './ports';
 
 /** Bildirimin içinde taşınan veri; dokununca hangi doza gidileceğini söyler. */
 export type DoseNotificationData = {
@@ -49,7 +50,7 @@ export type NotificationPermissionStatus = 'granted' | 'undetermined' | 'denied'
  * Yerel ilaç hatırlatmaları: izin, günlük planlama, kayıtlı veriyle eşitleme ve
  * bildirim tarihini platformdan bağımsız hale getirme. Ağ gerektirmez.
  */
-export class NotificationService {
+export class NotificationService implements ReminderScheduler, SnoozeCanceller {
   private static readonly CHANNEL_ID = 'ilac-hatirlatma';
   private static readonly TEST_DELAY_SECONDS = 60;
   private static readonly TEST_ID_PREFIX = 'test-';
@@ -60,15 +61,11 @@ export class NotificationService {
 
   private readonly api: NotificationsApi;
   private readonly platform: string;
-  private readonly now: () => Date;
+  private readonly now: Clock;
   /** Son işlenen dokunuş; aynı dokunuş iki kez sayfa açmasın. */
   private lastHandledTapKey: string | null = null;
 
-  constructor(
-    api: NotificationsApi = Notifications,
-    platform: string = Platform.OS,
-    now: () => Date = () => new Date(),
-  ) {
+  constructor(api: NotificationsApi, platform: string, now: Clock) {
     this.api = api;
     this.platform = platform;
     this.now = now;
@@ -206,7 +203,7 @@ export class NotificationService {
   async scheduleTest({ medication, time }: Dose) {
     await this.ensureChannel();
     await this.api.scheduleNotificationAsync({
-      identifier: `${NotificationService.TEST_ID_PREFIX}${Date.now()}`,
+      identifier: `${NotificationService.TEST_ID_PREFIX}${this.now().getTime()}`,
       content: this.doseContent(medication, time),
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

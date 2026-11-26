@@ -11,7 +11,7 @@ import { logger } from '@/utils/logger';
 import { isScheduledOn } from '@/utils/schedule';
 import { DAY_PERIODS, dayPeriodOf, formatTime, type DayPeriod } from '@/utils/time';
 
-import type { NotificationService } from './NotificationService';
+import type { Clock, SnoozeCanceller } from './ports';
 import type { IStorage } from './StorageService';
 
 /** Doz onayından sonra kaydedilen yeni durum. */
@@ -19,9 +19,6 @@ export type DoseState = {
   medications: Medication[];
   doseLogs: DoseLog[];
 };
-
-/** Doz onaylanınca ertelenmiş bildirimi kaldıran taraf. */
-export type SnoozeCanceller = Pick<NotificationService, 'cancelSnooze'>;
 
 /** Geçmiş ekranındaki günün rengi: hepsi, bir kısmı, hiçbiri; doz yoksa veya sürüyorsa nötr. */
 export type DaySummary = 'all' | 'some' | 'none' | 'open';
@@ -51,9 +48,9 @@ export class DoseService {
 
   private readonly storage: IStorage;
   private readonly snoozes: SnoozeCanceller;
-  private readonly now: () => Date;
+  private readonly now: Clock;
 
-  constructor(storage: IStorage, snoozes: SnoozeCanceller, now: () => Date = () => new Date()) {
+  constructor(storage: IStorage, snoozes: SnoozeCanceller, now: Clock) {
     this.storage = storage;
     this.snoozes = snoozes;
     this.now = now;
