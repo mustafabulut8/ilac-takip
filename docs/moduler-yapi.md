@@ -69,33 +69,38 @@ app/src/
 ├── hooks/                    # useMedications, useTodayDoses, useMedicationWizard, ...
 ├── context/medications.tsx   # Sadece React durumu; iş kuralı yok
 ├── services/                 # İş mantığı sınıfları
-│   ├── StorageService.ts     # IStorage arayüzü + AsyncStorageService
+│   ├── repositories.ts       # MedicationRepository, DoseLogRepository arayüzleri
+│   ├── local/                # Cihaz uygulamaları: LocalDeviceStore (AsyncStorage adaptörü),
+│   │                         #   LocalMedicationRepository, LocalDoseLogRepository
 │   ├── migrations.ts         # Kayıtlı veri sürüm göçleri
 │   ├── MedicationService.ts, DoseService.ts, DoseCalculator.ts, HistoryService.ts
 │   ├── NotificationService.ts, ReminderPlanner.ts, PhotoService.ts
 │   ├── AuthService.ts, ProfileRepository.ts, ProfileCache.ts, auth-errors.ts, ports.ts
-│   └── index.ts              # Bağımlılıkların kurulduğu tek yer
+│   ├── supabase.ts           # Tek Supabase istemcisi (createClient<Database>)
+│   └── index.ts              # Bağımlılıkların kurulduğu tek yer (Composition Root)
 ├── models/                   # Tipler ve form sınıfları
 │   ├── medication.ts, schedule.ts (plan), dose-log.ts, dose.ts
 │   └── forms/                # MedicationForm (soyut) ve on form sınıfı
-├── validation/               # medication-input, wizard-steps (girdi), stored-records (kayıt)
+├── validation/               # schemas (ortak zod sözlüğü), medication-input, auth-input,
+│                             #   wizard-steps (girdi), stored-records, profile-records (sınır)
+├── types/database.ts         # `npm run tipler` ile Supabase şemasından üretilir
 ├── errors/                   # AppError, ValidationError, StorageError, NotificationError
-├── utils/                    # Saf fonksiyonlar: date, time, schedule, json, id, logger
+├── utils/                    # Saf fonksiyonlar: date, time, schedule, json, id, logger (ILogger)
 ├── constants/theme.ts        # Yüksek kontrastlı tema
 ├── config.ts                 # Ortam değişkenleri
-└── test-utils/fakes.ts       # Testler için sahte depolama
+└── test-utils/fakes.ts       # Testler için sahte depolama (iki repository'yi de sağlar)
 ```
 
 Testler ilgili klasörün `__tests__/` alt klasöründedir (örn. `services/__tests__/DoseService.test.ts`).
 
 ### Dört seviye
 
-| Seviye               | Projedeki karşılığı                                                                       | Örnekler                                                                                                                                                                                                                                                                                 |
-| -------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1. Fonksiyon**     | Her fonksiyon tek iş yapar; saf fonksiyonlar yan etkisizdir ve tek başına test edilir.    | `formatDate`, `atTime` (`utils/date.ts`); `isValidTime`, `formatTime` (`utils/time.ts`); `safeJsonParse` (`utils/json.ts`); `isScheduledOn`, `nextOccurrence` (`utils/schedule.ts`); `validateMedicationDraft`, `changesOf` (`validation/medication-input.ts`)                           |
-| **2. Sınıf**         | Birbiriyle ilgili veri ve davranış bir sınıfta toplanır; iç durum `private`.              | `DoseCalculator` (günün dozları ve durumları), `HistoryService` (Geçmiş haftası), `DoseService` (doz onayı), `MedicationService` (ekle/sil/güncelle/listele), `NotificationService`, `PhotoService`, `AsyncStorageService`, `Logger`, `MedicationForm` ve alt sınıfları, `ErrorBoundary` |
-| **3. Paket / dosya** | Klasörler katmanlara karşılık gelir; her klasör `index.ts` ile dışa açtığı şeyi belirler. | `models/`, `services/`, `validation/`, `errors/`, `utils/`, `hooks/`, `components/`, `app/`                                                                                                                                                                                              |
-| **4. Sistem**        | Uygulama, sunucu ve dış servisler ayrı bileşenlerdir; aralarında arayüz vardır.           | Mobil uygulama ↔ `IStorage` ↔ Supabase; Edge Functions ↔ Claude API; e-posta servisi (aşağıda)                                                                                                                                                                                           |
+| Seviye               | Projedeki karşılığı                                                                       | Örnekler                                                                                                                                                                                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Fonksiyon**     | Her fonksiyon tek iş yapar; saf fonksiyonlar yan etkisizdir ve tek başına test edilir.    | `formatDate`, `atTime` (`utils/date.ts`); `isValidTime`, `formatTime` (`utils/time.ts`); `safeJsonParse` (`utils/json.ts`); `isScheduledOn`, `nextOccurrence` (`utils/schedule.ts`); `validateMedicationDraft`, `changesOf` (`validation/medication-input.ts`)                        |
+| **2. Sınıf**         | Birbiriyle ilgili veri ve davranış bir sınıfta toplanır; iç durum `private`.              | `DoseCalculator` (günün dozları ve durumları), `HistoryService` (Geçmiş haftası), `DoseService` (doz onayı), `MedicationService` (ekle/sil/güncelle/listele), `NotificationService`, `PhotoService`, `LocalDeviceStore`, `Logger`, `MedicationForm` ve alt sınıfları, `ErrorBoundary` |
+| **3. Paket / dosya** | Klasörler katmanlara karşılık gelir; her klasör `index.ts` ile dışa açtığı şeyi belirler. | `models/`, `services/`, `validation/`, `errors/`, `utils/`, `hooks/`, `components/`, `app/`                                                                                                                                                                                           |
+| **4. Sistem**        | Uygulama, sunucu ve dış servisler ayrı bileşenlerdir; aralarında arayüz vardır.           | Mobil uygulama ↔ `MedicationRepository` / `DoseLogRepository` ↔ Supabase; Edge Functions ↔ Claude API; e-posta servisi (aşağıda)                                                                                                                                                      |
 
 Ekran dosyaları incedir: `ilac-ekle.tsx` 5 satırdır; sihirbazın durumu `useMedicationWizard`, kuralları `validation/`, görünümü `components/wizard/` içindedir.
 
@@ -105,39 +110,63 @@ Bağımlılık yönü tek yönlüdür: üst katman alttakini bilir, alttaki üst
 
 **Kural: Ekranlar servislere yalnızca kancalar üzerinden erişir.** `src/app/` ve `src/components/` altındaki dosyalar `@/services`'i, `expo-notifications`'ı veya depolamayı doğrudan import etmez. Servis çağrısı gereken her yer için `src/hooks/` altında bir kanca yazılır:
 
-| Kanca                       | Arkasındaki servis                                                           | Kullanan                                  |
-| --------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------- |
-| `useMedications`            | context → `MedicationService`, `DoseService`                                 | Tüm ekranlar                              |
-| `useTodayDoses`             | `DoseCalculator.getTodayDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün                                     |
-| `useHistoryWeek`            | `HistoryService.getWeek`                                                     | Geçmiş                                    |
-| `useDose`                   | Doz onayı (`useConfirmDose`), sıradaki doz                                   | `aldim/[id].tsx`                          |
-| `useConfirmDose`            | context → `DoseService.confirmDose`; çift dokunuş koruması, titreşim         | `useDose`, `useSimpleHome`                |
-| `useSimpleHome`             | `DoseCalculator.focusDose`, `progressOf`                                     | Sade ana ekran                            |
-| `useMedicationList`         | context → `MedicationService.update/remove`                                  | İlaçlarım                                 |
-| `useSnooze`                 | `NotificationService.snooze`                                                 | `aldim/[id].tsx`                          |
-| `useMedicationWizard`       | context → `MedicationService.add/update`                                     | Sihirbaz                                  |
-| `useMedicationPhoto`        | `PhotoService.photoUri`                                                      | `MedicationPhoto`, `DosePrompt`, sihirbaz |
-| `useReminderSync`           | `MedicationService.syncReminders`                                            | `_layout.tsx`                             |
-| `useTestNotification`       | `NotificationService.scheduleTest`                                           | Ayarlar (`__DEV__`)                       |
-| `useNotificationPermission` | `NotificationService` izin metotları                                         | Bugün, Ayarlar                            |
-| `useDoseNotificationTaps`   | `NotificationService.subscribeToDoseTaps`                                    | `_layout.tsx`                             |
+| Kanca                       | Arkasındaki servis                                                             | Kullanan                                  |
+| --------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
+| `useMedications`            | context → `MedicationService`, `DoseService`                                   | Tüm ekranlar                              |
+| `useTodayDoses`             | `DoseCalculator.getVisibleDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün                                     |
+| `useHistoryWeek`            | `HistoryService.getWeek`                                                       | Geçmiş                                    |
+| `useDose`                   | Doz onayı (`useConfirmDose`), sıradaki doz                                     | `aldim/[id].tsx`                          |
+| `useConfirmDose`            | context → `DoseService.confirmDose`; çift dokunuş koruması, titreşim           | `useDose`, `useSimpleHome`                |
+| `useSimpleHome`             | `DoseCalculator.getVisibleDoses`, `focusDose`, `progressOf`                    | Sade ana ekran                            |
+| `useMedicationList`         | context → `MedicationService.update/remove`                                    | İlaçlarım                                 |
+| `useSnooze`                 | `NotificationService.snooze`                                                   | `aldim/[id].tsx`                          |
+| `useMedicationWizard`       | context → `MedicationService.add/update`                                       | Sihirbaz                                  |
+| `useMedicationPhoto`        | `PhotoService.photoUri`                                                        | `MedicationPhoto`, `DosePrompt`, sihirbaz |
+| `useReminderSync`           | `MedicationService.syncReminders`                                              | `_layout.tsx`                             |
+| `useTestNotification`       | `NotificationService.scheduleTest`                                             | Ayarlar (`__DEV__`)                       |
+| `useNotificationPermission` | `NotificationService` izin metotları                                           | Bugün, Ayarlar                            |
+| `useDoseNotificationTaps`   | `NotificationService.subscribeToDoseTaps`                                      | `_layout.tsx`                             |
 
 Gerekçe: Ekranlar yalnızca görünümle ilgilenir. Bir servis değişirse (örneğin Supabase'e geçişte) sadece kanca güncellenir. Bildirim kütüphanesi değişirse yalnızca `NotificationService` etkilenir. Bildirimin genel ayarı (`notificationService.configure()`) da ekranda değil, bağımlılıkların kurulduğu `services/index.ts`'de yapılır.
 
 ```mermaid
 flowchart TD
   UI["Ekranlar<br/>app/*.tsx, components/"] --> Hooks["Kancalar<br/>hooks/"]
-  Hooks --> Ctx["Durum<br/>context/medications.tsx"]
-  Ctx --> Svc["Servisler<br/>services/*Service.ts"]
-  Svc --> Val["Doğrulama<br/>validation/"]
-  Svc --> Models["Modeller ve formlar<br/>models/"]
-  Svc --> IStorage{{"IStorage arayüzü"}}
-  IStorage --> Async["AsyncStorageService<br/>(bugün)"]
-  IStorage -.-> Supa["SupabaseStorage<br/>(planlanan)"]
-  Svc --> Expo["Expo modülleri<br/>bildirim, dosya sistemi"]
-  Val --> Utils["utils/, errors/"]
+  Hooks --> Ctx["Durum<br/>context/"]
+  Ctx --> Svc["Servisler<br/>DoseService, MedicationService, AuthService"]
+  Root["Composition Root<br/>services/index.ts"] -. kurar ve bağlar .-> Svc
+
+  subgraph Alan["Saf alan katmanı (React, Expo, Supabase import edemez)"]
+    Calc["DoseCalculator, HistoryService,<br/>ReminderPlanner"]
+    Repo{{"MedicationRepository<br/>DoseLogRepository"}}
+    Val["validation/<br/>zod şemaları"]
+    Models["models/<br/>MedicationForm ve alt sınıfları"]
+    Utils["utils/, errors/"]
+  end
+
+  Svc --> Calc
+  Svc --> Repo
+  Svc --> Val
+  Svc --> Models
+  Val --> Utils
   Models --> Utils
+
+  subgraph Adaptor["Adaptörler (platforma bağlanan kod)"]
+    Local["LocalMedicationRepository<br/>LocalDoseLogRepository<br/>→ LocalDeviceStore"]
+    Notif["NotificationService<br/>→ expo-notifications"]
+    Photo["PhotoService<br/>→ expo-file-system"]
+    Prof["ProfileRepository<br/>→ Supabase (Database tipleri)"]
+  end
+
+  Repo --> Local
+  Repo -.-> SupaRepo["SupabaseMedicationRepository<br/>(2. parça, planlanan)"]
+  Local --> Async[("AsyncStorage")]
+  Svc --> Notif
+  Svc --> Photo
+  Svc --> Prof
 ```
+
+Kesikli oklar planlanan bağlantıdır. `saf-alan-katmani` kuralı (dependency-cruiser) "Saf alan katmanı" kutusundaki dosyaların React, React Native, Expo veya Supabase'i import etmesini engeller. Adaptörler bu kuralın dışındadır.
 
 ### Planlanan sistem mimarisi
 
@@ -167,7 +196,7 @@ flowchart LR
   Edge --> Mail --> Aile
 ```
 
-- **Mobil uygulama:** Bugünkü hali. Veri `IStorage` üzerinden okunur; Supabase'e geçişte `services/index.ts` içindeki tek satır değişir, ekranlar etkilenmez.
+- **Mobil uygulama:** Bugünkü hali. Veri `MedicationRepository` ve `DoseLogRepository` üzerinden okunur. Supabase'e geçişte `services/index.ts` içindeki repository satırları değişir; servisler ve ekranlar etkilenmez.
 - **Supabase:** Veritabanı, kimlik doğrulama ve satır güvenliği (RLS). Uygulama yalnızca herkese açık anon anahtarı bilir (`config.ts`).
 - **Edge Functions:** Claude API anahtarı yalnızca burada sunucu sırrı olarak tutulur; uygulamaya hiç girmez.
 - **Claude API:** Kullanım alışkanlıklarının analizi ve yardım metinleri.
@@ -181,22 +210,24 @@ Servislerin bağımlılıkları ve sabitleri `private` alanlardadır; dışarıy
 
 ```ts
 export class DoseService {
-  private static readonly MISSED_AFTER_MS = 30 * 60 * 1000;
-  private readonly storage: IStorage;
-  private readonly now: () => Date;
-  // public: doseLogId, getTodayDoses, getDosesOn, groupByPeriod, progressOf, getWeek, confirmDose
-  // private: dosesOf, planPeriods, statusOf, summaryOf, withStockAfterDose
+  private readonly doseLogs: DoseLogRepository;
+  private readonly snoozes: SnoozeCanceller;
+  private readonly doses: DoseCalculator;
+  private readonly now: Clock;
+  // public: confirmDose
+  // private: withStockAfterDose
 }
 ```
 
-- `AsyncStorageService` depolama anahtarlarını dışarıya açmaz; `private writable` bayrağı veri okunamadığında yazmayı kapatır. Dışarıdan bu bayrak değiştirilemez.
+- `LocalDeviceStore` depolama anahtarlarını dışarıya açmaz. Son okunan veri `private current` alanında tutulur. `private writable` bayrağı veri okunamadığında yazmayı kapatır. Dışarıdan ikisi de değiştirilemez.
 - `NotificationService` kanal kimliğini ve test önekini `private static` tutar.
 - `Logger` kayıt hedeflerini `private readonly sinks` dizisinde tutar; yalnızca `addSink` ile eklenebilir.
 
 ### Soyutlama
 
-- `IStorage` (`services/StorageService.ts`): `load`, `saveMedications`, `saveDoseConfirmation`. Servisler ve context yalnızca bu arayüzü bilir; `AsyncStorageService` bugünkü uygulamasıdır, Supabase sınıfı aynı arayüzü uygulayacak.
-- `KeyValueStore`: AsyncStorage'ın kullandığımız üç metodu. Testte `MemoryKeyValueStore` verilir.
+- `MedicationRepository` ve `DoseLogRepository` (`services/repositories.ts`): `load`, `add`, `update`, `remove` ve `recordDose`. Servisler yalnızca bu arayüzleri bilir. `LocalMedicationRepository` ve `LocalDoseLogRepository` bugünkü uygulamalardır; Supabase sınıfları da aynı arayüzleri uygulayacak.
+- `KeyValueStore`: AsyncStorage'ın kullandığımız metotları (`services/local/LocalDeviceStore.ts`). Testte `MemoryKeyValueStore` verilir.
+- `ILogger` (`utils/logger.ts`): `info`, `warn`, `error`. `ErrorBoundary` testte sahte kaydedici alır.
 - `PhotoStore`, `ReminderScheduler`, `SnoozeCanceller`, `NotificationsApi`, `LogSink`: servislerin dış dünyadan beklediği en küçük arayüzler.
 - Ekranlar servis sınıfını hiç bilmez; yalnızca kancaları (`useMedications`, `useTodayDoses`, `useDose` ...) çağırır. Bkz. Katmanlar bölümündeki kural.
 
@@ -220,21 +251,33 @@ const form = getMedicationForm(medication.form);
 Servisler bağımlılıklarını constructor ile alır. Gerçek nesneler tek bir yerde (`services/index.ts`) kurulur:
 
 ```ts
-export const storage: IStorage = new AsyncStorageService(AsyncStorage);
-export const doseService = new DoseService(storage, notificationService);
+const device = new LocalDeviceStore(AsyncStorage, systemClock);
+const repositories = {
+  medications: new LocalMedicationRepository(device),
+  doseLogs: new LocalDoseLogRepository(device),
+};
+export const doseService = new DoseService(
+  repositories.doseLogs,
+  notificationService,
+  doseCalculator,
+  systemClock,
+);
 export const medicationService = new MedicationService(
-  storage,
+  repositories,
   photoService,
   notificationService,
+  systemClock,
 );
 ```
 
 Testte sahteleri verilir:
 
 ```ts
+const storage = new FakeStorage();
 const service = new DoseService(
-  new FakeStorage(),
+  storage.doseLogRepository,
   sahteErteleme,
+  new DoseCalculator(),
   () => new Date(2026, 10, 16, 9, 0),
 );
 ```
@@ -245,33 +288,45 @@ const service = new DoseService(
 
 ```mermaid
 classDiagram
-  class IStorage {
+  class MedicationRepository {
     <<interface>>
-    +load() StoredData
-    +saveMedications(medications)
-    +saveDoseConfirmation(medications, doseLogs)
+    +load() Loaded~Medication~
+    +add(medication)
+    +update(medication)
+    +remove(id)
   }
-  class AsyncStorageService {
+  class DoseLogRepository {
+    <<interface>>
+    +load() Loaded~DoseLog~
+    +recordDose(log, medication)
+  }
+  class LocalMedicationRepository
+  class LocalDoseLogRepository
+  class LocalDeviceStore {
     -store: KeyValueStore
     -writable: boolean
-    +load() StoredData
-    -parseArray()
-    -backup()
+    -current: DeviceData
+    +read()
+    +writeMedications(change)
+    +writeDose(log, medication)
   }
-  class DoseService {
-    -storage: IStorage
-    -snoozes: SnoozeCanceller
+  class DoseCalculator {
     -MISSED_AFTER_MS$
-    +doseLogId()$
     +getTodayDoses()
+    +getVisibleDoses()
     +getDosesOn()
     +groupByPeriod()
     +progressOf()
-    +getWeek()
+    +focusDose()
+  }
+  class DoseService {
+    -doseLogs: DoseLogRepository
+    -snoozes: SnoozeCanceller
     +confirmDose()
   }
   class MedicationService {
-    -storage: IStorage
+    -medications: MedicationRepository
+    -doseLogs: DoseLogRepository
     -photos: PhotoStore
     -reminders: ReminderScheduler
     +load()
@@ -315,9 +370,14 @@ classDiagram
     +isRunningLow()
     +stockAfterDose(stock)
   }
-  IStorage <|.. AsyncStorageService
-  DoseService --> IStorage
-  MedicationService --> IStorage
+  MedicationRepository <|.. LocalMedicationRepository
+  DoseLogRepository <|.. LocalDoseLogRepository
+  LocalMedicationRepository --> LocalDeviceStore
+  LocalDoseLogRepository --> LocalDeviceStore
+  DoseService --> DoseLogRepository
+  DoseService --> DoseCalculator
+  MedicationService --> MedicationRepository
+  MedicationService --> DoseLogRepository
   MedicationService --> PhotoService
   MedicationService --> NotificationService
   DoseService --> NotificationService
@@ -346,10 +406,10 @@ classDiagram
 - Stok 0-999 arası, 0,5 adımlı (yarım tablet).
 - Sihirbaz her adımda `stepError` ile yalnızca o adımın alanlarını denetler. `MedicationService.add` ve `update` aynı kuralları `assertValidNewMedication` ve `assertValidChanges` ile ikinci kez uygular. Böylece ekran dışından gelen veri de denetlenir.
 
-### Kayıtlı veri (`validation/stored-records.ts`, `StorageService`)
+### Kayıtlı veri (`validation/stored-records.ts`, `profile-records.ts`, `LocalDeviceStore`)
 
 - `JSON.parse` hiç doğrudan çağrılmaz; `safeJsonParse` hata fırlatmaz.
-- Okunan her kayıt tip kontrolünden geçer. Kimliği veya adı olmayan kayıt atlanır. Eksik alanlar varsayılanla doldurulur: stok 0, saat listesi boş, form tablet.
+- Okunan her kayıt zod şemasından geçer (`validation/schemas.ts` ortak sözlüğü). Formlar da aynı şemaları kullanır. Sunucudan gelen profil satırı da aynı şekilde denetlenir; geçersizse `logger.warn` ile yazılır ve kullanılmaz. Kimliği veya adı olmayan kayıt atlanır. Eksik alanlar varsayılanla doldurulur: stok 0, saat listesi boş, form tablet.
 - Bozuk veri **silinmez ve ezilmez**: ham hali `medications.yedek-<zaman>` gibi ayrı bir anahtara kopyalanır, ana ekranda Türkçe uyarı gösterilir.
 - Depolama hiç okunamazsa sessizce boş liste gösterilmez. Uyarı çıkar ve yazma kapatılır, böylece bilinmeyen veri ezilmez.
 - Stok hiçbir zaman negatife düşmez: `MedicationForm.stockAfterDose`, `sanitizeStock`.
@@ -360,7 +420,7 @@ classDiagram
 
 ### ErrorBoundary (`components/error-boundary.tsx`)
 
-Kök düzeyde tüm ekranları sarar. Bir ekran çizilirken hata çıkarsa "Bir sorun oluştu" mesajı ve "Yeniden dene" butonu gösterilir. Açılış ekranı açık kalmışsa kapatılır. React'te hata sınırı yalnızca sınıf bileşeniyle yazılabilir.
+Kök düzeyde tüm ekranları sarar. Bir ekran çizilirken hata çıkarsa "Bir sorun oldu" başlığı ve "Tekrar dene" butonu gösterilir. Hata `ILogger` ile kaydedilir. Açılış ekranı açık kalmışsa kapatılır. React'te hata sınırı yalnızca sınıf bileşeniyle yazılabilir.
 
 ### Veri göçü (`services/migrations.ts`)
 
