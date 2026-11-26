@@ -156,3 +156,62 @@ describe('servis doğrulaması', () => {
     expect(() => assertValidChanges({})).not.toThrow();
   });
 });
+
+// Karakterizasyon: assertValidChanges alan tablosuna bölünmeden önce hangi alana hangi
+// mesajın yazıldığını kilitler.
+describe('assertValidChanges alan mesajları (karakterizasyon)', () => {
+  const fieldsOf = (changes: Parameters<typeof assertValidChanges>[0]) => {
+    try {
+      assertValidChanges(changes);
+      return {};
+    } catch (error) {
+      return (error as ValidationError).fields;
+    }
+  };
+
+  it.each([
+    [{ name: '  ' }, { name: 'Lütfen ilacın adını yazın.' }],
+    [{ name: undefined }, { name: 'Lütfen ilacın adını yazın.' }],
+    [{ dose: '' }, { dose: 'Lütfen dozu yazın.' }],
+    [{ amount: 0 }, { dose: 'Lütfen geçerli bir miktar seçin.' }],
+    [{ amount: Number.NaN }, { dose: 'Lütfen geçerli bir miktar seçin.' }],
+    [{ form: 'hap' as never }, { form: 'İlaç formu geçersiz.' }],
+    [{ times: [] }, { times: 'Lütfen en az bir saat ekleyin.' }],
+    [{ times: ['25:00'] }, { times: 'Saatlerden biri geçersiz. Lütfen kaldırıp yeniden ekleyin.' }],
+    [{ schedule: { kind: 'weekdays', days: [] } }, { schedule: 'Lütfen en az bir gün seçin.' }],
+    [
+      { duration: { kind: 'days', count: 91 } },
+      { duration: 'Lütfen 1 ile 90 arasında bir gün sayısı seçin.' },
+    ],
+    [{ mealTiming: 'gece' as never }, { mealTiming: 'Lütfen birini seçin.' }],
+    [{ mealTiming: undefined }, { mealTiming: 'Lütfen birini seçin.' }],
+    [{ stock: -1 }, { stock: 'Lütfen 0 ile 999 arasında bir adet girin.' }],
+    [{ stock: undefined }, { stock: 'Lütfen 0 ile 999 arasında bir adet girin.' }],
+  ] as const)('%j → %j', (changes, expected) => {
+    expect(fieldsOf(changes as never)).toEqual(expected);
+  });
+
+  it('miktar hatası doz hatasının yerine yazılır; birden çok alan birlikte döner', () => {
+    expect(fieldsOf({ dose: '', amount: 0, name: '' })).toEqual({
+      name: 'Lütfen ilacın adını yazın.',
+      dose: 'Lütfen geçerli bir miktar seçin.',
+    });
+  });
+
+  it('geçerli değişiklikler ve verilmeyen sıklık/süre hata vermez', () => {
+    expect(
+      fieldsOf({
+        name: 'A',
+        dose: '1',
+        amount: 0.5,
+        form: 'syrup',
+        times: ['08:00'],
+        schedule: { kind: 'daily' },
+        duration: { kind: 'continuous' },
+        mealTiming: 'full',
+        stock: 0,
+      }),
+    ).toEqual({});
+    expect(fieldsOf({ schedule: undefined, duration: undefined })).toEqual({});
+  });
+});
