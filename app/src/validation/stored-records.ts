@@ -64,6 +64,11 @@ function sanitizeDuration(value: unknown): Duration {
     : { kind: 'continuous' };
 }
 
+/** Okunamayan veya hiç olmayan kayıt anı en eski an sayılır. */
+function sanitizeCreatedAt(value: unknown): string {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value)) ? value : UNKNOWN_CREATED_AT;
+}
+
 /** Kayıt anının yerel günü; kayıt anı bozuksa en eski gün. */
 export function startDateOf(createdAt: unknown): string {
   const date = new Date(typeof createdAt === 'string' ? createdAt : UNKNOWN_CREATED_AT);
@@ -114,7 +119,7 @@ export function parseMedicationRecord(value: unknown): Medication | null {
     photoFile: stringOr(value.photoFile, ''),
     ...sanitizePlan(value, value.createdAt),
     stock: sanitizeStock(value.stock),
-    createdAt: isNonEmptyString(value.createdAt) ? value.createdAt : UNKNOWN_CREATED_AT,
+    createdAt: sanitizeCreatedAt(value.createdAt),
     form: getMedicationForm(value.form).kind,
     amount: sanitizeAmount(value.amount),
     unit: stringOr(value.unit, 'adet'),
