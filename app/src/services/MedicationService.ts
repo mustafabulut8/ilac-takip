@@ -110,7 +110,10 @@ export class MedicationService {
     if (updated.photoFile !== existing.photoFile) this.tryDeletePhoto(existing.photoFile);
     if (!this.affectsReminders(fields)) return { medications, notice: 'Değişiklik kaydedildi' };
 
-    const reminded = (await this.tryCancel(existing)) && (await this.trySync(medications));
+    // İptal başarısız olsa da eşitleme denenir; yoksa yeni saatler hiç kurulmazdı.
+    const cancelled = await this.tryCancel(existing);
+    const synced = await this.trySync(medications);
+    const reminded = cancelled && synced;
     return {
       medications,
       notice: reminded
