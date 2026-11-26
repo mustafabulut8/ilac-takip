@@ -4,6 +4,21 @@
 
 ## Bugün Tamamlananlar (26 Kasım)
 
+### Mimari iyileştirme turu
+
+Dal: `feature/mimari` (`feature/kalite`'den açıldı; main'e birleştirilmedi). Ayrıntılar `docs/kalite-raporu.md` "Mimari iyileştirmeler" ve `docs/kararlar.md` ADR-020'de.
+
+- **Repository:** `MedicationRepository`, `DoseLogRepository`; cihaz uygulamaları `services/local/` altında.
+- **Saf alan katmanı:** Modeller ve iş kuralları React, Expo ve Supabase'i import edemiyor (dependency-cruiser `saf-alan-katmani`).
+- **Supabase tipleri:** `npm run tipler` → `src/types/database.ts`.
+- **zod:** Cihaz ve sunucu verisi şemalarla doğrulanıyor; formlar aynı şemaları kullanıyor.
+- **Hata ekranı:** "Bir sorun oldu" ve "Tekrar dene"; `ILogger` arayüzü.
+- **Erişilebilirlik:** a11y lint kuralları ve 48pt dokunma testi. KVKK bağlantısı kendi satırına taşındı.
+- **Kararlar:** ADR biçimi. Bölge "AB – İrlanda (eu-west-1)" oldu. Sızdırılmış şifre denetimi bilinen sınırlılık olarak eklendi.
+- **Commit standardı:** Conventional Commits, commitlint, `CHANGELOG.md` ve Dependabot.
+- **TDD ile düzeltildi:** Gece yarısından sonra dünün alınabilen dozu Bugün ve Sade ekranında görünüyor. Kalite turunun açık bulgusu kapandı.
+- **Test:** 495 → 530. Kapsam eşikleri değişmedi ve hepsi geçiyor.
+
 ### Kalite turu
 
 Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilmedi). Yeni özellik yok. Ayrıntılar `docs/kalite-raporu.md` (Başlangıç ve Sonuç) ve `docs/kararlar.md` 19. kararda.
@@ -23,7 +38,7 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
   - düzenlemede yeni saatlerin hatırlatması kurulmuyordu;
   - süresi dolan oturumda genel hata mesajı çıkıyordu;
   - bozuk kayıt anı Geçmiş'te geri gitmeyi engelliyordu.
-- **Açık bulgu:** Gece yarısından sonra dünün 23:50 dozu 30 dakika boyunca hâlâ alınabilir, ama ana ekranda görünmüyor (yalnızca bildirimden açılıyor).
+- **Açık bulgu:** Gece yarısından sonra dünün 23:50 dozu ana ekranda görünmüyordu. Mimari turunda düzeltildi.
 
 ### 2. tur, 1. parça
 

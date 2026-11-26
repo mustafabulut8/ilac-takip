@@ -15,7 +15,14 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimini izle
   - Erişilebilirlik lint kuralları.
   - commitlint, Dependabot ve bu dosya.
 - **Düzeltildi:** Gece yarısından sonra dünün henüz alınabilen dozu (ör. 23:50 dozu 00:10'da) Bugün ve Sade ana ekranında görünüyor ve onaylanabiliyor.
-- **Belgeler:** Kararlar ADR biçimine çevrildi. Sunucu bölgesi "AB – İrlanda (eu-west-1)" olarak düzeltildi.
+- **Değişti (görünüm):**
+  - KVKK aydınlatma metni bağlantısı onay cümlesinin altında, kendi satırında.
+  - Hata ekranı "Bir sorun oldu" ve "Tekrar dene" diyor.
+  - Bugün ekranında dünden kalan dozun saatinin önünde "Dün" yazıyor.
+- **Belgeler:**
+  - Kararlar ADR biçimine çevrildi.
+  - Sunucu bölgesi "AB – İrlanda (eu-west-1)" olarak düzeltildi.
+  - Sızdırılmış şifre denetimi bilinen sınırlılık olarak eklendi.
 
 ### Kalite turu (`feature/kalite`), 26 Kasım 2026
 
