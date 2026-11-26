@@ -2,14 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { AuthError } from '@/errors';
 import { isUserRole, type Profile, type UserRole } from '@/models';
+import type { Database, Tables } from '@/types/database';
 
 import { toAuthError } from './auth-errors';
 
 /** `profiles` tablosuna erişim için Supabase istemcisinden kullanılan kısım. */
-export type ProfilesBackend = Pick<SupabaseClient, 'from'>;
+export type ProfilesBackend = Pick<SupabaseClient<Database>, 'from'>;
 
-/** `profiles` tablosundaki satır; sütun adları veritabanındaki gibidir. */
-type ProfileRow = { id: string; ad: string; rol: string; olusturma_zamani: string };
+/** `profiles` tablosundaki satır (üretilen tipten); sütun adları veritabanındaki gibidir. */
+type ProfileRow = Tables<'profiles'>;
 
 /**
  * `profiles` tablosunun okunması ve güncellenmesi. Veritabanının Türkçe sütun adlarını
@@ -31,7 +32,7 @@ export class ProfileRepository {
       .eq('id', userId)
       .maybeSingle();
     if (error) throw toAuthError(error);
-    const profile = ProfileRepository.profileOf(data as ProfileRow | null);
+    const profile = ProfileRepository.profileOf(data);
     if (!profile) {
       throw new AuthError(
         'profile_missing',

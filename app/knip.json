@@ -2,5 +2,6 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/app/**/*.tsx"],
   "project": ["src/**/*.{ts,tsx}", "*.{js,cjs,ts}"],
-  "ignoreDependencies": ["expo-glass-effect", "expo-updates"]
+  "ignoreDependencies": ["expo-glass-effect", "expo-updates"],
+  "ignore": ["src/types/database.ts"]
 }
