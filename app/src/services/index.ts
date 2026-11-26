@@ -6,21 +6,23 @@ import { isSupabaseConfigured } from '@/config';
 
 import { AuthService } from './AuthService';
 import { supabase } from './supabase';
+import { DoseCalculator } from './DoseCalculator';
 import { DoseService } from './DoseService';
+import { HistoryService } from './HistoryService';
 import { MedicationService } from './MedicationService';
 import { NotificationService } from './NotificationService';
 import { PhotoService } from './PhotoService';
 import { systemClock } from './ports';
 import { AsyncStorageService, type IStorage } from './StorageService';
 
+export { DoseService, type DoseState } from './DoseService';
+export { DoseCalculator, type DoseGroup } from './DoseCalculator';
 export {
-  DoseService,
+  HistoryService,
   type DaySummary,
-  type DoseGroup,
-  type DoseState,
   type HistoryDay,
   type HistoryWeek,
-} from './DoseService';
+} from './HistoryService';
 export {
   MedicationService,
   type MedicationResult,
@@ -45,7 +47,14 @@ export type { IStorage, KeyValueStore, StoredData } from './StorageService';
 const storage: IStorage = new AsyncStorageService(AsyncStorage, systemClock);
 export const photoService = new PhotoService();
 export const notificationService = new NotificationService(Notifications, Platform.OS, systemClock);
-export const doseService = new DoseService(storage, notificationService, systemClock);
+export const doseCalculator = new DoseCalculator();
+export const historyService = new HistoryService(doseCalculator);
+export const doseService = new DoseService(
+  storage,
+  notificationService,
+  doseCalculator,
+  systemClock,
+);
 // Uygulama açıkken gelen bildirim de gösterilsin. Uygulama açılırken bir kez çalışır.
 notificationService.configure();
 export const medicationService = new MedicationService(

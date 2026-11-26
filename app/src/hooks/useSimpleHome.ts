@@ -1,4 +1,4 @@
-import { doseService } from '@/services';
+import { doseCalculator } from '@/services';
 import { addDays, atTime } from '@/utils/date';
 
 import { useMedications } from './useMedications';
@@ -8,13 +8,13 @@ import { useNow } from './useNow';
 export function useSimpleHome() {
   const { isLoaded, medications, doseLogs, confirmDose } = useMedications();
   const now = useNow();
-  const today = doseService.getTodayDoses(medications, doseLogs, now);
-  const progress = doseService.progressOf(today);
-  const focus = doseService.focusDose(today, now);
+  const today = doseCalculator.getTodayDoses(medications, doseLogs, now);
+  const progress = doseCalculator.progressOf(today);
+  const focus = doseCalculator.focusDose(today, now);
   const lateMinutes = focus
     ? Math.floor((now.getTime() - atTime(now, focus.time).getTime()) / 60000)
     : 0;
-  const tomorrow = doseService
+  const tomorrow = doseCalculator
     .getDosesOn(addDays(now, 1), medications, doseLogs, now)
     .find((dose) => dose.status !== 'alindi');
 

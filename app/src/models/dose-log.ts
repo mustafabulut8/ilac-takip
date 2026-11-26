@@ -9,3 +9,8 @@ export type DoseLog = {
   time: string;
   takenAt: string;
 };
+
+/** Belirleyici kimlik: aynı doz iki kez kaydedilemez, stok iki kez düşmez. */
+export function doseLogIdOf(medicationId: string, date: string, time: string) {
+  return `${medicationId}_${date}_${time}`;
+}

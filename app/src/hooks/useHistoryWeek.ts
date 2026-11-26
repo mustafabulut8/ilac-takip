@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { doseService } from '@/services';
+import { historyService } from '@/services';
 import { addDays, formatDate, startOfWeek } from '@/utils/date';
 
 import { useMedications } from './useMedications';
@@ -16,7 +16,7 @@ export function useHistoryWeek() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const monday = addDays(startOfWeek(now), weekOffset * 7);
-  const week = doseService.getWeek(monday, medications, doseLogs, now);
+  const week = historyService.getWeek(monday, medications, doseLogs, now);
   const today = formatDate(now);
   // Seçim bu haftada değilse: bu hafta bugün, geçmiş haftalarda Pazar.
   const selectedDay =
@@ -31,7 +31,7 @@ export function useHistoryWeek() {
     monday,
     selectedDay,
     selectDay: setSelected,
-    canGoBack: doseService.hasHistoryBefore(monday, medications),
+    canGoBack: historyService.hasHistoryBefore(monday, medications),
     canGoForward: weekOffset < 0,
     previousWeek: () => setWeekOffset((offset) => offset - 1),
     nextWeek: () => setWeekOffset((offset) => Math.min(offset + 1, 0)),

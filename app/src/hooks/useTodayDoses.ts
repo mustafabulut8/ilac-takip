@@ -1,4 +1,4 @@
-import { doseService } from '@/services';
+import { doseCalculator } from '@/services';
 
 import { useMedications } from './useMedications';
 import { useNow } from './useNow';
@@ -7,13 +7,13 @@ import { useNow } from './useNow';
 export function useTodayDoses() {
   const { medications, doseLogs } = useMedications();
   const now = useNow();
-  const doses = doseService.getTodayDoses(medications, doseLogs, now);
+  const doses = doseCalculator.getTodayDoses(medications, doseLogs, now);
 
   return {
     now,
     doses,
-    groups: doseService.groupByPeriod(doses),
-    progress: doseService.progressOf(doses),
-    nextDose: doseService.nextPending(doses),
+    groups: doseCalculator.groupByPeriod(doses),
+    progress: doseCalculator.progressOf(doses),
+    nextDose: doseCalculator.nextPending(doses),
   };
 }

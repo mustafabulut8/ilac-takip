@@ -1,4 +1,4 @@
-import { doseService } from '@/services';
+import { doseCalculator } from '@/services';
 
 import { useMedications } from './useMedications';
 import { useNow } from './useNow';
@@ -9,9 +9,9 @@ export function useDose(medicationId: string, date: string, time: string | undef
   const now = useNow();
   const medication = medications.find((item) => item.id === medicationId);
   const log = doseLogs.find(
-    (item) => item.id === doseService.logIdOf(medicationId, date, time ?? ''),
+    (item) => item.id === doseCalculator.logIdOf(medicationId, date, time ?? ''),
   );
-  const today = doseService.getTodayDoses(medications, doseLogs, now);
+  const today = doseCalculator.getTodayDoses(medications, doseLogs, now);
 
   const confirm = async () => {
     if (!medication || !time) return;
@@ -24,7 +24,7 @@ export function useDose(medicationId: string, date: string, time: string | undef
     medication,
     isTaken: !!log,
     takenAt: log?.takenAt,
-    nextDose: doseService.nextPending(today),
+    nextDose: doseCalculator.nextPending(today),
     confirm,
   };
 }
