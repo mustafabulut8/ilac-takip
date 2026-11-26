@@ -4,6 +4,8 @@ import { AppText } from '@/components/app-text';
 import { Icon } from '@/components/icon';
 import { Colors, MinTouchSize, Spacing } from '@/constants/theme';
 
+import { TextLink } from '../text-link';
+
 import { FieldError } from './field-error';
 
 type ConsentCheckboxProps = {
@@ -14,7 +16,10 @@ type ConsentCheckboxProps = {
   error?: string;
 };
 
-/** KVKK onay kutusu; metnin bağlantısı ayrı bir dokunma alanıdır. */
+/**
+ * KVKK onay kutusu. Metnin bağlantısı cümlenin içinde değil, altında ayrı bir 48pt
+ * dokunma alanıdır; satır içi bağlantı yaşlı kullanıcı için çok küçük kalıyordu.
+ */
 export function ConsentCheckbox({ checked, onToggle, onOpenText, error }: ConsentCheckboxProps) {
   return (
     <View style={styles.wrapper}>
@@ -29,18 +34,10 @@ export function ConsentCheckbox({ checked, onToggle, onOpenText, error }: Consen
           {checked && <Icon name="check" size={22} color={Colors.textOnColor} />}
         </Pressable>
         <AppText style={styles.text} onPress={onToggle} color={Colors.textSecondary}>
-          Kişisel verilerimin işlenmesine ilişkin{' '}
-          <AppText
-            weight="bold"
-            color={Colors.primary}
-            style={styles.link}
-            accessibilityRole="link"
-            onPress={onOpenText}>
-            KVKK Aydınlatma Metni
-          </AppText>
-          ’ni okudum ve kabul ediyorum.
+          Kişisel verilerimin işlenmesine ilişkin aydınlatma metnini okudum ve kabul ediyorum.
         </AppText>
       </View>
+      <TextLink label="KVKK Aydınlatma Metni" onPress={onOpenText} align="flex-start" />
       <FieldError message={error} />
     </View>
   );
@@ -77,8 +74,5 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-  },
-  link: {
-    textDecorationLine: 'underline',
   },
 });

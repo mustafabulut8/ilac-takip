@@ -9,7 +9,7 @@ type TextLinkProps = {
   onPress: () => void;
   /** Bağlantıdan önce düz yazı ("Hesabınız yok mu?" gibi). */
   prefix?: string;
-  align?: 'center' | 'flex-end';
+  align?: 'center' | 'flex-start' | 'flex-end';
 };
 
 /** Altı çizili turkuaz bağlantı; dokunma alanı en az 48pt. */

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Colors, MinTouchSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { getMedicationForm, MEAL_TIMING_LABELS, type Dose } from '@/models';
 import { DAY_PERIOD_LABELS, dayPeriodOf } from '@/utils/time';
 
@@ -88,6 +88,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: Spacing.three,
+    // İçerik zaten daha yüksek; en küçük dokunma alanı yine de garanti edilir.
+    minHeight: MinTouchSize,
   },
   pressed: {
     opacity: 0.7,
