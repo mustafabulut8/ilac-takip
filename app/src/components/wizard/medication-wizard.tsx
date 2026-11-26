@@ -2,9 +2,12 @@ import { router } from 'expo-router';
 import { useEffect, type ComponentType } from 'react';
 import { Alert, BackHandler } from 'react-native';
 
-import { useMedicationWizard, type MedicationWizard } from '@/hooks/useMedicationWizard';
+import {
+  useMedicationWizard,
+  type MedicationWizard,
+  type WizardStepId,
+} from '@/hooks/useMedicationWizard';
 import type { Medication } from '@/models';
-import type { WizardStepId } from '@/hooks/useMedicationWizard';
 
 import { DoseStep } from './dose-step';
 import { FormStep } from './form-step';

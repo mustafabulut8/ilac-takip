@@ -18,9 +18,9 @@ import {
   type WizardStepId,
 } from '@/validation/wizard-steps';
 
-export type { WizardStepId };
-
 import { useMedications } from './useMedications';
+
+export type { WizardStepId };
 
 /**
  * İlaç ekleme ve düzenleme sihirbazının durumu. Yeni ilaç ilk adımdan, düzenleme

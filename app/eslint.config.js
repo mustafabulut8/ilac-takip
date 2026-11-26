@@ -44,6 +44,8 @@ module.exports = defineConfig([
     rules: {
       'max-lines': 'off',
       'max-lines-per-function': 'off',
+      // jest.mock fabrikaları modülü require ile almak zorundadır.
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 ]);

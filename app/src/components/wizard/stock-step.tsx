@@ -7,8 +7,7 @@ import { Chip, ChipGroup } from '@/components/chip-group';
 import { NumberStepper } from '@/components/number-stepper';
 import { Colors, MinTouchSize, Spacing } from '@/constants/theme';
 import type { MedicationWizard } from '@/hooks/useMedicationWizard';
-import { DEFAULT_LOW_STOCK_THRESHOLD, getMedicationForm } from '@/models';
-import { MAX_STOCK } from '@/models';
+import { DEFAULT_LOW_STOCK_THRESHOLD, getMedicationForm, MAX_STOCK } from '@/models';
 
 import { StepTitle } from './step-title';
 
