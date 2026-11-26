@@ -1,4 +1,5 @@
-# Her push ve pull request'te uygulamanın tip, lint ve test kontrolü.
+# Her push ve pull request'te yerelde çalışan `npm run kontrol` zincirinin tamamı:
+# tip kontrolü, lint ve biçim, katman kuralları, kullanılmayan kod ve kapsam eşikli testler.
 name: Kontrol
 
 on:
@@ -22,15 +23,12 @@ jobs:
 
       - name: Bağımlılıkları kur
         run: npm ci
+        env:
+          # Commit öncesi kanca yalnızca geliştiricinin bilgisayarında kurulur.
+          HUSKY: '0'
 
-      - name: Tip kontrolü (tsc)
-        run: npm run typecheck
-
-      - name: Lint ve biçim kontrolü
-        run: npm run lint
-
-      - name: Testler ve kapsam
-        run: npm test
+      - name: Kalite kapıları (npm run kontrol)
+        run: npm run kontrol
 
       - name: Kapsam raporunu sakla
         if: always()
