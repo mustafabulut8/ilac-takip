@@ -7,14 +7,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/app-text';
 import { Card } from '@/components/card';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { ProfileCard } from '@/components/profile-card';
 import { ROLE_OPTIONS } from '@/components/role-option';
 import { ScreenHeader } from '@/components/screen-header';
 import { SettingsRow } from '@/components/settings-row';
 import { TestNotificationButton } from '@/components/test-notification-button';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -46,20 +49,7 @@ export default function SettingsScreen() {
       />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.five }]}>
-        <Card style={styles.profile}>
-          <View style={styles.avatar}>
-            <AppText size="title" weight="bold" color={Colors.textOnColor}>
-              {initialOf(profile?.name)}
-            </AppText>
-          </View>
-          <View style={styles.profileTexts}>
-            <AppText size="subtitle" weight="bold">
-              {profile?.name ?? 'Hesap'}
-            </AppText>
-            {/* E-posta kısaltılmaz; uzunsa alt satıra geçer (2. tur farkları). */}
-            <AppText color={Colors.textSecondary}>{session?.user.email ?? ''}</AppText>
-          </View>
-        </Card>
+        <ProfileCard name={profile?.name} email={session?.user.email} />
 
         <Group title="HESAP">
           <SettingsRow
@@ -87,11 +77,7 @@ export default function SettingsScreen() {
           />
         </Group>
         <Group title="HAKKINDA">
-          <SettingsRow
-            icon="info"
-            label="Uygulama hakkında"
-            value={`Sürüm ${Constants.expoConfig?.version ?? '1.0.0'}`}
-          />
+          <SettingsRow icon="info" label="Uygulama hakkında" value={`Sürüm ${APP_VERSION}`} />
         </Group>
         <Card style={styles.card}>
           <SettingsRow icon="logout" label="Çıkış yap" onPress={() => setConfirmingLogout(true)} />
@@ -116,11 +102,6 @@ export default function SettingsScreen() {
   );
 }
 
-/** Adın ilk harfi (Türkçe büyük harfle); ad yoksa boş. */
-function initialOf(name?: string) {
-  return name?.trim().charAt(0).toLocaleUpperCase('tr-TR') ?? '';
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -130,22 +111,6 @@ const styles = StyleSheet.create({
     gap: Spacing.screen,
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.two,
-  },
-  profile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
-  },
-  profileTexts: {
-    flex: 1,
-    gap: 6,
   },
   group: {
     gap: Spacing.two,
