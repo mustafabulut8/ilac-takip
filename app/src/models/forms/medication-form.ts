@@ -67,7 +67,7 @@ export abstract class MedicationForm {
 
   /** Varsayılan doz birimi, örn. "adet", "ölçek". */
   doseUnit(): string {
-    return this.doseUnits()[0];
+    return this.doseUnits()[0] ?? '';
   }
 
   /** Birimin ekrandaki adı; "adet" yerine formun kendi adı yazılır, örn. "1 tablet". */

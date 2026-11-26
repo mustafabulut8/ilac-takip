@@ -105,7 +105,7 @@ describe('AsyncStorageService.load', () => {
     const { storage } = setup({
       medications: JSON.stringify([{ ...legacyMedication, form: 'syrup' }]),
     });
-    expect((await storage.load()).medications[0].form).toBe('syrup');
+    expect((await storage.load()).medications[0]?.form).toBe('syrup');
   });
 
   it('daha yeni bir sürümden gelen veride göç yapmaz', async () => {
@@ -168,8 +168,8 @@ describe('AsyncStorageService.load', () => {
       medications: JSON.stringify([{ ...legacyMedication, stock: -4, times: 'sabah' }]),
     });
     const [medication] = (await storage.load()).medications;
-    expect(medication.stock).toBe(0);
-    expect(medication.times).toEqual([]);
+    expect(medication?.stock).toBe(0);
+    expect(medication?.times).toEqual([]);
   });
 
   it('depolama hiç okunamazsa StorageError fırlatır ve yazmayı kapatır', async () => {
@@ -195,7 +195,7 @@ describe('AsyncStorageService.load', () => {
     const { store, storage } = setup({ medications: JSON.stringify([legacyMedication]) });
     store.failWrites = true;
     const data = await storage.load();
-    expect(data.medications[0].form).toBe('tablet');
+    expect(data.medications[0]?.form).toBe('tablet');
   });
 });
 

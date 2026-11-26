@@ -89,7 +89,7 @@ describe('MedicationService.add', () => {
       photoFile: 'kopya.jpg',
       createdAt: NOW.toISOString(),
     });
-    expect(photos.savePhoto).toHaveBeenCalledWith('file:///gecici.jpg', medication.id);
+    expect(photos.savePhoto).toHaveBeenCalledWith('file:///gecici.jpg', medication?.id);
     expect(storage.medications).toEqual(result.medications);
     expect(reminders.sync).toHaveBeenCalledWith(result.medications);
     expect(result.notice).toBe('İlaç kaydedildi');
@@ -98,7 +98,7 @@ describe('MedicationService.add', () => {
   it('fotoğrafsız ilaç kaydedilebilir', async () => {
     const { photos, service } = setup();
     const result = await service.add([], { ...input, photoSourceUri: null });
-    expect(result.medications[0].photoFile).toBe('');
+    expect(result.medications[0]?.photoFile).toBe('');
     expect(photos.savePhoto).not.toHaveBeenCalled();
   });
 
@@ -106,7 +106,7 @@ describe('MedicationService.add', () => {
     const { service } = setup();
     const startOf = async (times: string[]) =>
       (await service.add([], { ...input, times, duration: { kind: 'days', count: 7 } }))
-        .medications[0].startDate;
+        .medications[0]?.startDate;
     // Saat 09:00: bugünün 08:00 dozu geçti, 20:00 dozu bugün alınabilir.
     expect(await startOf(['08:00'])).toBe('2026-11-17');
     expect(await startOf(['08:00', '20:00'])).toBe('2026-11-16');
@@ -148,8 +148,8 @@ describe('MedicationService.update / remove', () => {
     const existing = makeMedication();
     const { medications, notice } = await service.update([existing], 'ilac1', { times: ['09:30'] });
 
-    expect(medications[0].times).toEqual(['09:30']);
-    expect(medications[0].pastPlans).toEqual([
+    expect(medications[0]?.times).toEqual(['09:30']);
+    expect(medications[0]?.pastPlans).toEqual([
       {
         times: ['08:00', '20:00'],
         schedule: { kind: 'daily' },
@@ -187,7 +187,7 @@ describe('MedicationService.update / remove', () => {
       const { medications } = await service.update([course], 'ilac1', {
         duration: { kind: 'days', count: 10 },
       });
-      return medications[0].startDate;
+      return medications[0]?.startDate;
     };
     expect(await startAfter('2026-11-14')).toBe('2026-11-14');
     expect(await startAfter('2026-10-01')).toBe('2026-11-16');
@@ -200,7 +200,7 @@ describe('MedicationService.update / remove', () => {
       photoSourceUri: 'file:///yeni.jpg',
     });
     expect(photos.savePhoto).toHaveBeenCalledWith('file:///yeni.jpg', `ilac1-${NOW.getTime()}`);
-    expect(medications[0].photoFile).toBe('kopya.jpg');
+    expect(medications[0]?.photoFile).toBe('kopya.jpg');
     expect(photos.deletePhoto).toHaveBeenCalledWith('ilac1.jpg');
   });
 
@@ -217,7 +217,7 @@ describe('MedicationService.update / remove', () => {
     const { storage, reminders, service } = setup();
     reminders.cancelMedication.mockRejectedValue(new Error('bildirim yok'));
     const { notice } = await service.update([makeMedication()], 'ilac1', { times: ['09:30'] });
-    expect(storage.medications[0].times).toEqual(['09:30']);
+    expect(storage.medications[0]?.times).toEqual(['09:30']);
     expect(notice).toMatch(/hatırlatma kurulamadı/);
   });
 

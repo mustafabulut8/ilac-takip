@@ -26,7 +26,8 @@ export function stepIndexOf(id: WizardStepId): number {
 /** Bu adımda düzeltilmesi gereken ilk hata; adım tamamsa undefined. */
 export function stepError(id: WizardStepId, draft: MedicationDraft): string | undefined {
   const errors = validateMedicationDraft(draft);
-  const fields: readonly MedicationField[] = WIZARD_STEPS[stepIndexOf(id)].fields;
+  const fields: readonly MedicationField[] =
+    WIZARD_STEPS.find((step) => step.id === id)?.fields ?? [];
   return fields.map((field) => errors[field]).find(Boolean);
 }
 

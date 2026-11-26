@@ -59,7 +59,7 @@ function planDefaults(createdAt: unknown) {
   };
 }
 
-export const CURRENT_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+export const CURRENT_SCHEMA_VERSION = MIGRATIONS.at(-1)?.version ?? 0;
 
 /** `fromVersion`'dan sonraki tüm göçleri sırayla uygular. */
 export function runMigrations(data: RawStoredData, fromVersion: number): RawStoredData {

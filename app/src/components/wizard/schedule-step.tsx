@@ -44,7 +44,7 @@ export function ScheduleStep({ wizard }: { wizard: MedicationWizard }) {
             <Chip
               key={day}
               multiple
-              label={WEEKDAYS_SHORT[day]}
+              label={WEEKDAYS_SHORT[day] ?? ''}
               accessibilityLabel={WEEKDAYS[day]}
               selected={selectedDays.includes(day)}
               onPress={() => toggleDay(day)}

@@ -31,7 +31,8 @@ export function useMedicationWizard(original?: Medication) {
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
 
-  const step = WIZARD_STEPS[index];
+  // index her zaman adım sınırları içindedir; ilk adım yalnızca tip güvenliği için.
+  const step = WIZARD_STEPS[index] ?? WIZARD_STEPS[0];
 
   const update = (changes: Partial<MedicationDraft>) => {
     setDraft((current) => ({ ...current, ...changes }));

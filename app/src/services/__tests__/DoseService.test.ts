@@ -45,39 +45,39 @@ describe('DoseCalculator.getTodayDoses', () => {
   });
 
   it('saatinden önce ve 30 dakika içinde "bekliyor"', () => {
-    expect(calculator.getTodayDoses([medication], [], at(7, 59))[0].status).toBe('bekliyor');
-    expect(calculator.getTodayDoses([medication], [], at(8, 30))[0].status).toBe('bekliyor');
+    expect(calculator.getTodayDoses([medication], [], at(7, 59))[0]?.status).toBe('bekliyor');
+    expect(calculator.getTodayDoses([medication], [], at(8, 30))[0]?.status).toBe('bekliyor');
   });
 
   it('30 dakika geçince "kacirildi"', () => {
-    expect(calculator.getTodayDoses([medication], [], at(8, 31))[0].status).toBe('kacirildi');
+    expect(calculator.getTodayDoses([medication], [], at(8, 31))[0]?.status).toBe('kacirildi');
   });
 
   it('onaylanmış doz "alindi"', () => {
     const logs = [log('ilac1', '2026-11-16', '08:00')];
-    expect(calculator.getTodayDoses([medication], logs, at(12))[0].status).toBe('alindi');
+    expect(calculator.getTodayDoses([medication], logs, at(12))[0]?.status).toBe('alindi');
   });
 
   it('ilaç eklenmeden önceki saat "yarin" sayılır', () => {
     const added = makeMedication({ createdAt: at(10).toISOString() });
     const [morning, evening] = calculator.getTodayDoses([added], [], at(10, 5));
-    expect(morning.status).toBe('yarin');
-    expect(evening.status).toBe('bekliyor');
+    expect(morning?.status).toBe('yarin');
+    expect(evening?.status).toBe('bekliyor');
   });
 
   it('gece yarısı gün değişince dünkü onay bugünü etkilemez', () => {
     const yesterdayLogs = [log('ilac1', '2026-11-16', '08:00')];
     const tomorrow = new Date(2026, 10, 17);
     const doses = calculator.getTodayDoses([medication], yesterdayLogs, at(0, 1, tomorrow));
-    expect(doses[0].date).toBe('2026-11-17');
-    expect(doses[0].status).toBe('bekliyor');
+    expect(doses[0]?.date).toBe('2026-11-17');
+    expect(doses[0]?.status).toBe('bekliyor');
   });
 
   it('23:59 ile 00:01 farklı günlerin dozlarını verir', () => {
     const before = calculator.getTodayDoses([medication], [], at(23, 59));
     const after = calculator.getTodayDoses([medication], [], at(0, 1, new Date(2026, 10, 17)));
-    expect(before[0].date).toBe('2026-11-16');
-    expect(after[0].date).toBe('2026-11-17');
+    expect(before[0]?.date).toBe('2026-11-16');
+    expect(after[0]?.date).toBe('2026-11-17');
   });
 });
 
@@ -221,7 +221,7 @@ describe('DoseCalculator ve HistoryService: ilerleme ve geçmiş', () => {
       [{ ...log('ilac1', '2026-11-16', '08:00'), takenAt }],
       at(9),
     );
-    expect(dose.takenAt).toBe(takenAt);
+    expect(dose?.takenAt).toBe(takenAt);
   });
 });
 
@@ -247,7 +247,7 @@ describe('DoseService.confirmDose', () => {
       '2026-11-16',
       '08:00',
     );
-    expect(next?.medications[0].stock).toBe(9.5);
+    expect(next?.medications[0]?.stock).toBe(9.5);
   });
 
   it('doz kaydını ve stok düşüşünü birlikte kaydeder', async () => {
@@ -256,7 +256,7 @@ describe('DoseService.confirmDose', () => {
 
     const next = await service.confirmDose(state, 'ilac1', '2026-11-16', '08:00');
 
-    expect(next?.medications[0].stock).toBe(9);
+    expect(next?.medications[0]?.stock).toBe(9);
     expect(next?.doseLogs).toEqual([
       {
         id: 'ilac1_2026-11-16_08:00',
@@ -282,7 +282,7 @@ describe('DoseService.confirmDose', () => {
 
     expect(second).toBeNull();
     expect(storage.saveCount).toBe(1);
-    expect(first?.medications[0].stock).toBe(9);
+    expect(first?.medications[0]?.stock).toBe(9);
   });
 
   it('aynı saatin farklı günleri ayrı dozdur', async () => {
@@ -294,7 +294,7 @@ describe('DoseService.confirmDose', () => {
       '08:00',
     );
     const second = await service.confirmDose(first!, 'ilac1', '2026-11-17', '08:00');
-    expect(second?.medications[0].stock).toBe(8);
+    expect(second?.medications[0]?.stock).toBe(8);
   });
 
   it('stok sıfırken onaylanınca negatife düşmez', async () => {
@@ -305,7 +305,7 @@ describe('DoseService.confirmDose', () => {
       '2026-11-16',
       '08:00',
     );
-    expect(next?.medications[0].stock).toBe(0);
+    expect(next?.medications[0]?.stock).toBe(0);
     expect(next?.doseLogs).toHaveLength(1);
   });
 
@@ -317,7 +317,7 @@ describe('DoseService.confirmDose', () => {
       '2026-11-16',
       '08:00',
     );
-    expect(next?.medications[0].stock).toBe(3);
+    expect(next?.medications[0]?.stock).toBe(3);
   });
 
   it('yalnızca onaylanan ilacın stoğu düşer', async () => {
@@ -362,7 +362,7 @@ describe('DoseService.confirmDose', () => {
     const logs = [log('ilac1', '2026-11-16', '08:00')];
     expect(calculator.isTaken(logs, 'ilac1', '2026-11-16', '08:00')).toBe(true);
     expect(calculator.isTaken(logs, 'ilac1', '2026-11-16', '20:00')).toBe(false);
-    expect(calculator.logIdOf('ilac1', '2026-11-16', '08:00')).toBe(logs[0].id);
+    expect(calculator.logIdOf('ilac1', '2026-11-16', '08:00')).toBe(logs[0]?.id);
   });
 });
 

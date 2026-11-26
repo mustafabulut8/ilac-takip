@@ -2,7 +2,7 @@ import { Colors, FontSize, MinButtonHeight, MinTouchSize } from '@/constants/the
 
 /** WCAG 2 göreli parlaklık. */
 function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((i) => {
     const channel = parseInt(hex.slice(i, i + 2), 16) / 255;
     return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
   });
@@ -10,7 +10,7 @@ function luminance(hex: string): number {
 }
 
 function contrast(first: string, second: string): number {
-  const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+  const [light = 0, dark = 0] = [luminance(first), luminance(second)].sort((a, b) => b - a);
   return (light + 0.05) / (dark + 0.05);
 }
 

@@ -1,12 +1,17 @@
 import { useState } from 'react';
 
-import { historyService } from '@/services';
+import { historyService, type HistoryDay } from '@/services';
 import { addDays, formatDate, startOfWeek } from '@/utils/date';
 
 import { useMedications } from './useMedications';
 import { useNow } from './useNow';
 
 export type { DaySummary, HistoryDay } from '@/services';
+
+/** Hafta günlerinin dışında kalırsa gösterilecek boş gün (getWeek her zaman 7 gün verir). */
+function emptyDay(day: Date): HistoryDay {
+  return { day, date: formatDate(day), doses: [], summary: 'open' };
+}
 
 /** Geçmiş ekranının haftası ve seçili günü. Gelecek haftalara geçilmez. */
 export function useHistoryWeek() {
@@ -22,7 +27,7 @@ export function useHistoryWeek() {
   const selectedDay =
     week.days.find((day) => day.date === selected) ??
     week.days.find((day) => day.date === today) ??
-    week.days[6];
+    emptyDay(addDays(monday, 6));
 
   return {
     week,

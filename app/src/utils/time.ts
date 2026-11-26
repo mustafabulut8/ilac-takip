@@ -12,7 +12,7 @@ export function formatTime(hour: number, minute: number) {
 
 /** "08:30" → { hour: 8, minute: 30 } */
 export function parseTime(time: string) {
-  const [hour, minute] = time.split(':').map(Number);
+  const [hour = Number.NaN, minute = Number.NaN] = time.split(':').map(Number);
   return { hour, minute };
 }
 
