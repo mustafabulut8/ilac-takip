@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { doseCalculator } from '@/services';
-import { addDays, atTime } from '@/utils/date';
+import { addDays, atTime, parseDate } from '@/utils/date';
 
 import { useConfirmDose } from './useConfirmDose';
 import { useMedications } from './useMedications';
@@ -16,9 +16,15 @@ export function useSimpleHome() {
 
   const today = doseCalculator.getTodayDoses(medications, doseLogs, now);
   const progress = doseCalculator.progressOf(today);
-  const focus = doseCalculator.focusDose(today, now);
+  // Dünün hâlâ alınabilen dozu (ör. 23:50 dozu 00:10'da) da gösterilebilir.
+  const focus = doseCalculator.focusDose(
+    doseCalculator.getVisibleDoses(medications, doseLogs, now),
+    now,
+  );
   const lateMinutes = focus
-    ? Math.floor((now.getTime() - atTime(now, focus.time).getTime()) / 60000)
+    ? Math.floor(
+        (now.getTime() - atTime(parseDate(focus.date) ?? now, focus.time).getTime()) / 60000,
+      )
     : 0;
   const tomorrow = doseCalculator
     .getDosesOn(addDays(now, 1), medications, doseLogs, now)

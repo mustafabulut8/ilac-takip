@@ -6,9 +6,9 @@ import {
   type DoseStatus,
   type Medication,
 } from '@/models';
-import { atTime, formatDate } from '@/utils/date';
+import { addDays, atTime, formatDate, parseDate } from '@/utils/date';
 import { isScheduledOn } from '@/utils/schedule';
-import { DAY_PERIODS, dayPeriodOf, formatTime, type DayPeriod } from '@/utils/time';
+import { DAY_PERIODS, dayPeriodOf, type DayPeriod } from '@/utils/time';
 
 export type DoseGroup = { period: DayPeriod; doses: Dose[] };
 
@@ -40,6 +40,18 @@ export class DoseCalculator {
   /** `now` gününün dozlarını saate göre sıralı ve durumları hesaplanmış olarak döner. */
   getTodayDoses(medications: Medication[], doseLogs: DoseLog[], now: Date): Dose[] {
     return this.getDosesOn(now, medications, doseLogs, now);
+  }
+
+  /**
+   * Bugün ve Sade ekranında gösterilen dozlar: bugünün dozları ve önlerinde, gece
+   * yarısını geçmiş ama alma süresi dolmamış dünkü dozlar (ör. 23:50 dozu 00:10'da).
+   * İlerleme bunlarla değil, yalnızca `getTodayDoses` ile sayılır.
+   */
+  getVisibleDoses(medications: Medication[], doseLogs: DoseLog[], now: Date): Dose[] {
+    const stillOpen = this.getDosesOn(addDays(now, -1), medications, doseLogs, now).filter(
+      (dose) => dose.status === 'bekliyor',
+    );
+    return [...stillOpen, ...this.getTodayDoses(medications, doseLogs, now)];
   }
 
   /** Verilen günün dozları; o gün geçerli olan plana göre hesaplanır. */
@@ -89,13 +101,18 @@ export class DoseCalculator {
    * Sade mod ana ekranında gösterilen tek doz: saati gelmiş ama alınmamış en son doz
    * (gecikmiş veya kaçırılmış); yoksa sıradaki bekleyen doz. Yeni bir dozun saati
    * gelince önceki kaçırılan doz ekrandan çekilir, Geçmiş'te kaçırıldı olarak kalır.
-   * Dozlar `getTodayDoses` gibi saate göre sıralı olmalıdır.
+   * Dozlar `getVisibleDoses` gibi gün ve saate göre sıralı olmalıdır. Saat, dozun kendi
+   * gününe göre karşılaştırılır; dünün 23:50 dozu 00:10'da saati gelmiş sayılır.
    */
   focusDose(doses: Dose[], now: Date): Dose | undefined {
-    const clock = formatTime(now.getHours(), now.getMinutes());
     const open = doses.filter((dose) => dose.status === 'bekliyor' || dose.status === 'kacirildi');
-    const due = open.filter((dose) => dose.time <= clock);
+    const due = open.filter((dose) => this.momentOf(dose, now) <= now.getTime());
     return due.at(-1) ?? open.find((dose) => dose.status === 'bekliyor');
+  }
+
+  /** Dozun saatinin geldiği an (dozun kendi gününde). */
+  private momentOf(dose: Dose, now: Date) {
+    return atTime(parseDate(dose.date) ?? now, dose.time).getTime();
   }
 
   private dosesOf(medication: Medication, context: DayContext, doseLogs: DoseLog[]): Dose[] {

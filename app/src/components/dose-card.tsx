@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Colors, MinTouchSize, Radius, Shadow, Spacing } from '@/constants/theme';
 import { getMedicationForm, MEAL_TIMING_LABELS, type Dose } from '@/models';
+import { formatDate } from '@/utils/date';
 import { DAY_PERIOD_LABELS, dayPeriodOf } from '@/utils/time';
 
 import { AppText } from './app-text';
@@ -15,15 +16,34 @@ type DoseCardProps = {
   dose: Dose;
   /** Verilmezse kart dokunulamaz (Geçmiş). */
   onPress?: () => void;
+  /** Verilirse dünden kalan dozda saatin önüne "Dün" yazılır. */
+  now?: Date;
   /** Sıradaki doz vurgulanır ve onay butonu gösterilir. */
   isNext?: boolean;
 };
 
-export function DoseCard({ dose, onPress, isNext }: DoseCardProps) {
-  const { medication, time } = dose;
+/**
+ * Kartta görünen ve ekran okuyucunun söylediği saat. Gece yarısından sonra dünün 23:50
+ * dozu bugünün 23:50 dozuyla karışmasın diye önüne "Dün" eklenir.
+ */
+function timeTextsOf({ date, time }: Dose, now?: Date) {
+  const fromYesterday = !!now && date < formatDate(now);
+  return {
+    shown: `${fromYesterday ? 'Dün · ' : ''}${time} · ${DAY_PERIOD_LABELS[dayPeriodOf(time)]}`,
+    spoken: `${fromYesterday ? 'dün ' : ''}saat ${time}`,
+  };
+}
+
+function detailOf({ dose, mealTiming }: Dose['medication']) {
+  const meal = mealTiming === 'any' ? '' : MEAL_TIMING_LABELS[mealTiming];
+  return [dose, meal].filter(Boolean).join(' · ');
+}
+
+export function DoseCard({ dose, onPress, isNext, now }: DoseCardProps) {
+  const { medication } = dose;
   const look = statusLook(dose);
-  const meal = medication.mealTiming === 'any' ? '' : MEAL_TIMING_LABELS[medication.mealTiming];
-  const detail = [medication.dose, meal].filter(Boolean).join(' · ');
+  const detail = detailOf(medication);
+  const times = timeTextsOf(dose, now);
 
   return (
     <View style={[styles.card, isNext && styles.next]}>
@@ -31,7 +51,7 @@ export function DoseCard({ dose, onPress, isNext }: DoseCardProps) {
       <Pressable
         accessibilityRole={onPress ? 'button' : undefined}
         accessible
-        accessibilityLabel={`${medication.name}, ${detail}, saat ${time}, ${look.label}`}
+        accessibilityLabel={`${medication.name}, ${detail}, ${times.spoken}, ${look.label}`}
         disabled={!onPress || dose.status === 'yarin'}
         onPress={onPress}
         style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -46,9 +66,7 @@ export function DoseCard({ dose, onPress, isNext }: DoseCardProps) {
           {detail !== '' && <AppText color={Colors.textSecondary}>{detail}</AppText>}
           <View style={styles.time}>
             <Icon name="clock" size={20} color={Colors.primary} />
-            <AppText weight="semibold">
-              {time} · {DAY_PERIOD_LABELS[dayPeriodOf(time)]}
-            </AppText>
+            <AppText weight="semibold">{times.shown}</AppText>
           </View>
           <StatusChip dose={dose} />
         </View>

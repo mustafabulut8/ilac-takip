@@ -65,8 +65,9 @@ export default function TodayScreen() {
           />
           {groupDoses.map((dose) => (
             <DoseCard
-              key={`${dose.medication.id}_${dose.time}`}
+              key={`${dose.medication.id}_${dose.date}_${dose.time}`}
               dose={dose}
+              now={now}
               isNext={dose === nextDose}
               onPress={() => openDose(dose)}
             />

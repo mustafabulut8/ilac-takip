@@ -22,7 +22,16 @@ describe('gece yarısını aşan dozlar', () => {
     expect(statusAt('2026-11-16', '23:50', moment('2026-11-17', '00:21'), late)).toBe('kacirildi');
   });
 
-  it('dünün dozu bugünün listesine girmez; bugünün 23:50 dozu bekler', () => {
+  it('görünen dozlarda dünün alınabilen dozu öne gelir, süresi dolunca çıkar', () => {
+    const visible = (time: string) =>
+      calculator
+        .getVisibleDoses([late], [], moment('2026-11-17', time))
+        .map((dose) => `${dose.date} ${dose.time} ${dose.status}`);
+    expect(visible('00:10')).toEqual(['2026-11-16 23:50 bekliyor', '2026-11-17 23:50 bekliyor']);
+    expect(visible('00:25')).toEqual(['2026-11-17 23:50 bekliyor']);
+  });
+
+  it('günün dozlarına (ilerleme) dünün dozu girmez; bugünün 23:50 dozu bekler', () => {
     const today = calculator.getTodayDoses([late], [], moment('2026-11-17', '00:10'));
     expect(today).toEqual([expect.objectContaining({ date: '2026-11-17', status: 'bekliyor' })]);
   });
