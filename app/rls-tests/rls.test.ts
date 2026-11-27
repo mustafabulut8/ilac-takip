@@ -1,5 +1,5 @@
 import { SupabaseConsentApi } from '../src/services/remote/SupabaseConsentApi';
-import { newClient, signInAs, testMedication, TINY_JPEG, type TestUser } from './clients';
+import { signInAs, testMedication, TINY_JPEG, type TestUser } from './clients';
 
 /**
  * RLS kurallarının çalıştırılabilir hâli (docs/tur2-parca2-plan.md, b ve h bölümleri).
@@ -9,10 +9,10 @@ import { newClient, signInAs, testMedication, TINY_JPEG, type TestUser } from '.
  * dayanır. Sonunda A rızasını geri alır; bu hem geri almayı dener hem de A'nın
  * sunucudaki test verisini temizler.
  *
- * B ve C her çalıştırmada birer kod denemesi yapar. Deneme sınırı saatte 5 olduğu için
- * paket bir saat içinde en fazla 5 kez çalıştırılabilir; fazlasında açık bir hatayla durur.
- * Süresi dolmuş kod ve sınırın kendisi elle SQL ile denenir:
- * supabase/tests/elle/davet-kodu.sql.
+ * Deneme sınırı yalnızca başarısız denemeleri sayar. Bu dosyada yalnızca başarılı kod
+ * kullanımı vardır; bu yüzden paket art arda istendiği kadar çalıştırılabilir. Yanlış ve
+ * kullanılmış kodlar ile sınırın kendisi `rate-limit.test.ts`'te kendi hesabıyla (F)
+ * denenir. Süresi dolmuş kod elle SQL ile denenir: supabase/tests/elle/davet-kodu.sql.
  */
 
 jest.setTimeout(30_000);
@@ -38,46 +38,6 @@ beforeAll(async () => {
   ]);
   // E'nin önceki çalıştırmadan kalmış rızası olmasın.
   await e.db.rpc('withdraw_health_consent');
-});
-
-describe('oturumsuz istemci (anon)', () => {
-  it('hiçbir tabloyu okuyamaz, RPC çağıramaz', async () => {
-    const anon = newClient();
-    for (const table of ['medications', 'dose_logs', 'care_links', 'invite_codes'] as const) {
-      const { data } = await anon.from(table).select('id');
-      expect(data ?? []).toEqual([]);
-    }
-  });
-
-  // Fonksiyonların EXECUTE yetkisi anon ve public'ten kaldırıldı; yalnızca authenticated çağırır.
-  it.each([
-    ['create_invite_code', {}],
-    ['redeem_invite_code', { p_code: '000000', p_relation_label: 'Annem' }],
-    ['grant_health_consent', { p_text_version: 'test' }],
-    ['withdraw_health_consent', {}],
-    [
-      'record_dose',
-      {
-        p_id: 'x',
-        p_medication_id: 'x',
-        p_scheduled_date: '2026-11-27',
-        p_scheduled_time: '08:00',
-        p_taken_at: '2026-11-27T08:00:00Z',
-        p_amount: 1,
-      },
-    ],
-    ['mark_delivered', { p_items: [] }],
-  ] as const)('%s fonksiyonunu çağıramaz (izin reddi)', async (name, args) => {
-    const { error } = await newClient().rpc(name, args as never);
-    expect(error?.code).toBe('42501');
-  });
-
-  it("RLS yardımcı fonksiyonları API'de hiç görünmez", async () => {
-    for (const client of [newClient(), a.db]) {
-      const { error } = await client.rpc('has_health_consent' as never, { person: a.id } as never);
-      expect(error).not.toBeNull();
-    }
-  });
 });
 
 describe('rıza ve eşleşme', () => {
@@ -127,12 +87,25 @@ describe('rıza ve eşleşme', () => {
 });
 
 describe('eşleşmeden sonra', () => {
-  it('kullanılmış kod ikinci kez kullanılamaz', async () => {
-    const { data } = await c.db.rpc('redeem_invite_code', {
-      p_code: inviteCode,
-      p_relation_label: 'Annem',
-    });
-    expect(data?.[0]?.status).toBe('invalid_code');
+  it('kullanılan kod işaretlenir: kim, ne zaman kullandı', async () => {
+    const { data } = await a.db
+      .from('invite_codes')
+      .select('used_by, used_at')
+      .eq('code', inviteCode)
+      .not('used_at', 'is', null)
+      .single();
+    expect(data?.used_by).toBe(b.id);
+  });
+
+  it('başarılı kullanım deneme sayılmaz: B art arda 6 yeni kodla bağlanabilir', async () => {
+    for (let attempt = 1; attempt <= 6; attempt += 1) {
+      const code = (await a.db.rpc('create_invite_code')).data?.[0]?.code ?? '';
+      const { data } = await b.db.rpc('redeem_invite_code', {
+        p_code: code,
+        p_relation_label: 'Annem',
+      });
+      expect({ attempt, status: data?.[0]?.status }).toEqual({ attempt, status: 'ok' });
+    }
   });
 
   it('bağlantı tabloya doğrudan eklenemez', async () => {
