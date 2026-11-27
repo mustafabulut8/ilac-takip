@@ -108,6 +108,9 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
   }
 
   /** İlaç silinince veya değişince onun bütün hatırlatmaları (ertelenenler dahil) kaldırılır. */
+  /** İSKELET: çıkışta henüz hiçbir bildirim kaldırılmıyor. */
+  async clearAll() {}
+
   async cancelMedication(medication: Medication) {
     const scheduled = await this.api.getAllScheduledNotificationsAsync();
     await Promise.all(

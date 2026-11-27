@@ -59,6 +59,9 @@ export class LocalDeviceStore {
     this.now = now;
   }
 
+  /** İSKELET: hesap değişince bellekteki kopya henüz bırakılmıyor. */
+  reset() {}
+
   read(): Promise<DeviceData> {
     this.reading ??= this.readFromDisk().finally(() => {
       this.reading = null;
