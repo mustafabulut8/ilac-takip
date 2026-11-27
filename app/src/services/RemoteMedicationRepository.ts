@@ -41,8 +41,9 @@ export class RemoteMedicationRepository implements MedicationRepository {
     return this.write(medication);
   }
 
-  async remove(id: string) {
-    const written = await this.rows.softDelete(id, this.now().toISOString());
+  /** `at`: silinme anı; telefondaki kuyruk silmenin yapıldığı anı verir (son yazan kazanır). */
+  async remove(id: string, at = this.now().toISOString()) {
+    const written = await this.rows.softDelete(id, at);
     if (!written) await this.throwStale(id);
   }
 

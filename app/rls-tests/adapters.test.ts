@@ -47,3 +47,37 @@ describe('uygulamanın sunucu adaptörü (SupabaseMedicationRows)', () => {
     expect((await repository.load()).items.map((item) => item.id)).not.toContain(row.id);
   });
 });
+
+describe('eşitleme sorguları (SyncApi)', () => {
+  it('değişiklikler mikro saniyeli sunucu sürümüyle gelir; imleçten sonrası istenir', async () => {
+    const rows = new SupabaseMedicationRows(a.db);
+    const row = testMedication(`imlec-${Date.now().toString(36)}`, a.id);
+    expect(await rows.write({ ...row, deleted_at: null })).toBe(true);
+
+    const all = (await rows.changedSince(a.id, null)) as {
+      id: string;
+      server_updated_at: string;
+    }[];
+    const mine = all.find((item) => item.id === row.id);
+    expect(mine?.server_updated_at).toMatch(/\.\d{1,6}\+00:00$/);
+
+    const after = (await rows.changedSince(a.id, mine!.server_updated_at)) as { id: string }[];
+    expect(after.map((item) => item.id)).not.toContain(row.id);
+  });
+
+  it('doz iki kez gönderilse de stok bir kez düşer', async () => {
+    const rows = new SupabaseMedicationRows(a.db);
+    const row = testMedication(`doz-${Date.now().toString(36)}`, a.id, { stock: 10 });
+    await rows.write({ ...row, deleted_at: null });
+    const log = {
+      id: `${row.id}_2026-11-27_08:00`,
+      medicationId: row.id,
+      date: '2026-11-27',
+      time: '08:00',
+      takenAt: new Date().toISOString(),
+    };
+    await rows.recordDose(log, 1);
+    await rows.recordDose(log, 1);
+    expect(await rows.fetch(row.id)).toMatchObject({ stock: 9 });
+  });
+});
