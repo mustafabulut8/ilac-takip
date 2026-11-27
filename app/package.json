@@ -92,6 +92,7 @@
       "!src/**/__tests__/**",
       "!src/services/index.ts",
       "!src/services/supabase.ts",
+      "!src/services/remote/**",
       "!src/models/index.ts",
       "!src/errors/index.ts",
       "!src/config.ts",

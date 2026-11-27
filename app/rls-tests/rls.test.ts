@@ -1,3 +1,7 @@
+import { StaleWriteError } from '../src/errors';
+import { RemoteMedicationRepository } from '../src/services/RemoteMedicationRepository';
+import { SupabaseMedicationRows } from '../src/services/remote/SupabaseMedicationRows';
+import { parseMedicationRow } from '../src/validation/medication-rows';
 import { newClient, signInAs, testMedication, TINY_JPEG, type TestUser } from './clients';
 
 /**
@@ -181,6 +185,29 @@ describe('ilaçlar', () => {
     expect(
       (await c.db.from('medications').insert(testMedication(id('c'), a.id))).error,
     ).not.toBeNull();
+  });
+});
+
+describe('uygulamanın sunucu adaptörü (SupabaseMedicationRows)', () => {
+  it('eski sürümle yazma false döner; repository güncel hâli çekip StaleWriteError fırlatır', async () => {
+    const rows = new SupabaseMedicationRows(a.db);
+    const repository = new RemoteMedicationRepository(rows, a.id, () => new Date());
+    const now = new Date().toISOString();
+    const row = testMedication('adaptor', a.id, { name: 'Güncel', updated_at: now });
+    expect(await rows.write({ ...row, deleted_at: null })).toBe(true);
+
+    const old = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    expect(await rows.write({ ...row, name: 'Eski', updated_at: old, deleted_at: null })).toBe(
+      false,
+    );
+
+    const stale = parseMedicationRow({ ...row, name: 'Eski', updated_at: old });
+    const error = await repository.update(stale!).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(StaleWriteError);
+    expect((error as StaleWriteError).current?.name).toBe('Güncel');
+
+    await repository.remove(row.id);
+    expect((await repository.load()).items.map((item) => item.id)).not.toContain(row.id);
   });
 });
 

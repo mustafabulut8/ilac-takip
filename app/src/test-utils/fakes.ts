@@ -2,6 +2,8 @@ import type { DoseLog, Medication } from '@/models';
 import type { KeyValueStore } from '@/services/local/LocalDeviceStore';
 import type { StoredData } from '@/services/MedicationService';
 import type { DoseLogRepository, MedicationRepository } from '@/services/repositories';
+import type { MedicationRowsApi } from '@/services/remote-ports';
+import type { MedicationRow } from '@/validation/medication-rows';
 
 /** AsyncStorage yerine bellekte çalışan sahte anahtar-değer deposu. */
 export class MemoryKeyValueStore implements KeyValueStore {
@@ -114,4 +116,52 @@ export function makeMedication(overrides: Partial<Medication> = {}): Medication 
     photoPath: '',
     ...overrides,
   };
+}
+
+type Row = Record<string, unknown> & { id: string };
+
+/**
+ * Sunucudaki `medications` tablosunun sahtesi. Veritabanı tetikleyicisindeki "son yazan
+ * kazanır" kuralını taklit eder: `updated_at`'i mevcut satırdan eski olan yazma atlanır.
+ */
+export class FakeMedicationRows implements MedicationRowsApi {
+  readonly rows = new Map<string, Row>();
+  /** Bu kimliklere yazma RLS'e takılmış gibi atlanır ve satır görünmez. */
+  readonly rejectWritesFor = new Set<string>();
+
+  put(row: Record<string, unknown>) {
+    this.rows.set(String(row.id), row as Row);
+  }
+
+  get(id: string) {
+    return this.rows.get(id);
+  }
+
+  async list(ownerId: string) {
+    return [...this.rows.values()].filter(
+      (row) => row.owner_id === ownerId && row.deleted_at === null,
+    );
+  }
+
+  async write(row: MedicationRow) {
+    if (this.rejectWritesFor.has(row.id)) return false;
+    const existing = this.rows.get(row.id);
+    if (existing && Date.parse(row.updated_at) < Date.parse(String(existing.updated_at))) {
+      return false;
+    }
+    this.rows.set(row.id, { ...existing, ...row });
+    return true;
+  }
+
+  async softDelete(id: string, at: string) {
+    const existing = this.rows.get(id);
+    if (!existing || Date.parse(at) < Date.parse(String(existing.updated_at))) return false;
+    this.rows.set(id, { ...existing, deleted_at: at, updated_at: at });
+    return true;
+  }
+
+  async fetch(id: string) {
+    if (this.rejectWritesFor.has(id)) return null;
+    return this.rows.get(id) ?? null;
+  }
 }
