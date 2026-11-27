@@ -21,6 +21,7 @@ import { LocalDeviceStore } from './local/LocalDeviceStore';
 import { LocalDoseLogRepository } from './local/LocalDoseLogRepository';
 import { LocalMedicationRepository } from './local/LocalMedicationRepository';
 import { RemoteMedicationRepository } from './RemoteMedicationRepository';
+import { backgroundSync } from './remote/BackgroundSync';
 import { ExpoNetworkStatus } from './remote/ExpoNetworkStatus';
 import { RealtimeMedicationChanges } from './remote/RealtimeMedicationChanges';
 import { SupabaseConsentApi } from './remote/SupabaseConsentApi';
@@ -111,3 +112,17 @@ export const authService = new AuthService(
   new ProfileCache(AsyncStorage),
   isSupabaseConfigured(),
 );
+
+/**
+ * Arka planda uyanınca React ağacı yoktur; sahip ve rıza burada okunur. Rıza yoksa
+ * eşitleme açılmaz (ADR-021).
+ */
+backgroundSync.define(async () => {
+  const session = await authService.getSession();
+  const userId = session?.user.id;
+  if (!userId || (await consentService.current(userId)).status !== 'granted') return;
+  syncService.setOwner(userId);
+  syncService.start();
+  await syncService.run();
+});
+void backgroundSync.register();
