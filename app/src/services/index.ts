@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { isSupabaseConfigured } from '@/config';
 
 import { AuthService } from './AuthService';
+import { CareService } from './CareService';
 import { ConsentService } from './ConsentService';
 import { ProfileCache } from './ProfileCache';
 import { ProfileRepository } from './ProfileRepository';
@@ -24,6 +25,7 @@ import { RemoteMedicationRepository } from './RemoteMedicationRepository';
 import { backgroundSync } from './remote/BackgroundSync';
 import { ExpoNetworkStatus } from './remote/ExpoNetworkStatus';
 import { RealtimeMedicationChanges } from './remote/RealtimeMedicationChanges';
+import { SupabaseCareApi } from './remote/SupabaseCareApi';
 import { SupabaseConsentApi } from './remote/SupabaseConsentApi';
 import { SupabaseMedicationRows } from './remote/SupabaseMedicationRows';
 import type { DoseLogRepository, MedicationRepository } from './repositories';
@@ -83,6 +85,7 @@ const repositories: { medications: MedicationRepository; doseLogs: DoseLogReposi
 };
 export const networkStatus = new ExpoNetworkStatus();
 export const realtimeMedicationChanges = new RealtimeMedicationChanges(supabase);
+export const careService = new CareService(new SupabaseCareApi(supabase), networkStatus);
 export const consentService = new ConsentService(
   new SupabaseConsentApi(supabase),
   AsyncStorage,

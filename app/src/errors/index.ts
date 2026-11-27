@@ -1,5 +1,6 @@
 export { AppError, userMessageOf } from './app-error';
 export { AuthError, type AuthErrorKind } from './auth-error';
+export { CareError, type CareErrorKind } from './care-error';
 export { NotificationError } from './notification-error';
 export { OfflineError } from './offline-error';
 export { StaleWriteError } from './stale-write-error';

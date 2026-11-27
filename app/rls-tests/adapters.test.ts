@@ -1,5 +1,7 @@
 import { StaleWriteError } from '../src/errors';
 import { RemoteMedicationRepository } from '../src/services/RemoteMedicationRepository';
+import { CareService } from '../src/services/CareService';
+import { SupabaseCareApi } from '../src/services/remote/SupabaseCareApi';
 import { SupabaseConsentApi } from '../src/services/remote/SupabaseConsentApi';
 import { SupabaseMedicationRows } from '../src/services/remote/SupabaseMedicationRows';
 import { parseMedicationRow } from '../src/validation/medication-rows';
@@ -79,5 +81,42 @@ describe('eşitleme sorguları (SyncApi)', () => {
     await rows.recordDose(log, 1);
     await rows.recordDose(log, 1);
     expect(await rows.fetch(row.id)).toMatchObject({ stock: 9 });
+  });
+});
+
+describe('davet kodu ve bağlantılar (SupabaseCareApi + CareService)', () => {
+  const online = { isOnline: async () => true };
+
+  it('A kod üretir, B bağlanır; iki taraf karşısındakini görür; bağlantı kaldırılır', async () => {
+    const b = await signInAs('B', 'Test Aile', 'aile');
+    const patient = new CareService(new SupabaseCareApi(a.db), online);
+    const caregiver = new CareService(new SupabaseCareApi(b.db), online);
+
+    const { code } = await patient.createInviteCode();
+    expect(
+      await caregiver.redeem({
+        code: `${code.slice(0, 3)} ${code.slice(3)}`,
+        relationLabel: 'Annem',
+      }),
+    ).toEqual({
+      patientId: a.id,
+      patientName: 'Test Sade',
+    });
+
+    const fromCaregiver = await caregiver.links(b.id);
+    expect(fromCaregiver).toContainEqual(
+      expect.objectContaining({
+        personId: a.id,
+        name: 'Test Sade',
+        role: 'sade',
+        relationLabel: 'Annem',
+      }),
+    );
+    const fromPatient = await patient.links(a.id);
+    const link = fromPatient.find((item) => item.personId === b.id);
+    expect(link).toMatchObject({ name: 'Test Aile', role: 'aile' });
+
+    await patient.removeLink(link!.id);
+    expect((await caregiver.links(b.id)).map((item) => item.personId)).not.toContain(a.id);
   });
 });
