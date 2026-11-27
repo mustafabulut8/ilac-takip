@@ -12,6 +12,7 @@ import { ProfileRepository } from './ProfileRepository';
 import { supabase } from './supabase';
 import { DoseCalculator } from './DoseCalculator';
 import { DoseService } from './DoseService';
+import { createFamilyServices, FamilyDashboardService } from './family';
 import { HistoryService } from './HistoryService';
 import { MedicationService } from './MedicationService';
 import { NotificationService } from './NotificationService';
@@ -27,6 +28,7 @@ import { ExpoNetworkStatus } from './remote/ExpoNetworkStatus';
 import { RealtimeMedicationChanges } from './remote/RealtimeMedicationChanges';
 import { SupabaseCareApi } from './remote/SupabaseCareApi';
 import { SupabaseConsentApi } from './remote/SupabaseConsentApi';
+import { SupabaseDoseLogRows } from './remote/SupabaseDoseLogRows';
 import { SupabaseMedicationRows } from './remote/SupabaseMedicationRows';
 import type { DoseLogRepository, MedicationRepository } from './repositories';
 import { SyncService } from './SyncService';
@@ -36,6 +38,7 @@ import { SyncService } from './SyncService';
 export type { AuthService } from './AuthService';
 export type { ConsentService, ConsentState } from './ConsentService';
 export type { DoseService } from './DoseService';
+export type { FamilySummary } from './family';
 export type { DaySummary, HistoryDay } from './HistoryService';
 export type { MedicationChanges, MedicationService } from './MedicationService';
 export type { NotificationPermissionStatus } from './NotificationService';
@@ -85,6 +88,26 @@ const repositories: { medications: MedicationRepository; doseLogs: DoseLogReposi
 };
 export const networkStatus = new ExpoNetworkStatus();
 export const realtimeMedicationChanges = new RealtimeMedicationChanges(supabase);
+export const doseCalculator = new DoseCalculator();
+const doseLogRows = new SupabaseDoseLogRows(supabase);
+export const familyDashboard = new FamilyDashboardService(
+  medicationRows,
+  doseLogRows,
+  doseCalculator,
+  systemClock,
+);
+/** Aile üyesinin yakını için servisler (depo sunucuda, hatırlatıcı boş). */
+export const familyServicesFor = (patientId: string) =>
+  createFamilyServices(
+    {
+      rows: medicationRows,
+      doseRows: doseLogRows,
+      photos: photoService,
+      realtime: realtimeMedicationChanges,
+      now: systemClock,
+    },
+    patientId,
+  );
 export const careService = new CareService(new SupabaseCareApi(supabase), networkStatus);
 export const consentService = new ConsentService(
   new SupabaseConsentApi(supabase),
@@ -93,7 +116,6 @@ export const consentService = new ConsentService(
   networkStatus,
   systemClock,
 );
-export const doseCalculator = new DoseCalculator();
 export const historyService = new HistoryService(doseCalculator);
 export const doseService = new DoseService(
   repositories.doseLogs,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { CareLink } from '@/models';
 import { careService } from '@/services';
@@ -34,7 +34,8 @@ export function useCareLinks() {
     };
   }, [userId, version]);
 
-  const reload = () => setVersion((current) => current + 1);
+  // Sabit kimlik: Aile Paneli ekrana her dönüşte bunu çağırır (useFocusEffect).
+  const reload = useCallback(() => setVersion((current) => current + 1), []);
 
   /** Hata onay penceresinde gösterilsin diye fırlatılır. */
   const remove = async (id: string) => {

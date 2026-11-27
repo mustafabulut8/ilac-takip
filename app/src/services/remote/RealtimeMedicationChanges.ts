@@ -7,6 +7,8 @@ import type { Database } from '@/types/database';
  * ilacı düzenleyince telefon uygulama açıkken hemen eşitlenir; kapalıyken açılışta ve
  * öne gelince eşitlenir. RLS burada da geçerlidir: yalnızca görebildiği satırlar gelir.
  */
+let channelCount = 0;
+
 export class RealtimeMedicationChanges {
   private readonly db: Pick<SupabaseClient<Database>, 'channel' | 'removeChannel'>;
 
@@ -16,10 +18,17 @@ export class RealtimeMedicationChanges {
 
   subscribe(ownerId: string, onChange: () => void) {
     const channel = this.db
-      .channel(`medications-${ownerId}`)
+      // Aynı kişiyi iki ekran dinleyebilir; her abonelik kendi kanalını açar.
+      .channel(`medications-${ownerId}-${(channelCount += 1)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'medications', filter: `owner_id=eq.${ownerId}` },
+        onChange,
+      )
+      // Aile paneli doz onaylarını da canlı görür.
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'dose_logs', filter: `owner_id=eq.${ownerId}` },
         onChange,
       )
       .subscribe();

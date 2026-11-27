@@ -15,6 +15,12 @@ export class ExpoNetworkStatus implements NetworkStatus {
     return isOnline(await Network.getNetworkStateAsync());
   }
 
+  /** Her durum değişikliğinde haber verir (aile ekranlarında düğmeleri kapatmak için). */
+  onChange(listener: (online: boolean) => void) {
+    const subscription = Network.addNetworkStateListener((state) => listener(isOnline(state)));
+    return () => subscription.remove();
+  }
+
   /** İnternet geri gelince haber verir (kuyruk o an gönderilir). */
   onReconnect(listener: () => void) {
     let wasOnline = true;

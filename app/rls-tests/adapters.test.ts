@@ -1,8 +1,11 @@
 import { StaleWriteError } from '../src/errors';
 import { RemoteMedicationRepository } from '../src/services/RemoteMedicationRepository';
 import { CareService } from '../src/services/CareService';
+import { DoseCalculator } from '../src/services/DoseCalculator';
+import { createFamilyServices, FamilyDashboardService } from '../src/services/family';
 import { SupabaseCareApi } from '../src/services/remote/SupabaseCareApi';
 import { SupabaseConsentApi } from '../src/services/remote/SupabaseConsentApi';
+import { SupabaseDoseLogRows } from '../src/services/remote/SupabaseDoseLogRows';
 import { SupabaseMedicationRows } from '../src/services/remote/SupabaseMedicationRows';
 import { parseMedicationRow } from '../src/validation/medication-rows';
 import { signInAs, testMedication, type TestUser } from './clients';
@@ -118,5 +121,77 @@ describe('davet kodu ve bağlantılar (SupabaseCareApi + CareService)', () => {
 
     await patient.removeLink(link!.id);
     expect((await caregiver.links(b.id)).map((item) => item.personId)).not.toContain(a.id);
+  });
+});
+
+describe('Aile Paneli (SupabaseDoseLogRows + FamilyDashboardService + createFamilyServices)', () => {
+  const online = { isOnline: async () => true };
+
+  it('B, A için ilaç ekler: "telefona ulaşmadı" görünür, A teslim alınca kaybolur; dozlar okunur', async () => {
+    const b = await signInAs('B', 'Test Aile', 'aile');
+    const patient = new CareService(new SupabaseCareApi(a.db), online);
+    const { code } = await patient.createInviteCode();
+    await new CareService(new SupabaseCareApi(b.db), online).redeem({
+      code,
+      relationLabel: 'Annem',
+    });
+
+    try {
+      const now = () => new Date();
+      const familyRows = new SupabaseMedicationRows(b.db);
+      const doseRows = new SupabaseDoseLogRows(b.db);
+      const photos = { savePhoto: async () => '', deletePhoto: async () => undefined };
+      const family = createFamilyServices({ rows: familyRows, doseRows, photos, now }, a.id);
+      const added = await family.medications.add([], {
+        name: 'Aile Test İlacı',
+        dose: '1 tablet',
+        amount: 1,
+        unit: 'adet',
+        location: '',
+        form: 'tablet',
+        times: ['00:00'],
+        schedule: { kind: 'daily' },
+        duration: { kind: 'continuous' },
+        mealTiming: 'any',
+        stock: 10,
+        lowStockThreshold: 2,
+        markedLow: false,
+        photoSourceUri: null,
+      });
+      const medication = added.medications[0]!;
+
+      const own = new SupabaseMedicationRows(a.db);
+      const dashboard = new FamilyDashboardService(familyRows, doseRows, new DoseCalculator(), now);
+      expect((await dashboard.summaryOf(a.id)).undeliveredIds).toContain(medication.id);
+
+      // A'nın telefonu eşitleyip teslim aldığını yazar.
+      const changed = (await own.changedSince(a.id, null)) as {
+        id: string;
+        server_updated_at: string;
+      }[];
+      const row = changed.find((item) => item.id === medication.id)!;
+      await own.markDelivered([{ id: row.id, server_updated_at: row.server_updated_at }]);
+      expect((await dashboard.summaryOf(a.id)).undeliveredIds).not.toContain(medication.id);
+
+      // A dozu kendi telefonundan onaylar; aile paneli "Alındı" görür.
+      const today = new Date().toLocaleDateString('sv-SE');
+      await own.recordDose(
+        {
+          id: `${medication.id}_${today}_00:00`,
+          medicationId: medication.id,
+          date: today,
+          time: '00:00',
+          takenAt: new Date().toISOString(),
+        },
+        1,
+      );
+      const after = await dashboard.summaryOf(a.id);
+      expect(after.doses.find((dose) => dose.medication.id === medication.id)?.status).toBe(
+        'alindi',
+      );
+    } finally {
+      const link = (await patient.links(a.id)).find((item) => item.personId === b.id);
+      if (link) await patient.removeLink(link.id);
+    }
   });
 });

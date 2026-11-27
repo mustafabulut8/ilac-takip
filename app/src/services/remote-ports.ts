@@ -36,3 +36,9 @@ export interface SyncApi {
   /** Doz onayı; sunucu stoğu `amount` kadar düşürür, aynı doz iki kez düşürmez. */
   recordDose(log: DoseLog, amount: number): Promise<void>;
 }
+
+/** Sunucudaki `dose_logs` tablosu (gerçeği: `remote/SupabaseDoseLogRows`). */
+export interface DoseLogRowsApi {
+  /** Kişinin `fromDate` (YYYY-MM-DD) gününden bu yana doz kayıtları. */
+  list(ownerId: string, fromDate: string): Promise<unknown[]>;
+}
