@@ -356,8 +356,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      can_access_photo_folder: { Args: { folder: string }; Returns: boolean };
-      can_write_photo_folder: { Args: { folder: string }; Returns: boolean };
       create_invite_code: {
         Args: never;
         Returns: {
@@ -369,9 +367,6 @@ export type Database = {
         Args: { p_text_version: string };
         Returns: undefined;
       };
-      has_health_consent: { Args: { person: string }; Returns: boolean };
-      is_caregiver_of: { Args: { patient: string }; Returns: boolean };
-      is_linked_with: { Args: { other: string }; Returns: boolean };
       mark_delivered: { Args: { p_items: Json }; Returns: number };
       record_dose: {
         Args: {
