@@ -4,9 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { FamilyPerson } from '@/hooks/useFamilyDashboard';
 import type { Dose, UserRole } from '@/models';
-import { initialsOf } from '@/utils/family';
+import { initialsOf, reminderWarningOf } from '@/utils/family';
 
 import { AppText } from '../app-text';
+import { Banner } from '../banner';
 import { Card } from '../card';
 import { Icon, type IconName } from '../icon';
 import { Pill } from '../pill';
@@ -87,14 +88,16 @@ function PersonActions({ person, online }: { person: FamilyPerson; online: boole
   );
 }
 
-function SummaryBody({ person }: { person: FamilyPerson }) {
+function SummaryBody({ person, now }: { person: FamilyPerson; now: Date }) {
   const { summary } = person;
   if (summary === null) return <AppText color={Colors.textSecondary}>Yükleniyor…</AppText>;
   if (summary === 'error') {
     return <AppText color={Colors.danger}>Bilgiler alınamadı. Biraz sonra tekrar deneyin.</AppText>;
   }
+  const warning = reminderWarningOf(summary.remindersUntil, person.link.relationLabel, now);
   return (
     <>
+      {warning && <Banner tone="warning" icon="bell" title={warning} />}
       <Progress {...summary.progress} />
       {summary.doses.length === 0 && (
         <AppText color={Colors.textSecondary}>Bugün için planlanmış doz yok.</AppText>
@@ -111,7 +114,15 @@ function SummaryBody({ person }: { person: FamilyPerson }) {
 }
 
 /** Aile Paneli'nde her yakın için ayrı kart. */
-export function PersonCard({ person, online }: { person: FamilyPerson; online: boolean }) {
+export function PersonCard({
+  person,
+  online,
+  now,
+}: {
+  person: FamilyPerson;
+  online: boolean;
+  now: Date;
+}) {
   const { link } = person;
   return (
     <Card style={styles.card}>
@@ -130,7 +141,7 @@ export function PersonCard({ person, online }: { person: FamilyPerson; online: b
           </AppText>
         </View>
       </View>
-      <SummaryBody person={person} />
+      <SummaryBody person={person} now={now} />
       <PersonActions person={person} online={online} />
     </Card>
   );

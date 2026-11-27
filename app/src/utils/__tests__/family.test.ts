@@ -1,6 +1,6 @@
 import { makeMedication } from '@/test-utils/fakes';
 
-import { initialsOf, missedAlertOf } from '../family';
+import { initialsOf, missedAlertOf, reminderWarningOf } from '../family';
 
 const NOW = new Date(2026, 10, 27, 9, 45);
 
@@ -31,5 +31,25 @@ describe('initialsOf', () => {
     expect(initialsOf('fatma bulut')).toBe('FB');
     expect(initialsOf('İsmail')).toBe('İ');
     expect(initialsOf('  ')).toBe('');
+  });
+});
+
+describe('reminderWarningOf (reminders_until)', () => {
+  const now = new Date('2026-11-27T10:00:00.000Z');
+
+  it('48 saatten az kaldıysa uyarır', () => {
+    expect(reminderWarningOf('2026-11-29T09:00:00.000Z', 'Annem', now)).toBe(
+      'Annem telefonundaki hatırlatmalar yakında bitiyor. Uygulamayı açması yeterli; yenileri kurulur.',
+    );
+  });
+
+  it('48 saat ve fazlası kaldıysa ya da boşsa (tekrarlanan hatırlatmalar) uyarı yok', () => {
+    expect(reminderWarningOf('2026-11-29T10:00:00.000Z', 'Annem', now)).toBeNull();
+    expect(reminderWarningOf(null, 'Annem', now)).toBeNull();
+    expect(reminderWarningOf('bozuk', 'Annem', now)).toBeNull();
+  });
+
+  it('süresi geçtiyse de uyarır', () => {
+    expect(reminderWarningOf('2026-11-26T10:00:00.000Z', 'Babam', now)).toMatch(/^Babam/);
   });
 });

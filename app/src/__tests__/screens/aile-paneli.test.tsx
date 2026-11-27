@@ -65,6 +65,7 @@ const fatma = person('fatma', 'Fatma Bulut', 'Annem', {
   progress: { taken: 1, total: 3 },
   missed: [dose(met, '09:00', 'kacirildi')],
   undeliveredIds: ['ato'],
+  remindersUntil: null,
 });
 
 beforeEach(() => {
@@ -92,6 +93,21 @@ describe('Aile Paneli', () => {
     expect(screen.getByText('Alındı')).toBeTruthy();
     expect(screen.getByText('Bekliyor')).toBeTruthy();
     expect(screen.getAllByText('Henüz telefona ulaşmadı')).toHaveLength(1);
+  });
+
+  it('yakının hatırlatmaları 48 saatten az sonra bitiyorsa kartında uyarı görünür', async () => {
+    const soon = person('fatma', 'Fatma Bulut', 'Annem', {
+      ...(fatma.summary as object),
+      remindersUntil: '2026-11-28T09:00:00.000Z',
+    });
+    mockState.people = [soon];
+    await render(<FamilyHomeScreen />);
+    expect(screen.getByText(/^Annem telefonundaki hatırlatmalar yakında bitiyor/)).toBeTruthy();
+  });
+
+  it('hatırlatmalar bitmiyorsa (boş) uyarı yok', async () => {
+    await render(<FamilyHomeScreen />);
+    expect(screen.queryByText(/hatırlatmalar yakında bitiyor/)).toBeNull();
   });
 
   it('birden fazla yakın ayrı kartlarda görünür', async () => {

@@ -9,7 +9,7 @@ import type { PhotoSync } from './PhotoSync';
 import type { Clock, PhotoStore, ReminderScheduler } from './ports';
 import { readDoseLogs, RemoteDoseLogRepository } from './RemoteDoseLogRepository';
 import { RemoteMedicationRepository } from './RemoteMedicationRepository';
-import type { DoseLogRowsApi, MedicationRowsApi } from './remote-ports';
+import type { DeviceStatusReader, DoseLogRowsApi, MedicationRowsApi } from './remote-ports';
 
 /**
  * Aile telefonunda yakının ilaçları için hatırlatıcı: hiçbir şey kurmaz. Hatırlatmalar
@@ -73,6 +73,8 @@ export type FamilySummary = {
   missed: Dose[];
   /** Aile ekledi veya düzenledi, yakının telefonu henüz almadı (`delivered_at` boş). */
   undeliveredIds: string[];
+  /** Yakının telefonundaki hatırlatmalar ne zamana kadar kurulu; boş: bitmiyor. */
+  remindersUntil: string | null;
 };
 
 /**
@@ -86,24 +88,29 @@ export class FamilyDashboardService {
   private readonly doseRows: DoseLogRowsApi;
   private readonly calculator: DoseCalculator;
   private readonly now: Clock;
+  private readonly status: DeviceStatusReader;
 
   constructor(
     rows: MedicationRowsApi,
     doseRows: DoseLogRowsApi,
     calculator: DoseCalculator,
     now: Clock,
+    status: DeviceStatusReader,
   ) {
     this.rows = rows;
     this.doseRows = doseRows;
     this.calculator = calculator;
     this.now = now;
+    this.status = status;
   }
 
   async summaryOf(patientId: string): Promise<FamilySummary> {
     const now = this.now();
-    const [rows, doseRows] = await Promise.all([
+    const [rows, doseRows, remindersUntil] = await Promise.all([
       this.rows.list(patientId),
       this.doseRows.list(patientId, formatDate(addDays(now, -1))),
+      // Telefon durumu okunamazsa panel yine açılır; yalnızca uyarı gösterilmez.
+      this.status.remindersUntil(patientId).catch(() => null),
     ]);
     const medications = rows.map(parseMedicationRow).filter((item): item is Medication => !!item);
     const doses = this.calculator.getTodayDoses(medications, readDoseLogs(doseRows).items, now);
@@ -116,6 +123,7 @@ export class FamilyDashboardService {
       undeliveredIds: rows
         .filter((row) => isRecord(row) && row.delivered_at === null)
         .map((row) => String((row as { id: unknown }).id)),
+      remindersUntil,
     };
   }
 }

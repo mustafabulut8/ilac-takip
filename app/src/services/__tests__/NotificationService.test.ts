@@ -203,6 +203,23 @@ describe('NotificationService planlama', () => {
     expect(ids.slice(0, 3)).toEqual(['ilac1-08:00', 'ilac1-20:00', 'sureli-08:00-2026-11-16']);
   });
 
+  it('kurulan planın ne zamana kadar sürdüğünü dinleyiciye bildirir', async () => {
+    const service = new NotificationService(fakeApi(), 'ios', () => new Date(2026, 10, 16));
+    const listener = jest.fn();
+    service.onCoverage(listener);
+    await service.sync([
+      makeMedication({
+        id: 'sureli',
+        startDate: '2026-11-16',
+        duration: { kind: 'days', count: 90 },
+      }),
+    ]);
+    // 60 / 2 = 30 gün: 16 Kasım–15 Aralık.
+    expect(listener).toHaveBeenCalledWith(new Date(2026, 11, 15, 20, 0));
+    await service.sync([makeMedication()]);
+    expect(listener).toHaveBeenLastCalledWith(null);
+  });
+
   it('test bildirimi test- önekiyle 60 saniye sonraya kurulur', async () => {
     const api = fakeApi();
     await new NotificationService(api, 'ios', FIXED_NOW).scheduleTest({

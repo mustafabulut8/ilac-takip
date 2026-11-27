@@ -69,6 +69,11 @@ export class SyncService {
     this.ownerId = ownerId;
   }
 
+  /** Eşitlenen hesabın kimliği (oturum yoksa `null`). */
+  currentOwner() {
+    return this.ownerId;
+  }
+
   isEnabled() {
     return this.enabled && this.ownerId !== null;
   }

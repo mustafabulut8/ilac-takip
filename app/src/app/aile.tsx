@@ -59,7 +59,7 @@ function MissedAlerts({ people, now }: { people: FamilyPerson[]; now: Date }) {
 }
 
 /** Bağlı yakınların kartları; hiç yoksa boş durum. */
-function People({ people, online }: { people: FamilyPerson[]; online: boolean }) {
+function People({ people, online, now }: { people: FamilyPerson[]; online: boolean; now: Date }) {
   if (people.length === 0) return <EmptyState />;
   return (
     <>
@@ -67,7 +67,7 @@ function People({ people, online }: { people: FamilyPerson[]; online: boolean })
         {people.length === 1 ? 'Takip ettiğiniz kişi' : 'Takip ettiğiniz kişiler'}
       </AppText>
       {people.map((person) => (
-        <PersonCard key={person.link.id} person={person} online={online} />
+        <PersonCard key={person.link.id} person={person} online={online} now={now} />
       ))}
       <SecondaryButton
         label="Başka bir yakınımı bağla"
@@ -104,7 +104,7 @@ export default function FamilyHomeScreen() {
         <FieldError message={error} />
         {!online && <Banner tone="warning" icon="warning" title={OFFLINE_MESSAGE} />}
         {people && <MissedAlerts people={people} now={now} />}
-        {people && <People people={people} online={online} />}
+        {people && <People people={people} online={online} now={now} />}
       </ScrollView>
     </View>
   );

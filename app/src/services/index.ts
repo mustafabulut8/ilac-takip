@@ -12,6 +12,7 @@ import { ProfileCache } from './ProfileCache';
 import { ProfileRepository } from './ProfileRepository';
 import { supabase } from './supabase';
 import { DoseCalculator } from './DoseCalculator';
+import { DeviceStatusReporter } from './DeviceStatusReporter';
 import { DoseService } from './DoseService';
 import { createFamilyServices, FamilyDashboardService } from './family';
 import { HistoryService } from './HistoryService';
@@ -30,6 +31,7 @@ import { ExpoNetworkStatus } from './remote/ExpoNetworkStatus';
 import { RealtimeMedicationChanges } from './remote/RealtimeMedicationChanges';
 import { SupabaseCareApi } from './remote/SupabaseCareApi';
 import { SupabaseConsentApi } from './remote/SupabaseConsentApi';
+import { SupabaseDeviceStatus } from './remote/SupabaseDeviceStatus';
 import { SupabaseDoseLogRows } from './remote/SupabaseDoseLogRows';
 import { SupabasePhotoStorage } from './remote/SupabasePhotoStorage';
 import { SupabaseMedicationRows } from './remote/SupabaseMedicationRows';
@@ -98,12 +100,17 @@ export const networkStatus = new ExpoNetworkStatus();
 export const realtimeMedicationChanges = new RealtimeMedicationChanges(supabase);
 export const doseCalculator = new DoseCalculator();
 const doseLogRows = new SupabaseDoseLogRows(supabase);
+const deviceStatus = new SupabaseDeviceStatus(supabase);
 export const familyDashboard = new FamilyDashboardService(
   medicationRows,
   doseLogRows,
   doseCalculator,
   systemClock,
+  deviceStatus,
 );
+// Hatırlatmalar her kurulduğunda ne zamana kadar sürdükleri sunucuya yazılır (rıza varsa).
+const deviceStatusReporter = new DeviceStatusReporter(deviceStatus, syncService, systemClock);
+notificationService.onCoverage((until) => void deviceStatusReporter.report(until));
 /** Aile üyesinin yakını için servisler (depo sunucuda, hatırlatıcı boş). */
 export const familyServicesFor = (patientId: string) =>
   createFamilyServices(

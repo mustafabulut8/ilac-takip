@@ -134,8 +134,15 @@ describe('createFamilyServices: aile yakını için ilaç ekler', () => {
 describe('FamilyDashboardService', () => {
   function dashboard() {
     const { rows, doseRows } = setup();
-    const service = new FamilyDashboardService(rows, doseRows, new DoseCalculator(), () => NOW);
-    return { rows, doseRows, service };
+    const status = { remindersUntil: jest.fn().mockResolvedValue(null) };
+    const service = new FamilyDashboardService(
+      rows,
+      doseRows,
+      new DoseCalculator(),
+      () => NOW,
+      status,
+    );
+    return { rows, doseRows, status, service };
   }
 
   it('bugünün dozları mevcut doz kurallarıyla: alındı, kaçırıldı, bekliyor', async () => {
@@ -172,5 +179,18 @@ describe('FamilyDashboardService', () => {
     rows.familyWrite(toMedicationRow(makeMedication({ id: 'yeni' }), PATIENT));
     rows.put({ ...toMedicationRow(makeMedication({ id: 'eski' }), PATIENT), delivered_at: 'x' });
     expect((await service.summaryOf(PATIENT)).undeliveredIds).toEqual(['yeni']);
+  });
+
+  it('yakının telefonundaki hatırlatmaların ne zamana kadar kurulu olduğunu verir', async () => {
+    const { status, service } = dashboard();
+    status.remindersUntil.mockResolvedValue('2026-11-28T09:00:00.000Z');
+    expect((await service.summaryOf(PATIENT)).remindersUntil).toBe('2026-11-28T09:00:00.000Z');
+    expect(status.remindersUntil).toHaveBeenCalledWith(PATIENT);
+  });
+
+  it('telefon durumu okunamazsa panel yine açılır (uyarı yok)', async () => {
+    const { status, service } = dashboard();
+    status.remindersUntil.mockRejectedValue(new Error('ağ'));
+    expect((await service.summaryOf(PATIENT)).remindersUntil).toBeNull();
   });
 });

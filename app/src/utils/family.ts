@@ -28,3 +28,16 @@ export function initialsOf(name: string) {
     .map((part) => part.charAt(0).toLocaleUpperCase('tr-TR'))
     .join('');
 }
+
+const WARN_BEFORE_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * Yakının telefonundaki hatırlatmalar 48 saatten az sonra bitiyorsa aileye gösterilen uyarı.
+ * `remindersUntil` boşsa (tekrarlanan hatırlatmalar ya da hepsi kurulu) uyarı yoktur.
+ */
+export function reminderWarningOf(remindersUntil: string | null, relationLabel: string, now: Date) {
+  if (!remindersUntil) return null;
+  const until = Date.parse(remindersUntil);
+  if (Number.isNaN(until) || until - now.getTime() >= WARN_BEFORE_MS) return null;
+  return `${relationLabel} telefonundaki hatırlatmalar yakında bitiyor. Uygulamayı açması yeterli; yenileri kurulur.`;
+}

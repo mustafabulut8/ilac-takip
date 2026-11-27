@@ -52,3 +52,20 @@ export interface PhotoStorageApi {
   /** Özel kovadaki fotoğraf için süreli imzalı adres. */
   signedUrl(path: string, expiresInSeconds: number): Promise<string>;
 }
+
+/** Telefon durumu satırı (`device_status`). */
+export type DeviceStatusRow = {
+  owner_id: string;
+  reminders_until: string | null;
+  last_synced_at: string;
+};
+
+/** `device_status` tablosu (gerçeği: `remote/SupabaseDeviceStatus`). */
+export interface DeviceStatusApi {
+  write(row: DeviceStatusRow): Promise<void>;
+}
+
+/** Aile tarafı: yakının telefonundaki hatırlatmalar ne zamana kadar kurulu (satır yoksa `null`). */
+export interface DeviceStatusReader {
+  remindersUntil(ownerId: string): Promise<string | null>;
+}

@@ -5,7 +5,9 @@ import { DoseCalculator } from '../src/services/DoseCalculator';
 import { createFamilyServices, FamilyDashboardService } from '../src/services/family';
 import { SupabaseCareApi } from '../src/services/remote/SupabaseCareApi';
 import { SupabaseConsentApi } from '../src/services/remote/SupabaseConsentApi';
+import { SupabaseDeviceStatus } from '../src/services/remote/SupabaseDeviceStatus';
 import { SupabaseDoseLogRows } from '../src/services/remote/SupabaseDoseLogRows';
+import { DeviceStatusReporter } from '../src/services/DeviceStatusReporter';
 import { SupabasePhotoStorage } from '../src/services/remote/SupabasePhotoStorage';
 import { PhotoSync, PhotoUrls } from '../src/services/PhotoSync';
 import { SupabaseMedicationRows } from '../src/services/remote/SupabaseMedicationRows';
@@ -166,8 +168,27 @@ describe('Aile Paneli (SupabaseDoseLogRows + FamilyDashboardService + createFami
       const medication = added.medications[0]!;
 
       const own = new SupabaseMedicationRows(a.db);
-      const dashboard = new FamilyDashboardService(familyRows, doseRows, new DoseCalculator(), now);
+      const dashboard = new FamilyDashboardService(
+        familyRows,
+        doseRows,
+        new DoseCalculator(),
+        now,
+        new SupabaseDeviceStatus(b.db),
+      );
       expect((await dashboard.summaryOf(a.id)).undeliveredIds).toContain(medication.id);
+
+      // A'nın telefonu hatırlatmaların ne zamana kadar kurulu olduğunu yazar; aile okur.
+      const until = new Date(Date.now() + 24 * 3600_000);
+      const reporter = new DeviceStatusReporter(
+        new SupabaseDeviceStatus(a.db),
+        { isEnabled: () => true, currentOwner: () => a.id },
+        now,
+      );
+      await reporter.report(until);
+      const stored = (await dashboard.summaryOf(a.id)).remindersUntil;
+      expect(Date.parse(stored ?? '')).toBe(until.getTime());
+      await reporter.report(null);
+      expect((await dashboard.summaryOf(a.id)).remindersUntil).toBeNull();
 
       // A'nın telefonu eşitleyip teslim aldığını yazar.
       const changed = (await own.changedSince(a.id, null)) as {
