@@ -13,6 +13,7 @@ import { Colors } from '@/constants/theme';
 import { AuthProvider } from '@/context/auth';
 import { ConsentProvider } from '@/context/consent';
 import { MedicationsProvider } from '@/context/medications';
+import { useActiveAccount } from '@/hooks/useActiveAccount';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useConsent } from '@/hooks/useConsent';
@@ -22,6 +23,18 @@ import { useReminderSync } from '@/hooks/useReminderSync';
 import { HOME_ROUTES, withConsentStep } from '@/utils/routes';
 
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * İlaç verisi oturumdaki hesabındır (ADR-027). Hesap telefonda etkinleşmeden liste
+ * yüklenmez; hesap değişince sağlayıcı yeniden kurulur ve yalnızca o kişinin ilaçları
+ * okunur, hatırlatmaları kurulur. Bu sırada açılış ekranı açık kalır.
+ */
+function AccountScope({ children }: { children: ReactNode }) {
+  const { session, isLoading } = useAuth();
+  const account = useActiveAccount(isLoading ? undefined : (session?.user.id ?? null));
+  if (!account) return null;
+  return <MedicationsProvider key={account.userId ?? 'oturum-yok'}>{children}</MedicationsProvider>;
+}
 
 /** Rıza sağlayıcısı oturumdaki profile göre kurulur (eşitlemenin sahibi). */
 function WithConsent({ children }: { children: ReactNode }) {
@@ -117,11 +130,11 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <MedicationsProvider>
+        <AccountScope>
           <WithConsent>
             <AppStack />
           </WithConsent>
-        </MedicationsProvider>
+        </AccountScope>
       </AuthProvider>
     </ErrorBoundary>
   );

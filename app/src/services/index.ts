@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { isSupabaseConfigured } from '@/config';
 
+import { AccountSession } from './AccountSession';
 import { AuthService } from './AuthService';
 import { CareService } from './CareService';
 import { ConsentService } from './ConsentService';
@@ -23,6 +24,7 @@ import { PhotoService } from './PhotoService';
 import { PhotoSync, PhotoUrls } from './PhotoSync';
 import { systemClock } from './ports';
 import { LocalDeviceStore } from './local/LocalDeviceStore';
+import { UserScopedStore } from './local/UserScopedStore';
 import { LocalDoseLogRepository } from './local/LocalDoseLogRepository';
 import { LocalMedicationRepository } from './local/LocalMedicationRepository';
 import { RemoteMedicationRepository } from './RemoteMedicationRepository';
@@ -58,12 +60,14 @@ export type { SyncService } from './SyncService';
  * eşitleme sunucuya gönderir (ADR-022). Servisler bunu bilmez: cihaz repository'lerini
  * `OfflineFirst…` dekoratörleri sarar. Rıza yoksa eşitleme kapalıdır ve kutu büyümez.
  */
-const device = new LocalDeviceStore(AsyncStorage, systemClock);
+// Yerel veri kullanıcıya özeldir (ADR-027): ilaçlar, dozlar, kuyruk, eşitleme imleci ve rıza.
+const userStore = new UserScopedStore(AsyncStorage);
+const device = new LocalDeviceStore(userStore, systemClock);
 const local = {
   medications: new LocalMedicationRepository(device),
   doseLogs: new LocalDoseLogRepository(device),
 };
-const outbox = new Outbox(AsyncStorage);
+const outbox = new Outbox(userStore);
 const medicationRows = new SupabaseMedicationRows(supabase);
 export const photoService = new PhotoService();
 const photoStorage = new SupabasePhotoStorage(supabase, (uri) => new File(uri).arrayBuffer());
@@ -78,7 +82,7 @@ export const syncService = new SyncService({
     new RemoteMedicationRepository(medicationRows, ownerId, systemClock, photoSync),
   api: medicationRows,
   outbox,
-  store: AsyncStorage,
+  store: userStore,
   reminders: notificationService,
 });
 const syncEnabled = () => syncService.isEnabled();
@@ -127,7 +131,7 @@ export const familyServicesFor = (patientId: string) =>
 export const careService = new CareService(new SupabaseCareApi(supabase), networkStatus);
 export const consentService = new ConsentService(
   new SupabaseConsentApi(supabase),
-  AsyncStorage,
+  userStore,
   syncService,
   networkStatus,
   systemClock,
@@ -158,9 +162,19 @@ export const authService = new AuthService(
  * Arka planda uyanınca React ağacı yoktur; sahip ve rıza burada okunur. Rıza yoksa
  * eşitleme açılmaz (ADR-021).
  */
+/** Telefondaki etkin hesap: oturum değişince yerel depo, hatırlatmalar ve eşitleme ona geçer. */
+export const accountSession = new AccountSession({
+  store: userStore,
+  device,
+  sync: syncService,
+  reminders: notificationService,
+  lastUser: AsyncStorage,
+});
 backgroundSync.define(async () => {
   const session = await authService.getSession();
   const userId = session?.user.id;
+  // Arka plan görevi uygulama kapalıyken de çalışır; önce oturumdaki hesaba geçilir.
+  await accountSession.activate(userId ?? null);
   if (!userId || (await consentService.current(userId)).status !== 'granted') return;
   syncService.setOwner(userId);
   syncService.start();

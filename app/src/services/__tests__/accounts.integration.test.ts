@@ -60,7 +60,10 @@ function phone(disk = new MemoryKeyValueStore()) {
   /** Ekranın yaptığı gibi: hesap etkinleşir, liste yüklenir (yükleme hatırlatmaları kurar). */
   const signIn = async (userId: string | null) => {
     await session.activate(userId);
-    return (await service.load()).medications;
+    const { medications } = await service.load();
+    // `load` hatırlatmaları arka planda kurar; bitmesi beklenir.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return medications;
   };
   return { disk, service, sync, signIn, pending: notifications.pending };
 }

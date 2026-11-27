@@ -1,3 +1,4 @@
+import { CURRENT_SCHEMA_VERSION } from '../migrations';
 import { makeMedication, MemoryKeyValueStore } from '@/test-utils/fakes';
 
 import { DoseCalculator } from '../DoseCalculator';
@@ -71,6 +72,6 @@ describe('v1 → v2 göçü: bozuk ve eksik veri', () => {
       mealTiming: 'any',
       form: 'tablet',
     });
-    expect(store.data.get('schemaVersion')).toBe('3');
+    expect(store.data.get('schemaVersion')).toBe(String(CURRENT_SCHEMA_VERSION));
   });
 });

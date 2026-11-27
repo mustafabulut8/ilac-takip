@@ -53,6 +53,12 @@ export const MIGRATIONS: readonly Migration[] = [
       ),
     }),
   },
+  {
+    version: 4,
+    description:
+      'Yerel veri kullanıcıya özel anahtarlara taşındı (u:<kimlik>:medications). Kayıtların biçimi değişmez; oturum öncesi veriyi ilk giren kullanıcıya UserScopedStore taşır (ADR-027).',
+    migrate: (data) => data,
+  },
 ];
 
 function syncDefaults(createdAt: unknown) {

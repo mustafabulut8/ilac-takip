@@ -94,7 +94,7 @@ describe('cihaz repository’leri: okuma ve göç', () => {
     const data = await storage.load();
     expect(data.medications).toEqual([{ ...migratedMedication, form: 'syrup', note: 'x' }]);
     expect(data.doseLogs).toEqual([legacyLog]);
-    expect(store.data.get('schemaVersion')).toBe('3');
+    expect(store.data.get('schemaVersion')).toBe(String(CURRENT_SCHEMA_VERSION));
   });
 
   it('göç yeniden çalışsa da kullanıcının seçtiği planın üzerine yazmaz', async () => {

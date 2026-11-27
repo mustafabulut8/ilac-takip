@@ -29,7 +29,7 @@ function setup({ online = true } = {}) {
   const store = new MemoryKeyValueStore({
     medications,
     doseLogs,
-    schemaVersion: '3',
+    schemaVersion: '4',
     outbox: '[{"kind":"medication","id":"ilac1"}]',
     syncState: '{"cursor":"2026-11-27T08:00:00.123456+00:00"}',
     healthConsent: GRANTED,
@@ -125,7 +125,7 @@ describe('ConsentService.withdraw', () => {
 
     expect(store.data.get('medications')).toBe(medications);
     expect(store.data.get('doseLogs')).toBe(doseLogs);
-    expect(store.data.get('schemaVersion')).toBe('3');
+    expect(store.data.get('schemaVersion')).toBe('4');
     expect(store.data.has('outbox')).toBe(false);
     expect(store.data.has('syncState')).toBe(false);
     expect(
