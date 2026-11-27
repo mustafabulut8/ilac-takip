@@ -190,6 +190,8 @@ Yardımcı fonksiyon `is_caregiver_of(patient uuid)`: `security definer`, `stabl
 
 ### RPC fonksiyonları (boş `search_path`, `anon`'dan `revoke execute`)
 
+**Advisor düzeltmesi (27 Kasım 2026):** RLS kurallarının kullandığı yardımcı fonksiyonlar (`has_health_consent`, `is_caregiver_of`, `is_linked_with`, `can_access_photo_folder`, `can_write_photo_folder`) ilk migration'da `public` şemasındaydı ve API'den doğrudan çağrılabiliyordu. Örneğin `has_health_consent` ile herhangi bir kişinin rıza verip vermediği sorulabilirdi. API'nin görmediği `private` şemasına taşınırlar (`20261127090000_advisor_fixes.sql`). `profiles`'ın iki okuma kuralı da tek kuralda birleşir. Aşağıdaki tabloda uygulamanın çağırdığı fonksiyonlar listelidir; bunlar bilerek `public`'tedir.
+
 | Fonksiyon                                  | Kim çağırır     | Ne yapar                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `create_invite_code()` (definer)           | sade, standart  | Önceki kullanılmamış kodu geçersiz yapar. Süresi dolmuş kodları iptal eder. Etkin kodlarla çakışmayan rastgele 6 hane üretir (`gen_random_uuid()`'in rastgele bitleri; çakışırsa yeniden dener). Rıza ister. Kodu ve bitiş anını döner.                                                                                                                                                                                                                                                                                                                                                                              |
@@ -258,6 +260,12 @@ flowchart LR
     - Ağ hatasında durur ve bekleme süresi artar (30 sn → 5 dk).
     - Kalıcı hata (RLS reddi, doğrulama) kuyruğu tıkamaz: kayıt `outbox.hatali` anahtarına taşınır ve `logger.error` ile yazılır.
     - Doz kimliği tekil, ilaç yazması `updated_at` korumalı olduğu için aynı kaydın tekrar gönderilmesi zararsızdır.
+  - **Eski sürümle yazma atlanınca istemci bunu bilir:**
+    - Sunucu, eski `updated_at` ile gelen değişikliği sessizce atlar (tetikleyici satırı yazmaz). `Supabase…Repository` her yazmayı `.select('id')` ile yapar; satır dönmezse değişiklik atlanmış demektir. Bu durum RLS testinde doğrulandı: eski sürümle güncelleme hata vermez, boş sonuç döner ve kayıt değişmez.
+    - Repository bu durumda `StaleWriteError` (`AppError` alt sınıfı) fırlatır. Arayüz değişmez; hata türü sözleşmenin parçasıdır.
+    - **Telefonda (outbox):** `SyncService.push` bu hatayı alınca kaydı kuyruktan çıkarır, o ilacın sunucudaki güncel hâlini çeker ve yerel kopyanın yerine yazar. Ardından bildirimleri de yeniden kurar (d bölümündeki kural). Telefon kendi eski sürümünü doğru sanıp göstermeye devam etmez.
+    - **Aile tarafında:** Ekran "Bu ilaç bu arada değiştirilmiş; güncel hâli gösteriliyor." der ve listeyi yeniden çeker.
+    - **Testler:** Sözleşme testinde boş sonuç → `StaleWriteError`. `SyncService` testinde atlanan yazmadan sonra yerel kayıt sunucudakiyle aynıdır ve bildirimler yeni hâle göre kuruludur.
   - **`pull()`:** `server_updated_at > imleç` olan ilaç ve doz satırlarını çeker; silinmişler de gelir. İmleç `syncState` anahtarında tutulur.
     - Çakışma: aynı ilaç outbox'ta bekliyorsa `updated_at` karşılaştırılır, **son yazan kazanır**. Bekleyen yoksa sunucudaki kayıt alınır.
     - Doz kayıtları değişmez olduğu için birleştirme yeterlidir.
@@ -385,7 +393,12 @@ Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin
 
 - Düğmeler: "Kabul ediyorum" (ana buton) ve "Şimdilik hayır". İkisi de aynı boyda, ikincisi kenarlıklı; seçim zorlanmaz.
 - Metnin sürümü (`text_version`, örn. `2026-11-1`) rıza kaydına yazılır. Telefonda da `healthConsent` anahtarında durum tutulur; böylece uygulama internetsiz açılışta da rızanın durumunu bilir.
-- **Ayarlar > "Sağlık verisi ve aile":** Durum ("Rıza verildi · 27 Kasım 2026"), "Rızamı geri al" (onaylı: "Sunucudaki ilaç bilgileriniz silinecek ve yakınlarınızla bağlantınız kalkacak. Telefonunuzdaki ilaçlar kalır.") veya rıza yoksa "Rıza ver".
+- **Ayarlar > "Sağlık verisi ve aile":** Durum ("Rıza verildi · 27 Kasım 2026"), "Rızamı geri al" veya rıza yoksa "Rıza ver".
+- **Geri alma onay penceresi** (Çıkış onayı kalıbında, ekran 20):
+  - Başlık: "Rızanızı geri almak istiyor musunuz?"
+  - Metin: "Sunucudaki ilaç bilgileriniz ve aile bağlantılarınız silinecek. Telefonunuzdaki ilaçlar ve hatırlatmalar devam eder."
+  - Düğmeler: "Rızamı geri al" (kırmızı değil, ana renk; geri alınabilir bir işlem olduğu için korkutucu değil) ve "Vazgeç" (2px kenarlıklı).
+- **Telefondaki veri silinmez:** Geri almadan sonra `medications` ve `doseLogs` anahtarları ve kurulu bildirimler olduğu gibi kalır; uygulama yalnızca telefonda çalışmaya devam eder. Yalnızca eşitlemeye ait anahtarlar (`outbox`, `syncState`) temizlenir. **Testler:** `ConsentService.withdraw` sonrasında yerel ilaç ve doz listesi aynıdır, `NotificationService.cancelMedication` ve tümünü silen bir çağrı hiç yapılmaz, sahte bildirim API'sindeki kurulu bildirimler değişmez, eşitleme bir daha çalışmaz.
 - **Geri alma sırası:** Önce outbox'taki bekleyen kayıtlar atılır, eşitleme durur. Sonra kişinin fotoğraf dosyaları Storage API ile silinir. Ardından `withdraw_health_consent()` çağrılır. En son yerel `syncState` temizlenir. İnternet yoksa geri alma yapılmaz, hiçbir şey değişmez ve "İnternet bağlantısı gerekiyor" yazar.
 
 **Mevcut ekranları değiştirmeden kullanma yolu:**
@@ -467,12 +480,23 @@ Stitch'te çizilenler: 16 Ailemi Bağla, 17 Kodla Bağlan, 18 Aile Paneli. Metin
 
 Docker kurulmayacağı için (pgTAP yerel Docker ister) bu iki durum elle çalıştırılan SQL betiğiyle denenir: `supabase/tests/elle/davet-kodu.sql`. Gerçek projede saat ileri alınamadığından süre, yönetici yetkisiyle kodun bitiş anı geçmişe çekilerek denenir. Deneme sınırı otomatik testte de saatte bir kez çalışabilirdi; betik ise geri alındığı için istendiği kadar çalıştırılır.
 
-**Adımlar:**
+**Test hesaplarının kimliklerini (UUID) bulma:**
 
-1. Supabase panelinde **Authentication > Users**'tan A (sade), B (aile) ve D (aile) test hesaplarının kimliklerini (UUID) kopyalayın.
-2. Betiğin başındaki üç `set_config('test.…')` satırına yapıştırın.
-3. Betiğin tamamını **SQL Editor**'da çalıştırın.
-4. Sonuç tablosunda "Bütün denetimler geçti" yazmalı. Bir denetim tutmazsa betik, hangisinin tutmadığını Türkçe yazan bir hatayla durur.
+1. Önce `app/` klasöründe `npm run test:rls` bir kez çalıştırılmış olmalı. Bu komut A, B, C, D ve E test hesaplarını (yoksa) açar. Hesapların e-posta adresleri `app/.env.test` dosyasındadır: `RLS_A_EMAIL`, `RLS_B_EMAIL`, `RLS_D_EMAIL`.
+2. Tarayıcıda [supabase.com/dashboard](https://supabase.com/dashboard) adresine girin ve **ilac-takip** projesini açın.
+3. Sol menüden **Authentication**'a, açılan sayfada **Users** sekmesine tıklayın.
+4. Üstteki arama kutusuna A'nın e-postasını yazın (`ilac-takip.rls-a@example.com`).
+5. Çıkan satıra tıklayın. Sağda açılan panelde **User UID** satırındaki kimliği kopyalama simgesiyle kopyalayın (`3f2a…` gibi 36 karakterlik değer).
+6. B ve D için 4. ve 5. adımları tekrarlayın.
+
+**Betiği çalıştırma:**
+
+1. `supabase/tests/elle/davet-kodu.sql` dosyasını açın.
+2. Başındaki üç `set_config('test.…')` satırındaki `00000000-…` değerlerinin yerine kopyaladığınız kimlikleri yapıştırın (A, B, D sırasıyla). Dosyayı bu kimliklerle commit etmeyin; kimlikler gizli değildir ama test hesabına aittir ve her projede farklıdır.
+3. Panelde sol menüden **SQL Editor**'a girin, **New query** ile boş bir sorgu açın.
+4. Betiğin tamamını yapıştırın ve **Run**'a basın.
+5. Betiğin tamamını **SQL Editor**'da çalıştırın.
+6. Sonuç tablosunda "Bütün denetimler geçti" yazmalı. Bir denetim tutmazsa betik, hangisinin tutmadığını Türkçe yazan bir hatayla durur.
 
 **Betik ne yapar:** Hepsi tek işlemde çalışır ve sonunda `rollback` ile geri alınır; veritabanında iz kalmaz. Her adımda rol `authenticated` yapılır ve kimlik `request.jwt.claims` ile verilir, yani `auth.uid()` ve RLS uygulamadan gelen istekteki gibi çalışır.
 

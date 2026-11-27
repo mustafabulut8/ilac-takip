@@ -4,7 +4,7 @@ import { newClient, signInAs, testMedication, TINY_JPEG, type TestUser } from '.
  * RLS kurallarının çalıştırılabilir hâli (docs/tur2-parca2-plan.md, b ve h bölümleri).
  *
  * Hesaplar: A (sade, takip edilen), B (aile, A'ya bağlanır), C (aile, bağlı değil),
- * E (sade, rıza vermemiş). Testler sırayla çalışır ve önceki adımın kurduğu duruma
+ * E (sade, rıza vermemiş). D (aile) yalnızca elle SQL testi için açılır. Testler sırayla çalışır ve önceki adımın kurduğu duruma
  * dayanır. Sonunda A rızasını geri alır; bu hem geri almayı dener hem de A'nın
  * sunucudaki test verisini temizler.
  *
@@ -31,6 +31,8 @@ beforeAll(async () => {
     signInAs('B', 'Test Aile', 'aile'),
     signInAs('C', 'Test Yabancı', 'aile'),
     signInAs('E', 'Test Rızasız', 'sade'),
+    // D yalnızca elle SQL testinde (deneme sınırı) kullanılır; burada hesabı açılır.
+    signInAs('D', 'Test Deneme', 'aile'),
   ]);
   // E'nin önceki çalıştırmadan kalmış rızası olmasın.
   await e.db.rpc('withdraw_health_consent');
