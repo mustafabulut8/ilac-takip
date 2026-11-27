@@ -8,6 +8,7 @@ export const HOME_ROUTES = {
   sade: '/sade',
   standart: '/',
   aile: '/aile',
+  consent: '/saglik-verisi-rizasi',
 } as const;
 
 export type HomeRoute = (typeof HOME_ROUTES)[keyof typeof HOME_ROUTES];
@@ -37,4 +38,17 @@ export function homeRouteOf({
   if (!role) return HOME_ROUTES.noProfile;
   if (onboarding) return HOME_ROUTES.onboarding;
   return HOME_ROUTES[role];
+}
+
+/** Telefondaki rıza durumu; `null`: henüz okunmadı. */
+export type ConsentStep = 'granted' | 'declined' | 'withdrawn' | 'none' | null;
+
+/**
+ * Sağlık verisi rızası bir kez sorulur (kararlar.md ADR-021): sade ve standart
+ * kullanıcı, bildirim izninden sonra ve hiç cevap vermediyse ana ekranından önce rıza
+ * ekranını görür. Durum henüz okunmadıysa beklenmez; ana ekran açılır.
+ */
+export function withConsentStep(route: HomeRoute, consent: ConsentStep): HomeRoute {
+  const asks = route === HOME_ROUTES.sade || route === HOME_ROUTES.standart;
+  return asks && consent === 'none' ? HOME_ROUTES.consent : route;
 }

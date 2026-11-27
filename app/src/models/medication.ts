@@ -27,6 +27,15 @@ export type Medication = DosePlan & {
   /** Sayılamayan formlarda kullanıcının "Bitmek üzere" işareti. */
   markedLow: boolean;
   pastPlans: PastPlan[];
+
+  // Şema v3 ile eklenenler (bulut eşitleme).
+  /**
+   * Son değişiklik anı (ISO). Sunucu, bundan eski bir sürümle gelen yazmayı atlar
+   * (son yazan kazanır). Doz onayı bunu değiştirmez; stoğu sunucu kendisi düşürür.
+   */
+  updatedAt: string;
+  /** Fotoğrafın sunucudaki yolu (`<sahip>/<dosya>.jpg`); yüklenmemişse boş. */
+  photoPath: string;
 };
 
 /** İlaç ekleme ekranından gelen, henüz kaydedilmemiş veri. */

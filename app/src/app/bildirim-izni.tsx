@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,14 +23,20 @@ const BENEFITS = [
  */
 export default function NotificationPermissionScreen() {
   const insets = useSafeAreaInsets();
-  const { finishOnboarding } = useAuth();
+  const { finishOnboarding, profile } = useAuth();
   const { request } = useNotificationPermission();
+
+  // Aile rolünde kayıttan sonraki ilk iş yakınını bağlamaktır (Kodla Bağlan).
+  const finish = () => {
+    finishOnboarding();
+    if (profile?.role === 'aile') router.replace('/kodla-baglan');
+  };
 
   const allow = async () => {
     try {
       await request();
     } finally {
-      finishOnboarding();
+      finish();
     }
   };
 
@@ -68,7 +75,7 @@ export default function NotificationPermissionScreen() {
 
       <View style={styles.actions}>
         <PrimaryButton label="Bildirimlere izin ver" icon="bell" onPress={allow} />
-        <TextLink label="Şimdi değil" onPress={finishOnboarding} />
+        <TextLink label="Şimdi değil" onPress={finish} />
       </View>
     </ScrollView>
   );

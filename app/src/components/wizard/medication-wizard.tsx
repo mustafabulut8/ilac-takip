@@ -7,6 +7,7 @@ import {
   type MedicationWizard,
   type WizardStepId,
 } from '@/hooks/useMedicationWizard';
+import { useCareSubject } from '@/hooks/useCareSubject';
 import type { Medication } from '@/models';
 
 import { DoseStep } from './dose-step';
@@ -40,6 +41,8 @@ function leave() {
 /** İlaç ekleme ve (ilaç verilirse) düzenleme sihirbazı. */
 export function MedicationWizardScreen({ medication }: { medication?: Medication }) {
   const wizard = useMedicationWizard(medication);
+  // Aile yakını için ekliyorsa başlıkta kimin için olduğu yazar.
+  const subject = useCareSubject();
   const { step, back, next, save, isDirty, isSaving } = wizard;
   const Step = STEPS[step.id];
 
@@ -72,7 +75,7 @@ export function MedicationWizardScreen({ medication }: { medication?: Medication
   return (
     <WizardStepLayout
       wizard={wizard}
-      title={medication ? 'İlacı düzenle' : 'İlaç ekle'}
+      title={subject ? `${subject.name} için` : medication ? 'İlacı düzenle' : 'İlaç ekle'}
       onBack={goBack}
       onPrimary={onPrimary}
       primaryLabel={step.id !== 'summary' ? 'Devam' : isSaving ? 'Kaydediliyor…' : 'Kaydet'}>

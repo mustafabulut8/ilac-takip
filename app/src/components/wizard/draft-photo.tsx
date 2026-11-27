@@ -9,7 +9,7 @@ import type { MedicationDraft } from '@/models';
 
 /** Taslaktaki fotoğraf: yeni seçilen varsa o, yoksa kayıtlı olan; hiç yoksa ikon. */
 export function DraftPhoto({ draft, height }: { draft: MedicationDraft; height: number }) {
-  const savedUri = useMedicationPhoto(draft.photoFile);
+  const savedUri = useMedicationPhoto(draft.photoFile, draft.photoPath);
   const uri = draft.photo ?? savedUri;
   const isLarge = height > 150;
   const shape = { height, width: isLarge ? ('100%' as const) : height };

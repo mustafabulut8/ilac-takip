@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { AuthError, ValidationError } from '@/errors';
@@ -7,8 +7,10 @@ import { useFormSubmit } from '../useFormSubmit';
 import { useMedicationPhoto } from '../useMedicationPhoto';
 import { usePhotoPicker } from '../usePhotoPicker';
 
+const mockUrlFor = jest.fn(async (path: string) => `https://imzali/${path}`);
 jest.mock('@/services', () => ({
   photoService: { photoUri: (fileName: string) => `file:///belgeler/photos/${fileName}` },
+  photoUrls: { urlFor: (path: string) => mockUrlFor(path) },
 }));
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn(),
@@ -82,6 +84,28 @@ describe('useMedicationPhoto', () => {
     expect(withPhoto.result.current).toBe('file:///belgeler/photos/ilac1.jpg');
     const without = await renderHook(() => useMedicationPhoto(''));
     expect(without.result.current).toBeNull();
+  });
+
+  it('telefonda dosya yoksa sunucudaki fotoğrafı imzalı adresle, yoluyla önbelleğe alarak gösterir', async () => {
+    const { result } = await renderHook(() => useMedicationPhoto('', 'fatma/met-1.jpg'));
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        uri: 'https://imzali/fatma/met-1.jpg',
+        cacheKey: 'fatma/met-1.jpg',
+      }),
+    );
+  });
+
+  it('telefondaki dosya varsa sunucuya sorulmaz; adres alınamazsa form ikonu kalır', async () => {
+    mockUrlFor.mockClear();
+    const local = await renderHook(() => useMedicationPhoto('ilac1.jpg', 'fatma/met-1.jpg'));
+    expect(local.result.current).toBe('file:///belgeler/photos/ilac1.jpg');
+    expect(mockUrlFor).not.toHaveBeenCalled();
+
+    mockUrlFor.mockRejectedValueOnce(new Error('ağ'));
+    const failed = await renderHook(() => useMedicationPhoto('', 'fatma/yok.jpg'));
+    await waitFor(() => expect(mockUrlFor).toHaveBeenCalled());
+    expect(failed.result.current).toBeNull();
   });
 });
 

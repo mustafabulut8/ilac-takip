@@ -133,6 +133,8 @@ const medicationRecordSchema = z.looseObject({
     .optional()
     .transform((value) => value === true),
   pastPlans: z.unknown().optional(),
+  updatedAt: z.unknown().optional(),
+  photoPath: z.string().catch(''),
 });
 
 const doseLogRecordSchema = z.looseObject({
@@ -163,6 +165,10 @@ export function parseMedicationRecord(value: unknown): Medication | null {
     ...record,
     ...plan,
     pastPlans: parsePastPlans(record.pastPlans, record.createdAt),
+    // Son değişiklik anı okunamazsa kayıt anı kullanılır; eşitlemede en eski sürüm sayılır.
+    updatedAt: matches(instantSchema, record.updatedAt)
+      ? (record.updatedAt as string)
+      : record.createdAt,
   } as Medication;
 }
 

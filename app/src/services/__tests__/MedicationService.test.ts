@@ -88,6 +88,8 @@ describe('MedicationService.add', () => {
       form: 'tablet',
       photoFile: 'kopya.jpg',
       createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+      photoPath: '',
     });
     expect(photos.savePhoto).toHaveBeenCalledWith('file:///gecici.jpg', medication?.id);
     expect(storage.medications).toEqual(result.medications);
@@ -166,7 +168,7 @@ describe('MedicationService.update / remove', () => {
   it('yalnızca stok değişince plan ve hatırlatmalara dokunulmaz', async () => {
     const { reminders, service } = setup();
     const { medications } = await service.update([makeMedication()], 'ilac1', { stock: 30 });
-    expect(medications[0]).toEqual(makeMedication({ stock: 30 }));
+    expect(medications[0]).toEqual(makeMedication({ stock: 30, updatedAt: NOW.toISOString() }));
     expect(reminders.cancelMedication).not.toHaveBeenCalled();
   });
 
@@ -202,6 +204,19 @@ describe('MedicationService.update / remove', () => {
     expect(photos.savePhoto).toHaveBeenCalledWith('file:///yeni.jpg', `ilac1-${NOW.getTime()}`);
     expect(medications[0]?.photoFile).toBe('kopya.jpg');
     expect(photos.deletePhoto).toHaveBeenCalledWith('ilac1.jpg');
+  });
+
+  it('fotoğraf değişince ya da kaldırılınca sunucudaki yolu sıfırlanır (yeniden yüklenir)', async () => {
+    const { service } = setup();
+    const uploaded = makeMedication({ photoPath: 'sahip/ilac1-1.jpg' });
+    const changed = await service.update([uploaded], 'ilac1', {
+      photoSourceUri: 'file:///yeni.jpg',
+    });
+    expect(changed.medications[0]?.photoPath).toBe('');
+    const removed = await service.update([uploaded], 'ilac1', { photoSourceUri: null });
+    expect(removed.medications[0]?.photoPath).toBe('');
+    const untouched = await service.update([uploaded], 'ilac1', { name: 'Yeni ad' });
+    expect(untouched.medications[0]?.photoPath).toBe('sahip/ilac1-1.jpg');
   });
 
   it('kayıt başarısız olursa eski fotoğraf silinmez', async () => {
@@ -267,5 +282,16 @@ describe('MedicationService.update hatırlatma hatası', () => {
     expect(result.notice).toBe(
       'Değişiklik kaydedildi, ancak hatırlatma kurulamadı. Bildirim iznini kontrol edin.',
     );
+  });
+});
+
+describe('MedicationService: son değişiklik anı (eşitleme)', () => {
+  it('güncelleme ve silme olmayan her değişiklik updatedAt alanını şimdiki an yapar', async () => {
+    const { storage, service } = setup();
+    const existing = makeMedication({ updatedAt: '2026-01-01T00:00:00.000Z' });
+    storage.medications = [existing];
+    const result = await service.update([existing], existing.id, { name: 'Yeni' });
+    expect(result.medications[0]?.updatedAt).toBe(NOW.toISOString());
+    expect(storage.medications[0]?.updatedAt).toBe(NOW.toISOString());
   });
 });

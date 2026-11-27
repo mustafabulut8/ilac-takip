@@ -53,6 +53,8 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
   /** Son işlenen dokunuş; aynı dokunuş iki kez sayfa açmasın. */
   private lastHandledTapKey: string | null = null;
 
+  private coverageListener?: (remindersUntil: Date | null) => void;
+
   constructor(api: NotificationsApi, platform: string, now: Clock) {
     this.api = api;
     this.platform = platform;
@@ -106,6 +108,14 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
   }
 
   /** İlaç silinince veya değişince onun bütün hatırlatmaları (ertelenenler dahil) kaldırılır. */
+  /** Hesap değişince önceki kullanıcının bütün hatırlatmaları (ertelenenler dahil) kaldırılır. */
+  async clearAll() {
+    const scheduled = await this.api.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      scheduled.map((request) => this.api.cancelScheduledNotificationAsync(request.identifier)),
+    );
+  }
+
   async cancelMedication(medication: Medication) {
     const scheduled = await this.api.getAllScheduledNotificationsAsync();
     await Promise.all(
@@ -124,12 +134,23 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
    * Cihazdaki plan kayıtlı veriyle eşitlenir; ağ gerektirmez.
    * Bekleyen test ve erteleme bildirimlerine dokunulmaz.
    */
+  /**
+   * Her kurulumdan sonra hatırlatmaların ne zamana kadar kurulu olduğu bildirilir
+   * (`null`: bitmiyor). Telefon durumu sunucuya böyle gider (DeviceStatusReporter).
+   */
+  onCoverage(listener: (remindersUntil: Date | null) => void) {
+    this.coverageListener = listener;
+  }
+
   async sync(medications: Medication[]) {
     try {
       await this.ensureChannel();
       const scheduled = await this.api.getAllScheduledNotificationsAsync();
       const scheduledIds = new Set(scheduled.map((request) => request.identifier));
-      const expected = this.planner.plan(medications, this.now());
+      const { reminders: expected, remindersUntil } = this.planner.planWithCoverage(
+        medications,
+        this.now(),
+      );
       const expectedIds = new Set(expected.map((reminder) => reminder.identifier));
 
       await Promise.all(
@@ -142,6 +163,7 @@ export class NotificationService implements ReminderScheduler, SnoozeCanceller {
           .filter(({ identifier }) => !scheduledIds.has(identifier))
           .map((reminder) => this.api.scheduleNotificationAsync(this.requestOf(reminder))),
       );
+      this.coverageListener?.(remindersUntil);
     } catch (error) {
       throw new NotificationError(
         'Bildirim planlanamadı',

@@ -43,6 +43,8 @@ const ICONS = {
   info: { ios: 'info.circle.fill', android: 'info' },
   textSize: { ios: 'textformat.size', android: 'format_size' },
   shield: { ios: 'lock.shield.fill', android: 'shield' },
+  share: { ios: 'square.and.arrow.up', android: 'share' },
+  link: { ios: 'link', android: 'link' },
   document: { ios: 'doc.text.fill', android: 'description' },
   logout: { ios: 'rectangle.portrait.and.arrow.right', android: 'logout' },
   morning: { ios: 'sunrise.fill', android: 'wb_twilight' },

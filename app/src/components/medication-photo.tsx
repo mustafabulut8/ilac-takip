@@ -8,14 +8,15 @@ import { getMedicationForm, type Medication } from '@/models';
 import { Icon } from './icon';
 
 type MedicationPhotoProps = {
-  medication: Pick<Medication, 'name' | 'photoFile' | 'form'>;
+  medication: Pick<Medication, 'name' | 'photoFile' | 'form'> &
+    Partial<Pick<Medication, 'photoPath'>>;
   size?: number;
   badgeSize?: number;
 };
 
 /** Kullanıcının çektiği ilaç fotoğrafı ve form rozeti; fotoğraf yoksa form ikonu. */
 export function MedicationPhoto({ medication, size = 72, badgeSize = 24 }: MedicationPhotoProps) {
-  const uri = useMedicationPhoto(medication.photoFile);
+  const uri = useMedicationPhoto(medication.photoFile, medication.photoPath);
   const { kind } = getMedicationForm(medication.form);
   const shape = { width: size, height: size };
 

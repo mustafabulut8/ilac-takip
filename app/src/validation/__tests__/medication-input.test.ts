@@ -125,6 +125,14 @@ describe('düzenleme', () => {
     expect(changesOf(medication, { ...draft, photoFile: '' })).toEqual({ photoSourceUri: null });
   });
 
+  it('yalnızca sunucuda olan fotoğraf (aile ekledi) taslakta görünür ve kaldırılabilir', () => {
+    const medication = makeMedication({ photoFile: '', photoPath: 'fatma/ilac1-1.jpg' });
+    const draft = draftFromMedication(medication);
+    expect(draft.photoPath).toBe('fatma/ilac1-1.jpg');
+    expect(changesOf(medication, draft)).toEqual({});
+    expect(changesOf(medication, { ...draft, photoPath: '' })).toEqual({ photoSourceUri: null });
+  });
+
   it('form seçilmemişse doz metni boştur', () => {
     expect(doseTextOf(EMPTY_MEDICATION_DRAFT)).toBe('');
   });

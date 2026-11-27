@@ -12,12 +12,23 @@ import { ROLE_OPTIONS } from '@/components/role-option';
 import { ScreenHeader } from '@/components/screen-header';
 import { SettingsRow } from '@/components/settings-row';
 import { TestNotificationButton } from '@/components/test-notification-button';
+import { WITHDRAW_MESSAGE, WITHDRAW_TITLE } from '@/constants/health-consent';
 import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { useConsent } from '@/hooks/useConsent';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { formatDayMonth } from '@/utils/date';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+
+/** "Verildi · 27 Kasım 2026" */
+function consentLabel(status: string | null, at: string | null) {
+  if (status !== 'granted') return 'Verilmedi';
+  if (!at) return 'Verildi';
+  const date = new Date(at);
+  return `Verildi · ${formatDayMonth(date)} ${date.getFullYear()}`;
+}
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -30,6 +41,72 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** Kullanım biçimi; aile rolünde "Yakınımı bağla". */
+function AccountGroup() {
+  const { profile } = useAuth();
+  return (
+    <Group title="HESAP">
+      <SettingsRow
+        icon="mode"
+        label="Kullanım biçimi"
+        value={profile ? ROLE_OPTIONS[profile.role].label : undefined}
+        onPress={() => router.push('/kullanim-bicimi')}
+      />
+      {profile?.role === 'aile' && (
+        <SettingsRow
+          icon="link"
+          label="Yakınımı bağla"
+          onPress={() => router.push('/kodla-baglan')}
+        />
+      )}
+    </Group>
+  );
+}
+
+/**
+ * Sağlık verisi rızası ve aile bağlama. Rıza varsa satır geri alma onayını açar; geri
+ * almada telefondaki ilaçlar ve hatırlatmalar kalır (ADR-021).
+ */
+function HealthDataGroup() {
+  const consent = useConsent();
+  const withdrawal = useFormSubmit();
+  const [confirming, setConfirming] = useState(false);
+  const granted = consent.status === 'granted';
+
+  const onWithdraw = async () => {
+    if (await withdrawal.submit(consent.withdraw)) setConfirming(false);
+  };
+
+  return (
+    <Group title="SAĞLIK VERİSİ VE AİLE">
+      <SettingsRow
+        icon="shield"
+        label="Sağlık verisi rızası"
+        value={consentLabel(consent.status, consent.at)}
+        onPress={() => (granted ? setConfirming(true) : router.push('/saglik-verisi-rizasi'))}
+      />
+      <SettingsRow
+        icon="family"
+        label="Ailemi bağla"
+        value={granted ? undefined : 'Bunun için rıza gerekir'}
+        disabled={!granted}
+        onPress={() => router.push('/ailemi-bagla')}
+      />
+      <ConfirmDialog
+        visible={confirming}
+        icon="shield"
+        title={WITHDRAW_TITLE}
+        message={WITHDRAW_MESSAGE}
+        confirmLabel="Rızamı geri al"
+        onConfirm={onWithdraw}
+        onCancel={() => setConfirming(false)}
+        busy={withdrawal.busy}
+        error={withdrawal.error}
+      />
+    </Group>
+  );
+}
+
 /** Ayarlar - Hesap (Stitch 19) ve Çıkış onayı (Stitch 20). */
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -37,6 +114,7 @@ export default function SettingsScreen() {
   const permission = useNotificationPermission();
   const logout = useFormSubmit();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const ownsMedications = profile?.role === 'sade' || profile?.role === 'standart';
 
   // Çıkıştan sonra kök düzen kendiliğinden rol seçimine yönlendirir.
   const onLogout = () => logout.submit(signOut);
@@ -51,15 +129,8 @@ export default function SettingsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.five }]}>
         <ProfileCard name={profile?.name} email={session?.user.email} />
 
-        <Group title="HESAP">
-          <SettingsRow
-            icon="mode"
-            label="Kullanım biçimi"
-            value={profile ? ROLE_OPTIONS[profile.role].label : undefined}
-            onPress={() => router.push('/kullanim-bicimi')}
-          />
-          <SettingsRow icon="family" label="Ailemi bağla" soon />
-        </Group>
+        <AccountGroup />
+        {ownsMedications && <HealthDataGroup />}
         <Group title="UYGULAMA">
           <SettingsRow
             icon="bell"

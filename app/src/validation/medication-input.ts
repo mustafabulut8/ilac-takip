@@ -122,7 +122,8 @@ export function changesOf(original: Medication, draft: MedicationDraft): Medicat
   );
   const changes: MedicationChanges = Object.fromEntries(changed);
   if (photoSourceUri) return { ...changes, photoSourceUri };
-  return draft.photoFile === original.photoFile ? changes : { ...changes, photoSourceUri: null };
+  const kept = draft.photoFile === original.photoFile && draft.photoPath === original.photoPath;
+  return kept ? changes : { ...changes, photoSourceUri: null };
 }
 
 /** Değişiklikteki bir alanın denetimi: hangi alan, hangi mesaj alanına, hangi kural. */

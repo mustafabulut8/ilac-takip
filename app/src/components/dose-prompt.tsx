@@ -58,7 +58,7 @@ export function DosePrompt({
   onClose,
 }: DosePromptProps) {
   const insets = useSafeAreaInsets();
-  const photoUri = useMedicationPhoto(medication.photoFile);
+  const photoUri = useMedicationPhoto(medication.photoFile, medication.photoPath);
   const form = getMedicationForm(medication.form);
 
   return (

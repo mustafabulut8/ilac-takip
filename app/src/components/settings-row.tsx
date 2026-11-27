@@ -14,6 +14,8 @@ type SettingsRowProps = {
   onPress?: () => void;
   /** Henüz yapılmamış özellik. */
   soon?: boolean;
+  /** Şu an kullanılamıyor; nedeni `value`'da yazar (örn. "Bunun için rıza gerekir"). */
+  disabled?: boolean;
   danger?: boolean;
 };
 
@@ -22,14 +24,23 @@ const NORMAL_TONE = { text: Colors.text, icon: Colors.primary, tile: Colors.prim
 const DANGER_TONE = { text: Colors.danger, icon: Colors.danger, tile: Colors.dangerSoft };
 
 /** Ayarlar satırı; "Yakında" olanlar basılamaz ve ekran okuyucuya pasif bildirilir. */
-export function SettingsRow({ icon, label, value, onPress, soon, danger }: SettingsRowProps) {
+export function SettingsRow({
+  icon,
+  label,
+  value,
+  onPress,
+  soon,
+  danger,
+  disabled,
+}: SettingsRowProps) {
   const tone = danger ? DANGER_TONE : NORMAL_TONE;
-  const opens = !!onPress && !soon;
+  const inactive = !!soon || !!disabled;
+  const opens = !!onPress && !inactive;
   return (
     <Pressable
-      accessibilityRole={onPress || soon ? 'button' : 'text'}
+      accessibilityRole={onPress || inactive ? 'button' : 'text'}
       accessibilityLabel={[label, value, soon && 'Yakında'].filter(Boolean).join(', ')}
-      accessibilityState={{ disabled: !!soon }}
+      accessibilityState={{ disabled: inactive }}
       disabled={!opens}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}>

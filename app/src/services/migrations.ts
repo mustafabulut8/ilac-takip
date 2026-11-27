@@ -42,7 +42,28 @@ export const MIGRATIONS: readonly Migration[] = [
       ),
     }),
   },
+  {
+    version: 3,
+    description:
+      'Bulut eşitlemesi için son değişiklik anı (kayıt anı) ve boş sunucu fotoğraf yolu eklenir.',
+    migrate: (data) => ({
+      ...data,
+      medications: data.medications.map((item) =>
+        isRecord(item) ? { ...syncDefaults(item.createdAt), ...item } : item,
+      ),
+    }),
+  },
+  {
+    version: 4,
+    description:
+      'Yerel veri kullanıcıya özel anahtarlara taşındı (u:<kimlik>:medications). Kayıtların biçimi değişmez; oturum öncesi veriyi ilk giren kullanıcıya UserScopedStore taşır (ADR-027).',
+    migrate: (data) => data,
+  },
 ];
+
+function syncDefaults(createdAt: unknown) {
+  return { updatedAt: createdAt, photoPath: '' };
+}
 
 function planDefaults(createdAt: unknown) {
   return {

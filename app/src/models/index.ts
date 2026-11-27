@@ -5,3 +5,4 @@ export * from './medication';
 export * from './medication-draft';
 export * from './schedule';
 export * from './profile';
+export * from './care';

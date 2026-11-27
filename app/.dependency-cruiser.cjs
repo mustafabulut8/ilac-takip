@@ -30,7 +30,7 @@ module.exports = {
       comment:
         'Ekranlar (src/app) ve bileşenler yalnızca hooks, components, models, utils ve constants (tema) kullanır. Servislere, doğrulamaya, hatalara ve duruma kanca üzerinden ulaşılır.',
       severity: 'error',
-      from: { path: '^src/(app|components)/', pathNot: `${TESTS}|^src/app/_layout\\.tsx$` },
+      from: { path: '^src/(app|components)/', pathNot: `${TESTS}|^src/app/.*_layout\\.tsx$` },
       to: {
         path: '^src/',
         pathNot: '^src/(app|components|hooks|models|utils|constants)/',
@@ -39,9 +39,9 @@ module.exports = {
     {
       name: 'kok-duzen-yalnizca-saglayicilar',
       comment:
-        'Tek istisna: kök düzen (src/app/_layout.tsx) context sağlayıcılarını kurar; servislere ve doğrulamaya yine erişemez.',
+        'Tek istisna: düzen dosyaları (src/app/**/_layout.tsx) context sağlayıcılarını kurar; servislere ve doğrulamaya yine erişemez.',
       severity: 'error',
-      from: { path: '^src/app/_layout\\.tsx$' },
+      from: { path: '^src/app/.*_layout\\.tsx$' },
       to: {
         path: '^src/',
         pathNot: '^src/(app|components|hooks|models|utils|constants|context)/',

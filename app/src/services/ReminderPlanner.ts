@@ -48,6 +48,8 @@ export class ReminderPlanner {
   static readonly CHANNEL_ID = 'ilac-hatirlatma';
   /** iOS en fazla 64 bekleyen bildirim tutar; erteleme ve test için yer bırakılır. */
   static readonly MAX_PENDING = 60;
+  /** Sınıra sığmayan planda kurulu son hatırlatmanın kimlik eki. */
+  static readonly LAST_SUFFIX = '-son';
 
   /** Her gün tekrarlanan hatırlatmanın kimliği; diğer türlerde sonuna ek gelir. */
   static notificationId(medicationId: string, time: string) {
@@ -70,6 +72,19 @@ export class ReminderPlanner {
    * uygulama her açıldığında eşitlemeyle tamamlanır.
    */
   plan(medications: Medication[], now: Date): Reminder[] {
+    return this.planWithCoverage(medications, now).reminders;
+  }
+
+  /**
+   * Plan ve hatırlatmaların ne zamana kadar kurulu olduğu. Sınıra sığmayan süreli
+   * hatırlatmalar varsa en yakın olanlar kurulur; sonuncusu "Uygulamayı açın" der ve
+   * `remindersUntil` onun anıdır (aile paneli 48 saatten az kalınca uyarır). Hepsi
+   * sığıyorsa ya da yalnızca tekrarlanan hatırlatmalar varsa `remindersUntil` boştur.
+   */
+  planWithCoverage(
+    medications: Medication[],
+    now: Date,
+  ): { reminders: Reminder[]; remindersUntil: Date | null } {
     const repeating = medications
       .filter((medication) => medication.duration.kind === 'continuous')
       .flatMap((medication) =>
@@ -81,10 +96,28 @@ export class ReminderPlanner {
       .sort((a, b) => (a.at?.getTime() ?? 0) - (b.at?.getTime() ?? 0));
 
     const room = Math.max(ReminderPlanner.MAX_PENDING - repeating.length, 0);
-    if (dated.length > room) {
-      logger.info(`${dated.length - room} süreli hatırlatma sonraki açılışta kurulacak.`);
-    }
-    return [...repeating, ...dated.slice(0, room)];
+    if (dated.length <= room) return { reminders: [...repeating, ...dated], remindersUntil: null };
+
+    logger.info(`${dated.length - room} süreli hatırlatma sonraki açılışta kurulacak.`);
+    const kept = dated.slice(0, room);
+    const last = kept.pop();
+    if (!last) return { reminders: repeating, remindersUntil: null };
+    return {
+      reminders: [...repeating, ...kept, this.openAppReminder(last)],
+      remindersUntil: last.at ?? null,
+    };
+  }
+
+  /** Kurulu son hatırlatma: dozu söyler ve sonrakiler için uygulamanın açılmasını ister. */
+  private openAppReminder(reminder: Reminder): Reminder {
+    return {
+      ...reminder,
+      identifier: `${reminder.identifier}${ReminderPlanner.LAST_SUFFIX}`,
+      content: {
+        ...reminder.content,
+        body: `${reminder.content.body} Sonraki hatırlatmalar için Uygulamayı açın.`,
+      },
+    };
   }
 
   private repeatingReminders(medication: Medication, time: string): Reminder[] {

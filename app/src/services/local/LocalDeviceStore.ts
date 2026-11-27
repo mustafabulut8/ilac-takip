@@ -19,6 +19,7 @@ export interface KeyValueStore {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
   multiSet(pairs: [string, string][]): Promise<void>;
+  multiRemove(keys: string[]): Promise<void>;
 }
 
 type ListResult<T> = { items: T[]; warning?: string };
@@ -52,10 +53,20 @@ export class LocalDeviceStore {
   private current: { medications: Medication[]; doseLogs: DoseLog[] } | null = null;
   /** İki repository aynı anda okursa disk bir kez okunur, bozuk veri bir kez yedeklenir. */
   private reading: Promise<DeviceData> | null = null;
+  /** `reset` her çağrıldığında artar; önceki hesabın yarım kalan okuması bellek kopyasını değiştirmez. */
+  private generation = 0;
 
   constructor(store: KeyValueStore, now: Clock) {
     this.store = store;
     this.now = now;
+  }
+
+  /** Hesap değişince bellekteki kopya bırakılır; sonraki okuma yeni kullanıcının verisidir. */
+  reset() {
+    this.generation += 1;
+    this.current = null;
+    this.reading = null;
+    this.writable = true;
   }
 
   read(): Promise<DeviceData> {
@@ -96,6 +107,7 @@ export class LocalDeviceStore {
   }
 
   private async readFromDisk(): Promise<DeviceData> {
+    const generation = this.generation;
     let raw: [string | null, string | null, string | null];
     try {
       raw = await Promise.all([
@@ -141,7 +153,9 @@ export class LocalDeviceStore {
       await this.writeMigrated(migrated);
     }
 
-    this.current = { medications: medications.items, doseLogs: doseLogs.items };
+    if (generation === this.generation) {
+      this.current = { medications: medications.items, doseLogs: doseLogs.items };
+    }
     return {
       medications: { items: medications.items, warnings: medicationWarnings },
       doseLogs: { items: doseLogs.items, warnings: doseLogWarnings },

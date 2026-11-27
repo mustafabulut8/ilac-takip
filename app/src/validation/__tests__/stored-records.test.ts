@@ -31,7 +31,29 @@ describe('parseMedicationRecord', () => {
       lowStockThreshold: 5,
       markedLow: false,
       pastPlans: [],
+      updatedAt: new Date(0).toISOString(),
+      photoPath: '',
     });
+  });
+
+  it('son değişiklik anı yoksa veya bozuksa kayıt anı kullanılır; sunucu yolu metindir', () => {
+    const createdAt = '2026-11-01T08:00:00.000Z';
+    expect(parseMedicationRecord({ id: 'a', name: 'A', createdAt })).toMatchObject({
+      updatedAt: createdAt,
+      photoPath: '',
+    });
+    expect(
+      parseMedicationRecord({ id: 'a', name: 'A', createdAt, updatedAt: 'bozuk', photoPath: 5 }),
+    ).toMatchObject({ updatedAt: createdAt, photoPath: '' });
+    expect(
+      parseMedicationRecord({
+        id: 'a',
+        name: 'A',
+        createdAt,
+        updatedAt: '2026-11-20T08:00:00.000Z',
+        photoPath: 'kisi/ilac.jpg',
+      }),
+    ).toMatchObject({ updatedAt: '2026-11-20T08:00:00.000Z', photoPath: 'kisi/ilac.jpg' });
   });
 
   it('bozuk saatleri atar, tekrarları kaldırır ve sıralar', () => {
