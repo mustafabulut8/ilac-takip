@@ -16,7 +16,14 @@ const mockAuth = {
 };
 const mockPermission = { status: 'granted', missing: false, request: jest.fn() };
 
+const mockConsent = {
+  status: 'granted' as string | null,
+  at: '2026-11-27T09:00:00.000Z' as string | null,
+  withdraw: jest.fn(),
+};
+
 jest.mock('@/hooks/useAuth', () => ({ useAuth: () => mockAuth }));
+jest.mock('@/hooks/useConsent', () => ({ useConsent: () => mockConsent }));
 jest.mock('@/hooks/useNotificationPermission', () => ({
   useNotificationPermission: () => mockPermission,
 }));
@@ -64,5 +71,45 @@ describe('Ayarlar ekranı', () => {
     expect(screen.getByText('Çıkış yapmak istiyor musunuz?')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Evet, çıkış yap' }));
     await waitFor(() => expect(mockSignOut).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('Ayarlar: sağlık verisi ve aile', () => {
+  beforeEach(() => {
+    mockAuth.profile = { id: 'u1', name: 'ayşe', role: 'sade', createdAt: '' };
+    mockConsent.status = 'granted';
+    mockConsent.withdraw.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('rıza verildiyse tarihini gösterir; geri alma penceresi telefondaki verinin kaldığını söyler', async () => {
+    await render(<SettingsScreen />);
+    await fireEvent.press(
+      screen.getByRole('button', { name: 'Sağlık verisi rızası, Verildi · 27 Kasım 2026' }),
+    );
+    expect(screen.getByText('Rızanızı geri almak istiyor musunuz?')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Sunucudaki ilaç bilgileriniz ve aile bağlantılarınız silinecek. Telefonunuzdaki ilaçlar ve hatırlatmalar devam eder.',
+      ),
+    ).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Rızamı geri al' }));
+    await waitFor(() => expect(mockConsent.withdraw).toHaveBeenCalled());
+  });
+
+  it('rıza yoksa satır rıza ekranını açar, aile bağlama "rıza gerekir" diye pasif görünür', async () => {
+    const { router } = jest.requireMock('expo-router');
+    mockConsent.status = 'declined';
+    await render(<SettingsScreen />);
+    expect(
+      screen.getByRole('button', { name: 'Ailemi bağla, Bunun için rıza gerekir, Yakında' }),
+    ).toBeDisabled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Sağlık verisi rızası, Verilmedi' }));
+    expect(router.push).toHaveBeenCalledWith('/saglik-verisi-rizasi');
+  });
+
+  it('aile rolünde bu bölüm görünmez', async () => {
+    mockAuth.profile = { id: 'u1', name: 'ayşe', role: 'aile', createdAt: '' };
+    await render(<SettingsScreen />);
+    expect(screen.queryByText('Sağlık verisi rızası')).toBeNull();
   });
 });

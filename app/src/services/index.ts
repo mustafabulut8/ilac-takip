@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { isSupabaseConfigured } from '@/config';
 
 import { AuthService } from './AuthService';
+import { ConsentService } from './ConsentService';
 import { ProfileCache } from './ProfileCache';
 import { ProfileRepository } from './ProfileRepository';
 import { supabase } from './supabase';
@@ -13,34 +14,81 @@ import { DoseService } from './DoseService';
 import { HistoryService } from './HistoryService';
 import { MedicationService } from './MedicationService';
 import { NotificationService } from './NotificationService';
+import { OfflineFirstDoseLogRepository, OfflineFirstMedicationRepository, Outbox } from './Outbox';
 import { PhotoService } from './PhotoService';
 import { systemClock } from './ports';
 import { LocalDeviceStore } from './local/LocalDeviceStore';
 import { LocalDoseLogRepository } from './local/LocalDoseLogRepository';
 import { LocalMedicationRepository } from './local/LocalMedicationRepository';
+import { RemoteMedicationRepository } from './RemoteMedicationRepository';
+import { ExpoNetworkStatus } from './remote/ExpoNetworkStatus';
+import { RealtimeMedicationChanges } from './remote/RealtimeMedicationChanges';
+import { SupabaseConsentApi } from './remote/SupabaseConsentApi';
+import { SupabaseMedicationRows } from './remote/SupabaseMedicationRows';
 import type { DoseLogRepository, MedicationRepository } from './repositories';
+import { SyncService } from './SyncService';
 
 // Kancaların ve durumun kullandığı tipler. Sınıflar dışarı açılmaz; yalnızca aşağıdaki
 // hazır örnekler kullanılır.
 export type { AuthService } from './AuthService';
+export type { ConsentService, ConsentState } from './ConsentService';
 export type { DoseService } from './DoseService';
 export type { DaySummary, HistoryDay } from './HistoryService';
 export type { MedicationChanges, MedicationService } from './MedicationService';
 export type { NotificationPermissionStatus } from './NotificationService';
+export type { SyncService } from './SyncService';
 
 /**
  * Bağımlılıkların tek kurulduğu yer (composition root). Servisler depolamayı, saati,
  * bildirimi ve Supabase istemcisini constructor ile alır; somut sınıflar yalnızca burada
- * seçilir. 2. parçada ilaç verisi sunucuya taşınınca yalnızca aşağıdaki iki repository
- * satırı değişir (ör. `new SupabaseMedicationRepository(supabase)`).
+ * seçilir.
+ *
+ * Telefon önce kendine yazar (çevrimdışı da çalışır), değişiklik giden kutusuna girer ve
+ * eşitleme sunucuya gönderir (ADR-022). Servisler bunu bilmez: cihaz repository'lerini
+ * `OfflineFirst…` dekoratörleri sarar. Rıza yoksa eşitleme kapalıdır ve kutu büyümez.
  */
 const device = new LocalDeviceStore(AsyncStorage, systemClock);
-const repositories: { medications: MedicationRepository; doseLogs: DoseLogRepository } = {
+const local = {
   medications: new LocalMedicationRepository(device),
   doseLogs: new LocalDoseLogRepository(device),
 };
+const outbox = new Outbox(AsyncStorage);
+const medicationRows = new SupabaseMedicationRows(supabase);
 export const photoService = new PhotoService();
 export const notificationService = new NotificationService(Notifications, Platform.OS, systemClock);
+export const syncService = new SyncService({
+  local: local.medications,
+  localDoseLogs: local.doseLogs,
+  remoteFor: (ownerId) => new RemoteMedicationRepository(medicationRows, ownerId, systemClock),
+  api: medicationRows,
+  outbox,
+  store: AsyncStorage,
+  reminders: notificationService,
+});
+const syncEnabled = () => syncService.isEnabled();
+const repositories: { medications: MedicationRepository; doseLogs: DoseLogRepository } = {
+  medications: new OfflineFirstMedicationRepository(
+    local.medications,
+    outbox,
+    syncEnabled,
+    systemClock,
+  ),
+  doseLogs: new OfflineFirstDoseLogRepository(
+    local.doseLogs,
+    local.medications,
+    outbox,
+    syncEnabled,
+  ),
+};
+export const networkStatus = new ExpoNetworkStatus();
+export const realtimeMedicationChanges = new RealtimeMedicationChanges(supabase);
+export const consentService = new ConsentService(
+  new SupabaseConsentApi(supabase),
+  AsyncStorage,
+  syncService,
+  networkStatus,
+  systemClock,
+);
 export const doseCalculator = new DoseCalculator();
 export const historyService = new HistoryService(doseCalculator);
 export const doseService = new DoseService(
@@ -57,7 +105,6 @@ export const medicationService = new MedicationService(
   notificationService,
   systemClock,
 );
-// Supabase istemcisi yalnızca hesap işlemlerinde kullanılır; ilaç verisi bu parçada cihazda kalır.
 export const authService = new AuthService(
   supabase.auth,
   new ProfileRepository(supabase),

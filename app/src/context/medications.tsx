@@ -8,6 +8,8 @@ import {
   type DoseService,
   type MedicationChanges,
   type MedicationService,
+  syncService,
+  type SyncService,
 } from '@/services';
 import { logger } from '@/utils/logger';
 
@@ -18,6 +20,8 @@ import { logger } from '@/utils/logger';
 export type MedicationsServices = {
   medications: Pick<MedicationService, 'load' | 'add' | 'update' | 'remove'>;
   doses: Pick<DoseService, 'confirmDose'>;
+  /** Eşitleme telefondaki listeyi değiştirince (aile ekledi, düzeltti, sildi) haber verir. */
+  changes?: Pick<SyncService, 'subscribe'>;
 };
 
 type MedicationsContextValue = {
@@ -40,6 +44,7 @@ const MedicationsContext = createContext<MedicationsContextValue | null>(null);
 const DEFAULT_SERVICES: MedicationsServices = {
   medications: defaultMedicationService,
   doses: defaultDoseService,
+  changes: syncService,
 };
 
 /**
@@ -76,6 +81,8 @@ export function MedicationsProvider({
       })
       .finally(() => setIsLoaded(true));
   }, [services]);
+
+  useEffect(() => services.changes?.subscribe(setMedications), [services]);
 
   const addMedication = async (input: NewMedication) => {
     const result = await services.medications.add(medications, input);

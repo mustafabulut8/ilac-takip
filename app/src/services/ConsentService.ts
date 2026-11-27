@@ -36,7 +36,7 @@ export interface SyncSwitch {
   start(): void;
 }
 
-type ConsentStatus = 'granted' | 'withdrawn' | 'none';
+type ConsentStatus = 'granted' | 'declined' | 'withdrawn' | 'none';
 export type ConsentState = { status: ConsentStatus; at: string | null };
 
 /** Eşitlemeye ait anahtarlar; geri almada silinir. İlaç anahtarlarına dokunulmaz. */
@@ -45,7 +45,7 @@ const CONSENT_KEY = 'healthConsent';
 
 const storedConsentSchema = z.object({
   userId: z.string(),
-  status: z.enum(['granted', 'withdrawn']),
+  status: z.enum(['granted', 'declined', 'withdrawn']),
   at: z.string(),
   textVersion: z.string().catch(''),
 });
@@ -88,6 +88,11 @@ export class ConsentService {
     this.sync.start();
   }
 
+  /** "Şimdilik hayır": yalnızca telefona yazılır, soru bir daha kendiliğinden gelmez. */
+  decline(userId: string) {
+    return this.save(userId, 'declined', '');
+  }
+
   /**
    * Sıra önemlidir: önce eşitleme durur (silinen veri yeniden gönderilmesin), sonra
    * fotoğraflar ve sunucu verisi silinir. Sunucu hatasında rıza verilmiş kalır ve
@@ -111,7 +116,7 @@ export class ConsentService {
     if (!(await this.network.isOnline())) throw new OfflineError(action);
   }
 
-  private save(userId: string, status: 'granted' | 'withdrawn', textVersion: string) {
+  private save(userId: string, status: Exclude<ConsentStatus, 'none'>, textVersion: string) {
     const record = { userId, status, at: this.now().toISOString(), textVersion };
     return this.store.setItem(CONSENT_KEY, JSON.stringify(record));
   }

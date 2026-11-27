@@ -94,6 +94,17 @@ describe('ConsentService.grant', () => {
   });
 });
 
+describe('ConsentService.decline ("Şimdilik hayır")', () => {
+  it('yalnızca telefona yazılır; internet istemez, sunucuya gitmez, eşitleme başlamaz', async () => {
+    const { store, api, sync, service } = setup({ online: false });
+    store.data.delete('healthConsent');
+    await service.decline(USER);
+    expect(await service.current(USER)).toEqual({ status: 'declined', at: NOW.toISOString() });
+    expect(api.grant).not.toHaveBeenCalled();
+    expect(sync.start).not.toHaveBeenCalled();
+  });
+});
+
 describe('ConsentService.withdraw', () => {
   it('sırayla: eşitlemeyi durdurur, fotoğrafları siler, sunucu verisini siler', async () => {
     const { calls, service } = setup();

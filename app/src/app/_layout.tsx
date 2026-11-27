@@ -6,23 +6,35 @@ import { Inter_800ExtraBold } from '@expo-google-fonts/inter/800ExtraBold';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Colors } from '@/constants/theme';
 import { AuthProvider } from '@/context/auth';
+import { ConsentProvider } from '@/context/consent';
 import { MedicationsProvider } from '@/context/medications';
 import { useAuth } from '@/hooks/useAuth';
+import { useCloudSync } from '@/hooks/useCloudSync';
+import { useConsent } from '@/hooks/useConsent';
 import { useDoseNotificationTaps } from '@/hooks/useDoseNotificationTaps';
 import { useMedications } from '@/hooks/useMedications';
 import { useReminderSync } from '@/hooks/useReminderSync';
-import { HOME_ROUTES } from '@/utils/routes';
+import { HOME_ROUTES, withConsentStep } from '@/utils/routes';
 
 SplashScreen.preventAutoHideAsync();
 
+/** Rıza sağlayıcısı oturumdaki profile göre kurulur (eşitlemenin sahibi). */
+function WithConsent({ children }: { children: ReactNode }) {
+  const { profile } = useAuth();
+  return <ConsentProvider profile={profile}>{children}</ConsentProvider>;
+}
+
 function AppStack() {
   const { isLoaded } = useMedications();
-  const { isLoading: authLoading, homeRoute } = useAuth();
+  const { isLoading: authLoading, homeRoute: accountHome } = useAuth();
+  const { status: consent } = useConsent();
+  // Rıza hiç sorulmadıysa ana ekrandan önce rıza ekranı açılır (ADR-021).
+  const homeRoute = withConsentStep(accountHome, consent);
   const ready = isLoaded && !authLoading;
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -30,6 +42,7 @@ function AppStack() {
 
   useDoseNotificationTaps(ready);
   useReminderSync();
+  useCloudSync();
 
   const signedIn = ready && homeRoute !== HOME_ROUTES.guest && homeRoute !== HOME_ROUTES.noProfile;
   const isHome = (route: string) => ready && homeRoute === route;
@@ -62,6 +75,8 @@ function AppStack() {
           <Stack.Screen name="aldim/[id]" />
           <Stack.Screen name="ayarlar" />
           <Stack.Screen name="kullanim-bicimi" />
+          {/* İlk kez sorulurken geri kaydırma kapalı; Ayarlar'dan açılınca da aynı ekran. */}
+          <Stack.Screen name="saglik-verisi-rizasi" options={{ gestureEnabled: false }} />
         </Stack.Protected>
         <Stack.Protected guard={isHome(HOME_ROUTES.onboarding)} redirectTo={homeRoute}>
           <Stack.Screen name="bildirim-izni" options={{ gestureEnabled: false }} />
@@ -97,7 +112,9 @@ export default function RootLayout() {
     <ErrorBoundary>
       <AuthProvider>
         <MedicationsProvider>
-          <AppStack />
+          <WithConsent>
+            <AppStack />
+          </WithConsent>
         </MedicationsProvider>
       </AuthProvider>
     </ErrorBoundary>

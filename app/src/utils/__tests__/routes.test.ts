@@ -1,4 +1,4 @@
-import { HOME_ROUTES, homeRouteOf } from '../routes';
+import { HOME_ROUTES, homeRouteOf, withConsentStep } from '../routes';
 
 const base = { hasSession: true, role: null, profileLoading: false, onboarding: false };
 
@@ -51,5 +51,25 @@ describe('homeRouteOf: bütün birleşimler', () => {
 
   it('önbellekteki profil varken yükleme sürse de rolün ekranı açılır (çevrimdışı açılış)', () => {
     expect(homeRouteOf({ ...base, role: 'sade', profileLoading: true })).toBe('/sade');
+  });
+});
+
+describe('withConsentStep (sağlık verisi rızası bir kez sorulur)', () => {
+  it('rıza hiç sorulmamış sade ve standart kullanıcı önce rıza ekranına gider', () => {
+    expect(withConsentStep(HOME_ROUTES.sade, 'none')).toBe(HOME_ROUTES.consent);
+    expect(withConsentStep(HOME_ROUTES.standart, 'none')).toBe(HOME_ROUTES.consent);
+  });
+
+  it('cevap verildiyse (kabul, ret veya geri alma) ana ekran açılır', () => {
+    for (const status of ['granted', 'declined', 'withdrawn'] as const) {
+      expect(withConsentStep(HOME_ROUTES.sade, status)).toBe(HOME_ROUTES.sade);
+    }
+  });
+
+  it('aile rolüne, bildirim izni adımına ve girişe dokunmaz; durum bilinmiyorsa beklemez', () => {
+    expect(withConsentStep(HOME_ROUTES.aile, 'none')).toBe(HOME_ROUTES.aile);
+    expect(withConsentStep(HOME_ROUTES.onboarding, 'none')).toBe(HOME_ROUTES.onboarding);
+    expect(withConsentStep(HOME_ROUTES.guest, 'none')).toBe(HOME_ROUTES.guest);
+    expect(withConsentStep(HOME_ROUTES.sade, null)).toBe(HOME_ROUTES.sade);
   });
 });

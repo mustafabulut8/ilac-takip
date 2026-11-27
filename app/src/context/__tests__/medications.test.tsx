@@ -30,6 +30,16 @@ function fakeServices() {
     doses: {
       confirmDose: jest.fn().mockResolvedValue({ medications: [aspirin], doseLogs: [log] }),
     },
+    changes: {
+      listener: null as ((medications: ReturnType<typeof makeMedication>[]) => void) | null,
+      subscribe: jest.fn(function (
+        this: { listener: unknown },
+        listener: (medications: ReturnType<typeof makeMedication>[]) => void,
+      ) {
+        this.listener = listener;
+        return jest.fn();
+      }),
+    },
   };
 }
 
@@ -96,5 +106,17 @@ describe('MedicationsProvider', () => {
     await expect(renderHook(() => useMedications())).rejects.toThrow(
       'useMedications, MedicationsProvider içinde kullanılmalıdır.',
     );
+  });
+});
+
+describe('MedicationsProvider: eşitlemeden gelen değişiklik', () => {
+  it('sunucudan gelen liste ekrana yansır (aile ekledi, düzeltti veya sildi)', async () => {
+    const { result, services } = await setup();
+    const fromFamily = makeMedication({ id: 'ilac2', name: 'Ailenin eklediği' });
+    await act(async () => services.changes.listener?.([aspirin, fromFamily]));
+    expect(result.current.medications.map((item) => item.name)).toEqual([
+      'Aspirin',
+      'Ailenin eklediği',
+    ]);
   });
 });
