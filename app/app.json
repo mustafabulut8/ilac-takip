@@ -47,7 +47,9 @@
           "imageWidth": 200
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      "expo-image",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
