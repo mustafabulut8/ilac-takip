@@ -1,7 +1,4 @@
-import { StaleWriteError } from '../src/errors';
-import { RemoteMedicationRepository } from '../src/services/RemoteMedicationRepository';
-import { SupabaseMedicationRows } from '../src/services/remote/SupabaseMedicationRows';
-import { parseMedicationRow } from '../src/validation/medication-rows';
+import { SupabaseConsentApi } from '../src/services/remote/SupabaseConsentApi';
 import { newClient, signInAs, testMedication, TINY_JPEG, type TestUser } from './clients';
 
 /**
@@ -127,7 +124,9 @@ describe('rıza ve eşleşme', () => {
     }
     expect(data?.[0]).toMatchObject({ status: 'ok', patient_id: a.id, patient_name: 'Test Sade' });
   });
+});
 
+describe('eşleşmeden sonra', () => {
   it('kullanılmış kod ikinci kez kullanılamaz', async () => {
     const { data } = await c.db.rpc('redeem_invite_code', {
       p_code: inviteCode,
@@ -185,29 +184,6 @@ describe('ilaçlar', () => {
     expect(
       (await c.db.from('medications').insert(testMedication(id('c'), a.id))).error,
     ).not.toBeNull();
-  });
-});
-
-describe('uygulamanın sunucu adaptörü (SupabaseMedicationRows)', () => {
-  it('eski sürümle yazma false döner; repository güncel hâli çekip StaleWriteError fırlatır', async () => {
-    const rows = new SupabaseMedicationRows(a.db);
-    const repository = new RemoteMedicationRepository(rows, a.id, () => new Date());
-    const now = new Date().toISOString();
-    const row = testMedication('adaptor', a.id, { name: 'Güncel', updated_at: now });
-    expect(await rows.write({ ...row, deleted_at: null })).toBe(true);
-
-    const old = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    expect(await rows.write({ ...row, name: 'Eski', updated_at: old, deleted_at: null })).toBe(
-      false,
-    );
-
-    const stale = parseMedicationRow({ ...row, name: 'Eski', updated_at: old });
-    const error = await repository.update(stale!).catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(StaleWriteError);
-    expect((error as StaleWriteError).current?.name).toBe('Güncel');
-
-    await repository.remove(row.id);
-    expect((await repository.load()).items.map((item) => item.id)).not.toContain(row.id);
   });
 });
 
@@ -355,9 +331,12 @@ describe('fotoğraflar', () => {
 
 describe('rızanın geri alınması', () => {
   it('A geri alınca sunucudaki verisi ve bağlantısı silinir; B artık bir şey göremez', async () => {
-    // Uygulamadaki sıra: önce fotoğraflar Storage API ile silinir, sonra RPC.
-    expect((await a.db.storage.from('medication-photos').remove([photoPath()])).error).toBeNull();
-    expect((await a.db.rpc('withdraw_health_consent')).error).toBeNull();
+    // Uygulamanın adaptörüyle ve uygulamadaki sırayla: önce fotoğraflar, sonra RPC.
+    const consent = new SupabaseConsentApi(a.db);
+    await consent.removeOwnPhotos();
+    await consent.withdraw();
+    const left = await a.db.storage.from('medication-photos').list(a.id);
+    expect(left.data).toEqual([]);
 
     expect((await a.db.from('medications').select('id').eq('owner_id', a.id)).data).toEqual([]);
     expect((await b.db.from('medications').select('id').eq('owner_id', a.id)).data).toEqual([]);

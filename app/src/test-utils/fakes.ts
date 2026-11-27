@@ -32,6 +32,11 @@ export class MemoryKeyValueStore implements KeyValueStore {
     for (const [key, value] of pairs) this.data.set(key, value);
   }
 
+  async multiRemove(keys: string[]) {
+    if (this.failWrites) throw new Error('yazma hatası');
+    for (const key of keys) this.data.delete(key);
+  }
+
   keys() {
     return [...this.data.keys()];
   }

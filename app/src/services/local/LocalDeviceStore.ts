@@ -19,6 +19,7 @@ export interface KeyValueStore {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
   multiSet(pairs: [string, string][]): Promise<void>;
+  multiRemove(keys: string[]): Promise<void>;
 }
 
 type ListResult<T> = { items: T[]; warning?: string };
