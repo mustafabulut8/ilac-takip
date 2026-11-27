@@ -17,7 +17,8 @@ module.exports = defineConfig([
   // Biçimlendirme kurallarını Prettier'a bırakır; çakışan ESLint kuralları kapatılır.
   prettierConfig,
   {
-    ignores: ['dist/*', 'coverage/*', 'ios/*', 'android/*', '.expo/*'],
+    // database.ts `npm run tipler` ile şemadan üretilir; elle yazılmadığı için denetlenmez.
+    ignores: ['dist/*', 'coverage/*', 'ios/*', 'android/*', '.expo/*', 'src/types/database.ts'],
   },
   {
     rules: {

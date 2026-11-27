@@ -70,7 +70,8 @@
     "test": "jest --coverage",
     "supabase": "supabase --workdir ..",
     "tipler": "(echo '// Bu dosya `npm run tipler` ile Supabase şemasından üretilir; elle değiştirmeyin.' && supabase --workdir .. gen types typescript --remote --schema public) > src/types/database.ts && prettier --write src/types/database.ts",
-    "prepare": "cd .. && husky app/.husky"
+    "prepare": "cd .. && husky app/.husky",
+    "test:rls": "jest --config jest.rls.config.js --runInBand"
   },
   "private": true,
   "jest": {
@@ -81,7 +82,8 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/ios/",
-      "/android/"
+      "/android/",
+      "/rls-tests/"
     ],
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",

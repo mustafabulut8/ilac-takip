@@ -19,6 +19,7 @@ app/android/
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # İmzalama anahtarları ve sertifikalar
 *.jks
