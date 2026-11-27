@@ -8,7 +8,8 @@ import { newClient, signInAs, testMedication, TINY_JPEG, type TestUser } from '.
  * dayanır. Sonunda A rızasını geri alır; bu hem geri almayı dener hem de A'nın
  * sunucudaki test verisini temizler.
  *
- * Deneme sınırı (saatte 5) yüzünden paket saatte en fazla iki kez çalıştırılmalı.
+ * B ve C her çalıştırmada birer kod denemesi yapar. Deneme sınırı saatte 5 olduğu için
+ * paket bir saat içinde en fazla 5 kez çalıştırılabilir; fazlasında açık bir hatayla durur.
  * Süresi dolmuş kod ve sınırın kendisi elle SQL ile denenir:
  * supabase/tests/elle/davet-kodu.sql.
  */
@@ -45,8 +46,36 @@ describe('oturumsuz istemci (anon)', () => {
       const { data } = await anon.from(table).select('id');
       expect(data ?? []).toEqual([]);
     }
-    const { error } = await anon.rpc('create_invite_code');
-    expect(error).not.toBeNull();
+  });
+
+  // Fonksiyonların EXECUTE yetkisi anon ve public'ten kaldırıldı; yalnızca authenticated çağırır.
+  it.each([
+    ['create_invite_code', {}],
+    ['redeem_invite_code', { p_code: '000000', p_relation_label: 'Annem' }],
+    ['grant_health_consent', { p_text_version: 'test' }],
+    ['withdraw_health_consent', {}],
+    [
+      'record_dose',
+      {
+        p_id: 'x',
+        p_medication_id: 'x',
+        p_scheduled_date: '2026-11-27',
+        p_scheduled_time: '08:00',
+        p_taken_at: '2026-11-27T08:00:00Z',
+        p_amount: 1,
+      },
+    ],
+    ['mark_delivered', { p_items: [] }],
+  ] as const)('%s fonksiyonunu çağıramaz (izin reddi)', async (name, args) => {
+    const { error } = await newClient().rpc(name, args as never);
+    expect(error?.code).toBe('42501');
+  });
+
+  it("RLS yardımcı fonksiyonları API'de hiç görünmez", async () => {
+    for (const client of [newClient(), a.db]) {
+      const { error } = await client.rpc('has_health_consent' as never, { person: a.id } as never);
+      expect(error).not.toBeNull();
+    }
   });
 });
 
@@ -87,6 +116,11 @@ describe('rıza ve eşleşme', () => {
       p_relation_label: 'Annem',
     });
     expect(error).toBeNull();
+    if (data?.[0]?.status === 'too_many_attempts') {
+      throw new Error(
+        'Deneme sınırı doldu (saatte 5). Testleri bir saat sonra yeniden çalıştırın.',
+      );
+    }
     expect(data?.[0]).toMatchObject({ status: 'ok', patient_id: a.id, patient_name: 'Test Sade' });
   });
 

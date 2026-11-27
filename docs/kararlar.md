@@ -422,7 +422,12 @@ Hocanın 1. tur sunumundan sonra onaylanan yapıya göre uygulamada üç rol ola
 ### Sonuçlar
 
 - Her yeni tabloya RLS kuralı yazılmadan veri açılmaz; 2. turda tablolar kurulurken kurallar da birlikte yazılır ve test edilir.
-- **Bilinen sınırlılık (Supabase Security Advisor'da kalan tek uyarı):** Sızdırılmış şifre denetimi (Leaked Password Protection) ücretli planda sunulduğundan prototipte kapalıdır; gerçek kullanımda açılmalıdır. Performance Advisor'da uyarı yoktur.
+- **Bilinen sınırlılık (Supabase Security Advisor):** Sızdırılmış şifre denetimi (Leaked Password Protection) ücretli planda sunulduğundan prototipte kapalıdır; gerçek kullanımda açılmalıdır. Performance Advisor'da uyarı yoktur.
+- **Bilinen sınırlılık (27 Kasım 2026, 2. parça):** Security Advisor dört fonksiyon için de uyarı verir: `create_invite_code`, `redeem_invite_code`, `grant_health_consent`, `withdraw_health_consent`. Bunlar uygulamanın bilerek çağırdığı fonksiyonlardır.
+  - Tablolara RLS'yi aşarak yazmaları gerekir. Örneğin bağlantıyı yalnızca kod doğruysa eklerler, rıza geri alınınca kişinin bütün verisini silerler. Bu yüzden `security definer`'dırlar.
+  - Her biri önce `auth.uid()` ile kimin çağırdığını ve rolünü denetler.
+  - Yalnızca oturum açmış kullanıcı (`authenticated`) çağırabilir; `anon` ve `public`'ten yetki kaldırıldı. RLS testi bunu denetler.
+  - RLS kurallarının kullandığı yardımcı fonksiyonlar API'nin görmediği `private` şemasındadır (`20261127090000_advisor_fixes.sql`); onlar için uyarı yoktur. Performance Advisor'da uyarı yoktur.
 
 ## ADR-017: Prototipte e-posta doğrulaması kapalı
 
