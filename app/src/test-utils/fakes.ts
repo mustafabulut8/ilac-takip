@@ -110,6 +110,8 @@ export function makeMedication(overrides: Partial<Medication> = {}): Medication 
     lowStockThreshold: 5,
     markedLow: false,
     pastPlans: [],
+    updatedAt: new Date(2026, 0, 1, 0, 0).toISOString(),
+    photoPath: '',
     ...overrides,
   };
 }

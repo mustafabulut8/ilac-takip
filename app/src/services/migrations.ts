@@ -42,7 +42,22 @@ export const MIGRATIONS: readonly Migration[] = [
       ),
     }),
   },
+  {
+    version: 3,
+    description:
+      'Bulut eşitlemesi için son değişiklik anı (kayıt anı) ve boş sunucu fotoğraf yolu eklenir.',
+    migrate: (data) => ({
+      ...data,
+      medications: data.medications.map((item) =>
+        isRecord(item) ? { ...syncDefaults(item.createdAt), ...item } : item,
+      ),
+    }),
+  },
 ];
+
+function syncDefaults(createdAt: unknown) {
+  return { updatedAt: createdAt, photoPath: '' };
+}
 
 function planDefaults(createdAt: unknown) {
   return {

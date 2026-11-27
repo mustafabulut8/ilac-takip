@@ -88,6 +88,8 @@ export class MedicationService {
       id,
       photoFile,
       createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      photoPath: '',
       startDate: this.firstDay(fields, now),
       pastPlans: [],
     };
@@ -120,6 +122,7 @@ export class MedicationService {
       ...existing,
       ...fields,
       ...this.planAfter(existing, fields, now),
+      updatedAt: now.toISOString(),
       // Dosya adı değişir; aynı ad kullanılsaydı ekranda eski fotoğraf önbellekten gelirdi.
       ...(photoSourceUri !== undefined && {
         photoFile: photoSourceUri

@@ -40,6 +40,8 @@ const migratedMedication = {
   lowStockThreshold: 5,
   markedLow: false,
   pastPlans: [],
+  updatedAt: '2026-11-01T10:00:00.000Z',
+  photoPath: '',
 };
 
 function setup(initial: Record<string, string> = {}) {
@@ -83,7 +85,7 @@ describe('cihaz repository’leri: okuma ve göç', () => {
     expect(JSON.parse(store.data.get('doseLogs')!)).toEqual([legacyLog]);
   });
 
-  it('v1 kaydını v2 ye göç ettirir, kayıtlı form ve alanlar korunur', async () => {
+  it('v1 kaydını güncel sürüme göç ettirir, kayıtlı form ve alanlar korunur', async () => {
     const { store, storage } = setup({
       medications: JSON.stringify([{ ...legacyMedication, form: 'syrup', note: 'x' }]),
       doseLogs: JSON.stringify([legacyLog]),
@@ -92,7 +94,7 @@ describe('cihaz repository’leri: okuma ve göç', () => {
     const data = await storage.load();
     expect(data.medications).toEqual([{ ...migratedMedication, form: 'syrup', note: 'x' }]);
     expect(data.doseLogs).toEqual([legacyLog]);
-    expect(store.data.get('schemaVersion')).toBe('2');
+    expect(store.data.get('schemaVersion')).toBe('3');
   });
 
   it('göç yeniden çalışsa da kullanıcının seçtiği planın üzerine yazmaz', async () => {

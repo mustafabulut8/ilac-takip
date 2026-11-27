@@ -51,7 +51,7 @@ describe('v1 → v2 göçü: bozuk ve eksik veri', () => {
     expect(data.medications.map((item) => item.id)).toEqual(['ilac1']);
   });
 
-  it('bozuk alanlar varsayılana döner, göç sonrası sürüm 2 yazılır', async () => {
+  it('bozuk alanlar varsayılana döner, göç sonrası güncel sürüm yazılır', async () => {
     const { data, store } = await loadV1([
       {
         id: 'm1',
@@ -71,6 +71,6 @@ describe('v1 → v2 göçü: bozuk ve eksik veri', () => {
       mealTiming: 'any',
       form: 'tablet',
     });
-    expect(store.data.get('schemaVersion')).toBe('2');
+    expect(store.data.get('schemaVersion')).toBe('3');
   });
 });
