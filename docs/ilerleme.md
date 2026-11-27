@@ -1,12 +1,21 @@
 # İlerleme
 
-**Son güncelleme:** 27 Kasım 2026
+**Son güncelleme:** 28 Kasım 2026
 
-## Bugün Tamamlananlar (27 Kasım)
+## Bugün Tamamlananlar (28 Kasım)
+
+### 2. tur, 2. parça: telefonda ve simülatörde birlikte denendi
+
+- **Test düzeni:** Telefonda Release derlemesiyle sade hesap, simülatörde aile hesabı.
+- **Çalışanlar:** Kodla bağlanma, ailenin yakını için ilaç eklemesi, anlık eşitleme (Realtime), "Henüz telefona ulaşmadı" (telefon alınca kayboluyor), kırmızı kaçırılan doz kartı, telefonda onaylanan dozun panelde "Alındı" görünmesi.
+- **Telefona kurulum:** `cd app && npx expo run:ios --device --configuration Release` (yerel paket veya `app.json` değiştiyse önce `npx expo prebuild -p ios --clean`, ardından Xcode'da imza takımı seçilir).
+- **Dal:** `feature/tur2-aile` main'e birleştirildi, `v0.5-aile-paneli` etiketi kondu.
+
+## Önceki Tamamlananlar (27 Kasım)
 
 ### 2. tur, 2. parça: bulut, eşleştirme ve aile paneli
 
-Dal: `feature/tur2-aile` (main'e birleştirilmedi). Plan: `docs/tur2-parca2-plan.md`; kararlar ADR-021…026.
+Dal: `feature/tur2-aile` (28 Kasım'da main'e birleştirildi, `v0.5-aile-paneli`). Plan: `docs/tur2-parca2-plan.md`; kararlar ADR-021…026.
 
 - **Veritabanı:** İlaç, doz, telefon durumu, davet kodu, aile bağlantısı ve rıza tabloları; RLS; fotoğraf kovası. Yardımcı fonksiyonlar `private` şemasında; RPC'ler yalnızca oturumlu kullanıcıya açık. Davet kodu deneme sınırı yalnızca başarısız denemeleri sayar.
 - **Rıza (ADR-021):** Ayrı rıza ekranı; rıza yoksa uygulama yalnızca telefonda çalışır. Geri alma onaylı; telefondaki veri ve hatırlatmalar kalır.
@@ -17,7 +26,8 @@ Dal: `feature/tur2-aile` (main'e birleştirilmedi). Plan: `docs/tur2-parca2-plan
 - **Bildirim bütçesi (ADR-026):** 60 bildirim, en yakın önce; sığmazsa son bildirim "Uygulamayı açın" der. `reminders_until` sunucuya yazılır, 48 saatten az kalınca panelde uyarı.
 - **Hesaba özel yerel veri (ADR-027):** Önce iki kullanıcıyla başarısız test, sonra düzeltme. İlaçlar, dozlar, kuyruk, eşitleme imleci ve rıza kullanıcıya özel anahtarlarda; çıkışta hatırlatmalar kaldırılıyor, eşitleme duruyor, veri silinmiyor. Oturum öncesi veri ilk giren kullanıcıya bir kez taşınıyor (schemaVersion 4).
 - **Bağımlılıklar:** Expo paketleri SDK 58.1 ile uyumlu (`npx expo install --check` temiz). Yeni yerel paketler: `expo-network`, `expo-background-task`, `expo-task-manager`, `expo-image-manipulator` (yeniden derleme gerekir).
-- **Test:** 684 birim testi; RLS ve adaptör paketi gerçek projeye karşı 36 test (`npm run test:rls`, art arda çalıştırılabilir).
+- **Release düzeltmesi:** Sunucu dışa aktarımı kapatıldı (`web.output: single`); Supabase istemcisi `window` olmayan ortamda depoya dokunmuyor.
+- **Test:** 703 birim testi; RLS ve adaptör paketi gerçek projeye karşı 36 test (`npm run test:rls`, art arda çalıştırılabilir).
 
 ## Önceki Tamamlananlar (26 Kasım)
 
@@ -118,7 +128,6 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
 - **Eski yerel fotoğraf dosyası:** Aile fotoğrafı değiştirince yaşlının telefonundaki eski dosya kullanılmaz ama silinmez.
 - **"Hesabımı sil" "Yakında":** Silme işi sunucu tarafında (Edge Function) yapılmalı; sonraki parçada.
 - **Kaçırılan doz uyarısı yalnızca panel açıkken (3. parçaya):** Aile Paneli'ndeki kırmızı kart, panel açıldığında mevcut doz kurallarıyla (`DoseCalculator`, 30 dakika) hesaplanıyor (`FamilyDashboardService`). Uygulama kapalıyken sunucu taraflı tespit ve aileye e-posta 3. parçada gelecek; kodda `services/family.ts` ve `app/aile.tsx` bu notu taşıyor.
-- **Aile tarafında ilaç fotoğrafı:** Aile bir ilaç eklerken çektiği fotoğraf şimdilik yalnızca aile telefonunda kalıyor; sunucuya yükleme 5. grupta.
 - **Sade modda yapılmayanlar:** "Bu dozu atla" onayı ve profil düzenleme (kalem) bu parçada yok.
 - **Bildirim izni artık kendiliğinden sorulmuyor:** Kayıttan sonraki Bildirim İzni ekranında veya ana ekrandaki "İzin ver" düğmesiyle soruluyor. 1. turdan kalan, oturumu olmayan kullanıcı da önce hesap açacak.
 
@@ -135,17 +144,46 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
 
 9. **Hesap (2. tur, 1. parça):** Üç rolle birer kayıt; çıkış; yeniden giriş; yanlış şifre; internet kapalıyken giriş ("İnternet bağlantısı yok") ve internet kapalıyken uygulamayı açma (doğru ana ekran açılmalı).
 10. **Sade mod:** Doz saati gelmeden, geçince ("Saati geçti") ve hepsi alınınca (14) ekranları; büyük onay düğmesi stoğu düşürüyor mu?
-11. **Aile (2. tur, 2. parça):** Sade ve aile hesabıyla simülatör adımları (son mesajdaki liste); gerçek telefonda arka plan eşitlemesi ve fotoğraf.
+11. ~~**Aile (2. tur, 2. parça):** Telefon (sade) ve simülatör (aile) ile birlikte~~ 28 Kasım'da denendi. Kalan: gerçek telefonda arka plan eşitlemesi ve fotoğraf.
 
 ## Yarın Yapılacaklar
 
-1. **Simülatörde hesap testi** (yukarıdaki 9 ve 10).
-2. **Elle test** (1-8) telefonda. Kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
-3. **2. tur, 2. parça'yı simülatörde dene** (11), sonra `feature/tur2-aile` için PR.
-4. **3. parça:** Kaçırılan dozun sunucu taraflı tespiti ve aileye e-posta; "Bu dozu atla".
+1. **Rapor 7. bölüm (UML)** (yol haritasının a maddesi).
 
-## Sonraki İşler
+## Yol Haritası
 
-- Kalan 6 ekranın tasarımı; Aile paneli ve mod seçimi ekranları eklenecek.
-- 2. tur (Supabase): ~~hesap, roller~~ (1. parça), ~~davet koduyla eşleşme, verinin sunucuya taşınması, aile paneli~~ (2. parça); kaçırılan doz e-postası (3. parça).
-- 3. tur: İlaç bilgisi.
+**a. Rapor 7. bölüm (UML).**
+
+**b. 3. parça:**
+
+- **Doz zamanlaması:** zamanında (±30 dk), erken (30 dk–2 saat), çok erken (2 saatten fazla), geç (30 dakikadan fazla).
+  - Çok erken onayda kullanıcıya sorulur.
+  - Onaydan sonra "Geri al".
+  - Erken alınan dozun asıl saatinde "tekrar almayın" bildirimi.
+  - Zamanlama aile panelinde ve PDF raporda gösterilir.
+- **Kaçırılan doz için sunucu görevi:** uygulama kapalıyken de tespit.
+- **Bildirim kanalları (Strategy):** e-posta ve panel uyarısı; aile hangi kanalı istediğini seçer.
+- **E-posta:** kaçırılan doz, çok erken alınan doz ve 2 saatten fazla geç alınan doz için.
+- **Doktor için PDF uyum raporu:** tarih aralığı, ilaç bazında uyum, kaçırılan, erken ve geç dozlar; telefonda üretilir, paylaş menüsüyle gönderilir; aile de üretebilir.
+- **Hesap silme** (sunucu tarafında).
+- **"Bu dozu atla".**
+- **Profil düzenleme.**
+- **Bildirim ayarları.**
+- **Hata:** silinen ilacın dozları Geçmiş'te görünmüyor.
+
+**c. 4. parça: kullanma talimatından kritik bilgiler ve sesli okuma.**
+
+- Dört bilgi: unutursam ne yapmalıyım, aç/tok, dikkat edilecekler, hemen doktora başvurulacak belirtiler.
+- Yapay zekâ yalnızca talimattaki cümleyi olduğu gibi alıntılar; bulamazsa "bulunamadı" der. Kullanıcı onaylamadan kaydedilmez (ADR-028).
+- Sesli okuma.
+
+**d. 5. parça: Tahlillerim (yapay zekâsız).**
+
+- Fotoğraf veya dosya yükleme; tarih, başlık, tür ve yer bilgisi.
+- Yıl ve aya göre gruplu, küçük resimli görünüm; tam ekran açma, filtre, arama, paylaşma.
+- Aile de görür ve yükler; aynı rıza ve RLS kuralları geçerli.
+- Tahlil değerleri okunmaz ve yorumlanmaz (ADR-028).
+
+**e. Son düzlük:** gerçek telefon testleri, kullanılabilirlik testi, Maestro, yük testi, sürüm dondurma.
+
+**Kapsam dışı:** WhatsApp bildirimi (ADR-029, gelecek çalışma).

@@ -38,6 +38,8 @@ Numaralar eski numaralarla aynıdır: "N. karar", ADR-0NN demektir. Yeni karar e
 | ADR-025 | Aile paneli ve telefonun durumu (`reminders_until`)                 | Kabul edildi                                            |
 | ADR-026 | Bildirim bütçesi (64 sınırı)                                        | Kabul edildi                                            |
 | ADR-027 | Hesaba özel yerel veri                                              | Kabul edildi                                            |
+| ADR-028 | Güvenilirlik ilkesi: tıbbi yorum yok                                | Kabul edildi                                            |
+| ADR-029 | WhatsApp bildirimi kapsam dışı                                      | Kabul edildi (gelecek çalışma)                          |
 
 ## ADR-001: iOS Push Notifications yetkisi kaldırıldı
 
@@ -733,3 +735,43 @@ Bitirme projesinin savunmasında tasarım ilkelerinin yalnızca anlatılmaması,
 - Önce iki kullanıcının çıkış/giriş senaryosunu gösteren başarısız test yazıldı (`accounts.integration.test.ts`), sonra düzeltildi.
 - Arka plan eşitleme görevi de önce oturumdaki hesaba geçer.
 - Profil önbelleği (`profile`) ve fotoğraf dosyaları kullanıcıya özel değildir; profil önbelleği yalnızca oturumdaki kullanıcınınkini kabul eder, fotoğraf adları ilaç kimliğiyle benzersizdir.
+
+## ADR-028: Güvenilirlik ilkesi: tıbbi yorum yok
+
+**Tarih:** 28 Kasım 2026 · **Durum:** Kabul edildi; ADR-008'i genişletir
+
+### Bağlam
+
+- Sonraki parçalarda yapay zekâ (kullanma talimatından bilgi) ve Tahlillerim geliyor. Yaşlı kullanıcı uygulamanın söylediğini doktor tavsiyesi gibi algılayabilir; yanlış ya da uydurma bir bilgi sağlığa zarar verebilir.
+- Dil modelleri kaynakta olmayan bilgiyi akıcı biçimde üretebilir.
+
+### Karar
+
+- **Uygulama tıbbi yorum yapmaz.** Yalnızca kullanıcının ve doktorun verdiği bilgiyi düzenler, hatırlatır ve gösterir.
+- **Tahlil değerleri hiçbir zaman okunmaz ve yorumlanmaz.** Tahlillerim yalnızca dosya saklar ve gösterir (yapay zekâ yok); "normal", "yüksek" gibi değerlendirme yapılmaz.
+- **Yapay zekâ yalnızca kaynaktan alıntı yapar.** Kullanma talimatındaki cümle olduğu gibi aktarılır. Bulunamazsa "bulunamadı" denir, tahmin edilmez. Kullanıcı onaylamadan hiçbir alıntı kaydedilmez.
+- Doz zamanlaması (zamanında, erken, geç) yorum değil, kullanıcının girdiği saatle onay anının karşılaştırılmasıdır.
+
+### Sonuçlar
+
+- Yapay zekâ çıktısı, talimat metninde birebir geçip geçmediği denetlenerek doğrulanabilir.
+- Bazı kullanıcılar yorum bekleyebilir; uygulama bunun için doktora yönlendirir.
+
+## ADR-029: WhatsApp bildirimi kapsam dışı
+
+**Tarih:** 28 Kasım 2026 · **Durum:** Kabul edildi (gelecek çalışma)
+
+### Bağlam
+
+- Aileler WhatsApp'ı e-postadan daha sık kullanıyor; kaçırılan doz bildiriminin WhatsApp'tan gelmesi istenebilir.
+- Uygulama adına otomatik mesaj göndermek için Meta WhatsApp Business Platformu gerekir. Bu platform ücretlidir ve gönderilecek her mesaj şablonunun Meta tarafından onaylanmasını ister.
+
+### Karar
+
+- WhatsApp bildirimi bu projenin kapsamı dışındadır.
+- Bildirimler 3. parçada kanal yapısıyla (Strategy) kurulacak: e-posta ve panel uyarısı. Kanallar ortak bir arayüzü uygular.
+
+### Sonuçlar
+
+- WhatsApp ileride tek bir kanal sınıfı eklenerek, diğer kodlar değişmeden desteklenebilir (gelecek çalışma).
+- Bitirme projesinde ücretli bir hizmete ve dış onay sürecine bağımlılık olmaz.
