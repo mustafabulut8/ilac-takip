@@ -57,6 +57,10 @@ app/src/
 │   ├── ilac-ekle.tsx         # Sihirbaz (yeni ilaç)
 │   ├── ilac-duzenle/[id].tsx # Aynı sihirbaz, dolu
 │   ├── aldim/[id].tsx        # Tam ekran ilaç zamanı ve başarı
+│   ├── sade.tsx, aile.tsx    # Sade ana ekran; Aile Paneli
+│   ├── saglik-verisi-rizasi.tsx, ailemi-bagla.tsx, kodla-baglan.tsx
+│   ├── yakin/[kisiId]/       # Aile: yakının ilaçları (index), ilac-ekle, ilac-duzenle/[id];
+│   │                         #   _layout.tsx o kişiye özel veri sağlayıcısını kurar
 │   └── ayarlar.tsx
 ├── components/               # Görsel bileşenler
 │   ├── wizard/               # WizardStepLayout ve dokuz adım
@@ -64,10 +68,12 @@ app/src/
 │   ├── app-text, icon, card, pill, banner, section-header, screen-header
 │   ├── primary-button, secondary-button (ortak gövde: button-base), icon-button
 │   ├── option-card, chip-group, number-stepper, time-stepper
-│   ├── status-chip, progress-ring, medication-photo
+│   ├── family/               # PersonCard, MissedAlert (Aile Paneli)
+│   ├── status-chip, progress-ring, medication-photo, needs-internet
 │   └── dose-card, dose-prompt, dose-done, medication-card, week-days, settings-row, ...
 ├── hooks/                    # useMedications, useTodayDoses, useMedicationWizard, ...
-├── context/medications.tsx   # Sadece React durumu; iş kuralı yok
+├── context/                  # Sadece React durumu; iş kuralı yok
+│                             #   medications, auth, consent, care-subject, family-member
 ├── services/                 # İş mantığı sınıfları
 │   ├── repositories.ts       # MedicationRepository, DoseLogRepository arayüzleri
 │   ├── local/                # Cihaz uygulamaları: LocalDeviceStore (AsyncStorage adaptörü),
@@ -76,6 +82,14 @@ app/src/
 │   ├── MedicationService.ts, DoseService.ts, DoseCalculator.ts, HistoryService.ts
 │   ├── NotificationService.ts, ReminderPlanner.ts, PhotoService.ts
 │   ├── AuthService.ts, ProfileRepository.ts, ProfileCache.ts, auth-errors.ts, ports.ts
+│   ├── Outbox.ts, SyncService.ts          # Telefon önce yazma, kuyruk ve eşitleme (ADR-022)
+│   ├── RemoteMedicationRepository.ts, RemoteDoseLogRepository.ts  # Sunucudaki kişi
+│   ├── ConsentService.ts, CareService.ts  # Rıza (ADR-021), davet kodu (ADR-023)
+│   ├── PhotoSync.ts          # Fotoğraf yükleme, imzalı adres önbelleği (ADR-024)
+│   ├── family.ts             # Aile servisleri, FamilyDashboardService (ADR-025)
+│   ├── DeviceStatusReporter.ts  # reminders_until (ADR-025, ADR-026)
+│   ├── remote-ports.ts       # Sunucu portları (MedicationRowsApi, SyncApi, ...)
+│   ├── remote/               # Supabase ve Expo adaptörleri (RLS testleriyle denenir)
 │   ├── supabase.ts           # Tek Supabase istemcisi (createClient<Database>)
 │   └── index.ts              # Bağımlılıkların kurulduğu tek yer (Composition Root)
 ├── models/                   # Tipler ve form sınıfları
@@ -110,22 +124,26 @@ Bağımlılık yönü tek yönlüdür: üst katman alttakini bilir, alttaki üst
 
 **Kural: Ekranlar servislere yalnızca kancalar üzerinden erişir.** `src/app/` ve `src/components/` altındaki dosyalar `@/services`'i, `expo-notifications`'ı veya depolamayı doğrudan import etmez. Servis çağrısı gereken her yer için `src/hooks/` altında bir kanca yazılır:
 
-| Kanca                       | Arkasındaki servis                                                             | Kullanan                                  |
-| --------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
-| `useMedications`            | context → `MedicationService`, `DoseService`                                   | Tüm ekranlar                              |
-| `useTodayDoses`             | `DoseCalculator.getVisibleDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün                                     |
-| `useHistoryWeek`            | `HistoryService.getWeek`                                                       | Geçmiş                                    |
-| `useDose`                   | Doz onayı (`useConfirmDose`), sıradaki doz                                     | `aldim/[id].tsx`                          |
-| `useConfirmDose`            | context → `DoseService.confirmDose`; çift dokunuş koruması, titreşim           | `useDose`, `useSimpleHome`                |
-| `useSimpleHome`             | `DoseCalculator.getVisibleDoses`, `focusDose`, `progressOf`                    | Sade ana ekran                            |
-| `useMedicationList`         | context → `MedicationService.update/remove`                                    | İlaçlarım                                 |
-| `useSnooze`                 | `NotificationService.snooze`                                                   | `aldim/[id].tsx`                          |
-| `useMedicationWizard`       | context → `MedicationService.add/update`                                       | Sihirbaz                                  |
-| `useMedicationPhoto`        | `PhotoService.photoUri`                                                        | `MedicationPhoto`, `DosePrompt`, sihirbaz |
-| `useReminderSync`           | `MedicationService.syncReminders`                                              | `_layout.tsx`                             |
-| `useTestNotification`       | `NotificationService.scheduleTest`                                             | Ayarlar (`__DEV__`)                       |
-| `useNotificationPermission` | `NotificationService` izin metotları                                           | Bugün, Ayarlar                            |
-| `useDoseNotificationTaps`   | `NotificationService.subscribeToDoseTaps`                                      | `_layout.tsx`                             |
+| Kanca                                              | Arkasındaki servis                                                             | Kullanan                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
+| `useMedications`                                   | context → `MedicationService`, `DoseService`                                   | Tüm ekranlar                              |
+| `useTodayDoses`                                    | `DoseCalculator.getVisibleDoses`, `groupByPeriod`, `progressOf`, `nextPending` | Bugün                                     |
+| `useHistoryWeek`                                   | `HistoryService.getWeek`                                                       | Geçmiş                                    |
+| `useDose`                                          | Doz onayı (`useConfirmDose`), sıradaki doz                                     | `aldim/[id].tsx`                          |
+| `useConfirmDose`                                   | context → `DoseService.confirmDose`; çift dokunuş koruması, titreşim           | `useDose`, `useSimpleHome`                |
+| `useSimpleHome`                                    | `DoseCalculator.getVisibleDoses`, `focusDose`, `progressOf`                    | Sade ana ekran                            |
+| `useMedicationList`                                | context → `MedicationService.update/remove`                                    | İlaçlarım                                 |
+| `useSnooze`                                        | `NotificationService.snooze`                                                   | `aldim/[id].tsx`                          |
+| `useMedicationWizard`                              | context → `MedicationService.add/update`                                       | Sihirbaz                                  |
+| `useMedicationPhoto`                               | `PhotoService.photoUri`, yoksa `PhotoUrls.urlFor` (imzalı adres)               | `MedicationPhoto`, `DosePrompt`, sihirbaz |
+| `useConsent`, `useCloudSync`                       | context → `ConsentService`; `SyncService` tetikleyicileri                      | Rıza ekranı, Ayarlar, `_layout.tsx`       |
+| `useInviteCode`, `useRedeemCode`, `useCareLinks`   | `CareService`                                                                  | Ailemi Bağla, Kodla Bağlan                |
+| `useFamilyDashboard`                               | `FamilyDashboardService.summaryOf`, Realtime                                   | Aile Paneli                               |
+| `useCareSubject`, `useOnline`, `useUndeliveredIds` | aile bağlamı, `networkStatus`, `delivered_at`                                  | Sihirbaz, yakının ilaçları                |
+| `useReminderSync`                                  | `MedicationService.syncReminders`                                              | `_layout.tsx`                             |
+| `useTestNotification`                              | `NotificationService.scheduleTest`                                             | Ayarlar (`__DEV__`)                       |
+| `useNotificationPermission`                        | `NotificationService` izin metotları                                           | Bugün, Ayarlar                            |
+| `useDoseNotificationTaps`                          | `NotificationService.subscribeToDoseTaps`                                      | `_layout.tsx`                             |
 
 Gerekçe: Ekranlar yalnızca görünümle ilgilenir. Bir servis değişirse (örneğin Supabase'e geçişte) sadece kanca güncellenir. Bildirim kütüphanesi değişirse yalnızca `NotificationService` etkilenir. Bildirimin genel ayarı (`notificationService.configure()`) da ekranda değil, bağımlılıkların kurulduğu `services/index.ts`'de yapılır.
 
@@ -159,14 +177,16 @@ flowchart TD
   end
 
   Repo --> Local
-  Repo -.-> SupaRepo["SupabaseMedicationRepository<br/>(2. parça, planlanan)"]
+  Repo --> Offline["OfflineFirst… → Outbox<br/>SyncService"]
+  Offline --> Remote["RemoteMedicationRepository<br/>→ remote/SupabaseMedicationRows"]
+  Repo --> Remote
   Local --> Async[("AsyncStorage")]
   Svc --> Notif
   Svc --> Photo
   Svc --> Prof
 ```
 
-Kesikli oklar planlanan bağlantıdır. `saf-alan-katmani` kuralı (dependency-cruiser) "Saf alan katmanı" kutusundaki dosyaların React, React Native, Expo veya Supabase'i import etmesini engeller. Adaptörler bu kuralın dışındadır.
+Telefonda servisler `OfflineFirst…` depolarını kullanır: yazma önce telefona yapılır, kuyruk `SyncService` ile gönderilir. Aile tarafında aynı `MedicationService` doğrudan `RemoteMedicationRepository` ile ve hatırlatma kurmayan `NO_REMINDERS` ile kurulur (`createFamilyServices`). `saf-alan-katmani` kuralı (dependency-cruiser) "Saf alan katmanı" kutusundaki dosyaların React, React Native, Expo veya Supabase'i import etmesini engeller. Adaptörler bu kuralın dışındadır.
 
 ### Planlanan sistem mimarisi
 
@@ -196,7 +216,8 @@ flowchart LR
   Edge --> Mail --> Aile
 ```
 
-- **Mobil uygulama:** Bugünkü hali. Veri `MedicationRepository` ve `DoseLogRepository` üzerinden okunur. Supabase'e geçişte `services/index.ts` içindeki repository satırları değişir; servisler ve ekranlar etkilenmez.
+- **Mobil uygulama:** Veri `MedicationRepository` ve `DoseLogRepository` üzerinden okunur. 2. parçada `services/index.ts` içindeki depo satırları telefon-önce ve sunucu depolarına bağlandı; servisler ve ekranlar değişmedi (ADR-022).
+- **Kaçırılan doz:** Şimdilik Aile Paneli açıldığında hesaplanıyor; sunucu tetikleyicisi ve e-posta 3. parçada.
 - **Supabase:** Veritabanı, kimlik doğrulama ve satır güvenliği (RLS). Uygulama yalnızca herkese açık anon anahtarı bilir (`config.ts`).
 - **Edge Functions:** Claude API anahtarı yalnızca burada sunucu sırrı olarak tutulur; uygulamaya hiç girmez.
 - **Claude API:** Kullanım alışkanlıklarının analizi ve yardım metinleri.

@@ -32,6 +32,11 @@ Numaralar eski numaralarla aynıdır: "N. karar", ADR-0NN demektir. Yeni karar e
 | ADR-019 | SOLID, TDD ve otomatik kalite kuralları                             | Kabul edildi                                            |
 | ADR-020 | Repository, saf alan katmanı, sınır doğrulaması ve commit standardı | Kabul edildi                                            |
 | ADR-021 | Sağlık verisi için açık rıza (KVKK)                                 | Kabul edildi                                            |
+| ADR-022 | Bulut eşitleme ve outbox                                            | Kabul edildi                                            |
+| ADR-023 | Davet kodu ve aile bağlantısı                                       | Kabul edildi                                            |
+| ADR-024 | İlaç fotoğrafı deposu                                               | Kabul edildi                                            |
+| ADR-025 | Aile paneli ve telefonun durumu (`reminders_until`)                 | Kabul edildi                                            |
+| ADR-026 | Bildirim bütçesi (64 sınırı)                                        | Kabul edildi                                            |
 
 ## ADR-001: iOS Push Notifications yetkisi kaldırıldı
 
@@ -596,3 +601,111 @@ Bitirme projesinin savunmasında tasarım ilkelerinin yalnızca anlatılmaması,
   - Sunucu AB'de olduğu için gerçek kullanımda ADR-016'daki KVKK notu da geçerlidir: veriler Türkiye'de barındırılmalı ya da KVKK 9. madde uyarınca standart sözleşme yapılıp Kurum'a bildirilmelidir.
   - Geri alma internet ister. İnternet yoksa geri alma yapılmaz, hiçbir şey değişmez ve "İnternet bağlantısı gerekiyor" yazar; kullanıcı bağlantı gelince yeniden dener.
 - Plan ve ekran metni: `docs/tur2-parca2-plan.md` (g bölümü).
+
+## ADR-022: Bulut eşitleme ve outbox
+
+**Tarih:** 27 Kasım 2026 · **Durum:** Kabul edildi
+
+### Bağlam
+
+- İlaçlar 2. parçaya kadar yalnızca telefondaydı. Aile üyesinin ilaç ekleyebilmesi ve telefon değişince verinin kaybolmaması için sunucuda da tutulmalı.
+- Yaşlının telefonu internetsiz de tam çalışmalı: hatırlatma, onay ve geçmiş ağ beklememeli (ADR-001).
+- Aynı ilacı iki kişi (yaşlı ve aile) aynı anda değiştirebilir.
+
+### Karar
+
+- **Telefon önce:** Yazma önce telefona yapılır, değişiklik `outbox` kuyruğuna girer (`OfflineFirstMedicationRepository`, `OfflineFirstDoseLogRepository`). Kuyruk aynı ilacın birden çok değişikliğini tek kayda indirir.
+- **Eşitleme (`SyncService`):** önce kuyruk gönderilir, sonra imleçten (`server_updated_at`, metin olarak saklanır) sonraki değişiklikler alınır ve "telefona ulaştı" diye işaretlenir (`mark_delivered`). Açılışta, uygulama öne gelince, internet geri gelince, Realtime bildirimiyle ve 15 dakikada bir arka plan göreviyle çalışır.
+- **Çakışma:** Son yazan kazanır (`updated_at`). Sunucu tetikleyicisi eski sürümü hata vermeden atlar; `RemoteMedicationRepository` bunu fark eder ve güncel hâliyle `StaleWriteError` fırlatır. Telefon sunucudaki hâle geçer, ekranda "Bu ilaç bu arada değiştirilmiş; güncel hâli gösteriliyor." yazar.
+- **Doz onayı** `record_dose` ile gider; aynı doz iki kez gönderilse de stok bir kez düşer.
+- **Hatırlatmalar:** Eşitleme bir ilacı değiştirirse önce o ilacın bildirimleri kaldırılır, sonra liste yeniden kurulur. Ailenin düzenlemesi böyle telefona ulaşır.
+- Eşitleme yalnızca sağlık verisi rızası varken çalışır (ADR-021). Rıza verilince telefondaki her şey bir kez yüklenir (`uploadAll`); dozlar stok yeniden düşmesin diye sıfır miktarla gider.
+
+### Sonuçlar
+
+- `MedicationService` ve ekranlar değişmedi; yalnızca `services/index.ts`'deki depo bağlantısı değişti (ADR-020'nin amacı).
+- Ağ hatası işi durdurmaz; kuyruk bir sonraki denemede gider.
+- **Bilinen sınırlılık:** iOS simülatöründe arka plan görevi çalışmaz; gerçek telefonda denenmelidir.
+
+## ADR-023: Davet kodu ve aile bağlantısı
+
+**Tarih:** 27 Kasım 2026 · **Durum:** Kabul edildi
+
+### Bağlam
+
+- Aile üyesi yaşlının hesabına e-posta ya da şifreyle erişmemeli. Bağlantıyı yaşlı başlatmalı ve istediğinde kaldırabilmeli.
+
+### Karar
+
+- Sade veya standart kullanıcı Ayarlar > "Ailemi bağla"dan 6 haneli, 24 saat geçerli, tek kullanımlık kod üretir ve telefonun paylaş menüsüyle gönderir. Kod üretmek rıza ister.
+- Yalnızca aile rolü kod kullanabilir ("Kodla bağlan"); yakınlığını seçer ("Annem", "Babam", "Eşim" veya kendisi yazar).
+- Kod tahminine karşı: sunucu 1 saatte 5 **başarısız** denemeden sonra doğru kodu da reddeder. Başarılı kullanım sayılmaz (`20261127100000_count_failed_attempts.sql`).
+- Bağlantıyı iki taraf da kaldırabilir. RPC'ler hata fırlatmak yerine durum döner; deneme kayıtları böylece geri alınmaz.
+
+### Sonuçlar
+
+- Sunucudaki hata kodları `CareService`'teki tabloyla Türkçe mesaja çevrilir.
+- RLS testleri art arda çalıştırılabilir; sınır testi kendi hesabını (F) kullanır.
+
+## ADR-024: İlaç fotoğrafı deposu
+
+**Tarih:** 27 Kasım 2026 · **Durum:** Kabul edildi
+
+### Bağlam
+
+- Fotoğraf yaşlının ilacı tanımasına yardım eder; aile eklediğinde yaşlının telefonunda da görünmeli. Telefon fotoğrafları birkaç MB'dır; kova 2 MB ile sınırlı.
+
+### Karar
+
+- Fotoğraf telefonda kaydedilirken uzun kenarı 1080 piksele küçültülür ve JPEG %70 ile sıkıştırılır (`PhotoService`, `utils/photo.ts`). Sunucuya bu küçük dosya gider.
+- Özel `medication-photos` kovası; yol `{sahip}/{ilaç}-{zaman}.jpg`. İlk klasör kime ait olduğunu söyler; sahip ve bağlı aile görür, yükleme sahibin rızasını ister.
+- Yükleme `RemoteMedicationRepository` içinde, ilaç satırından önce yapılır (`PhotoSync`). Böylece telefonun eşitlemesi ve aile tarafı aynı yoldan geçer. Fotoğraf değişince `photoPath` sıfırlanır, yenisi yüklenir, eskileri silinir.
+- Gösterim: önce telefondaki dosya; yoksa imzalı adres (1 saat, `PhotoUrls` önbelleği). `expo-image` görüntüyü yoluyla (`cacheKey`) diskte saklar; imzalı adres yenilense de yeniden indirmez.
+
+### Sonuçlar
+
+- Bağlantı kaldırılınca aile fotoğrafa erişemez (RLS testinde denendi).
+- **Bilinen sınırlılık:** Başka yerde değişen fotoğrafın eski yerel dosyası kullanılmaz ama telefondan silinmez.
+
+## ADR-025: Aile paneli ve telefonun durumu (`reminders_until`)
+
+**Tarih:** 27 Kasım 2026 · **Durum:** Kabul edildi
+
+### Bağlam
+
+- Aile, yakınının bugünkü dozlarını görmeli ve onun için ilaç ekleyebilmeli; ama yakının hatırlatmaları yalnızca yakının telefonunda kurulmalı.
+- iOS'ta uzun kürlerin hatırlatmaları ancak uygulama açılınca tamamlanır (ADR-026); kimse açmazsa hatırlatmalar sessizce biter.
+
+### Karar
+
+- Panel her yakın için ayrı kart gösterir. Doz durumları ayrı bir kural yazılmadan `DoseCalculator.getTodayDoses` ile hesaplanır (`FamilyDashboardService`). Yüzde yoktur; "Bugün 1 / 3 ilaç alındı".
+- Kaçırılan doz uyarısı (kırmızı kart) panel açıldığında hesaplanır. Uygulama kapalıyken sunucu taraflı tespit ve e-posta 3. parçadadır.
+- Yakın için ilaç ekleme mevcut sihirbazı kullanır, başlıkta "<ad> için" yazar. `MedicationService` aynen kullanılır; yalnızca bağımlılıkları farklıdır: depo `RemoteMedicationRepository`, hatırlatıcı `NO_REMINDERS`. Aile telefonu yakının hatırlatmalarını kurmaz (testi var).
+- Aile tarafında ekleme, düzenleme ve silme internet ister; düğmeler kapalıdır ve "İnternet bağlantısı gerekiyor" yazar.
+- `delivered_at` boşsa ilaçta "Henüz telefona ulaşmadı" yazar.
+- Yaşlının telefonu her hatırlatma kurulumundan sonra `device_status.reminders_until` yazar (`DeviceStatusReporter`). Değer yalnızca sınıra sığmayan planda dolu olur; tekrarlanan hatırlatmalarda boştur. 48 saatten az kaldıysa kartta "… telefonundaki hatırlatmalar yakında bitiyor" uyarısı çıkar.
+- Yakına özel ekranların düzen dosyası (`yakin/[kisiId]/_layout.tsx`) veri sağlayıcısını kurar; katman kuralındaki düzen dosyası istisnası bunun için bütün `_layout.tsx` dosyalarına genişletildi.
+
+### Sonuçlar
+
+- Sihirbaz ve ilaç kartları yakın için değişmeden çalışır.
+- Aile dozu onaylayamaz; dozu yalnızca yaşlı kendi telefonundan onaylar (RLS de izin vermez).
+
+## ADR-026: Bildirim bütçesi (64 sınırı)
+
+**Tarih:** 27 Kasım 2026 · **Durum:** Kabul edildi
+
+### Bağlam
+
+- iOS bir uygulama için en fazla 64 bekleyen bildirim tutar; fazlası sessizce atılır. Süreli ilaçlar gün gün kurulduğu için kolayca aşılır (6 gün × 3 saat × 4 ilaç = 72).
+
+### Karar
+
+- Tek bütçe: 60 bildirim (erteleme ve test için yer kalır). Önce tekrarlanan (sürekli) hatırlatmalar, kalan yere süreli hatırlatmalar en yakından başlayarak kurulur (`ReminderPlanner.planWithCoverage`).
+- Sığmayan varsa kurulu son hatırlatma dozu söyler ve "Sonraki hatırlatmalar için Uygulamayı açın." diye biter. Kimliği `-son` ekiyle farklıdır; sonraki eşitlemede artık son değilse sıradan bildirimle değişir.
+- Uygulama her açıldığında ve öne geldiğinde plan yeniden kurulur, pencere ileri kayar. Kurulu son anın değeri `reminders_until` olarak sunucuya gider (ADR-025).
+
+### Sonuçlar
+
+- Önce kırmızı test yazıldı (`ReminderPlanner.budget.test.ts`).
+- Yaşlı haftalarca uygulamayı hiç açmazsa hatırlatmalar biter; aile bunu 48 saat önceden görür.

@@ -1,8 +1,24 @@
 # İlerleme
 
-**Son güncelleme:** 26 Kasım 2026
+**Son güncelleme:** 27 Kasım 2026
 
-## Bugün Tamamlananlar (26 Kasım)
+## Bugün Tamamlananlar (27 Kasım)
+
+### 2. tur, 2. parça: bulut, eşleştirme ve aile paneli
+
+Dal: `feature/tur2-aile` (main'e birleştirilmedi). Plan: `docs/tur2-parca2-plan.md`; kararlar ADR-021…026.
+
+- **Veritabanı:** İlaç, doz, telefon durumu, davet kodu, aile bağlantısı ve rıza tabloları; RLS; fotoğraf kovası. Yardımcı fonksiyonlar `private` şemasında; RPC'ler yalnızca oturumlu kullanıcıya açık. Davet kodu deneme sınırı yalnızca başarısız denemeleri sayar.
+- **Rıza (ADR-021):** Ayrı rıza ekranı; rıza yoksa uygulama yalnızca telefonda çalışır. Geri alma onaylı; telefondaki veri ve hatırlatmalar kalır.
+- **Eşitleme (ADR-022):** Telefon önce yazar, kuyruk (`outbox`) gönderilir, değişiklikler imleçle alınır; Realtime, öne gelme, internetin dönmesi ve 15 dakikalık arka plan görevi tetikler. Bayat yazma fark edilir.
+- **Eşleştirme (ADR-023):** Ailemi Bağla (6 haneli kod, paylaş), Kodla Bağlan (yakınlık seçimi), bağlantı kaldırma.
+- **Aile Paneli (ADR-025):** Her yakın ayrı kart; bugünün dozları (mevcut doz kurallarıyla), "1 / 3 ilaç alındı", kaçırılan doz için kırmızı uyarı, "Henüz telefona ulaşmadı", yakın için ilaç ekleme ve yönetme (aynı sihirbaz, "<ad> için"). Aile telefonu yakının hatırlatmalarını kurmaz. Çevrimdışıyken değiştirme kapalı.
+- **Fotoğraf (ADR-024):** 1080 piksel, JPEG %70; sunucuya yükleme, imzalı adres, önbellek.
+- **Bildirim bütçesi (ADR-026):** 60 bildirim, en yakın önce; sığmazsa son bildirim "Uygulamayı açın" der. `reminders_until` sunucuya yazılır, 48 saatten az kalınca panelde uyarı.
+- **Bağımlılıklar:** Expo paketleri SDK 58.1 ile uyumlu (`npx expo install --check` temiz). Yeni yerel paketler: `expo-network`, `expo-background-task`, `expo-task-manager`, `expo-image-manipulator` (yeniden derleme gerekir).
+- **Test:** 684 birim testi; RLS ve adaptör paketi gerçek projeye karşı 36 test (`npm run test:rls`, art arda çalıştırılabilir).
+
+## Önceki Tamamlananlar (26 Kasım)
 
 ### Mimari iyileştirme turu
 
@@ -92,12 +108,14 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
 
 - 1. tur simülatörde yalnızca görüntü olarak denendi; dokunma, kamera, bildirim, titreşim ve Android elle denenmedi.
 - Silinen ilacın dozları Geçmiş'te görünmez (kayıtlar durur, ilaç adı yok).
-- iOS 64 bildirim sınırı: uzun ve çok saatli kürün son günleri ancak uygulama açılınca kurulur.
+- iOS 64 bildirim sınırı: uzun ve çok saatli kürün son günleri ancak uygulama açılınca kurulur. Son bildirim "Uygulamayı açın" der; aile 48 saat kala uyarılır (ADR-026).
 - 6 ekran tasarlanacak (`arayuz-tasarimi.md`).
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
 - Kullanılmayan paketler henüz kaldırılmadı (`moduler-yapi.md` → Temizlenecek paketler).
 - **Şifre sıfırlama yarım:** Bağlantı e-postayla gidiyor ama yeni şifre Supabase'in varsayılan sayfasında belirleniyor; uygulama içi "yeni şifre" ekranı sonra yapılacak.
-- **İlaçlar hesaba bağlı değil:** İlaçlar telefonda tutuluyor; aynı telefonda başka hesapla girilirse aynı ilaçlar görünür. Veriler Supabase'e taşınınca çözülecek (2. parça).
+- **Aynı telefonda iki hesap:** İlaçlar hâlâ telefonda tutuluyor (sunucu kopyadır). Aynı telefonda çıkış yapıp başka sade/standart hesapla girilirse önceki hesabın ilaçları görünür. Aile hesabı etkilenmez (yakının verisi sunucudan okunur). Hesaba göre ayrı yerel depo sonraki işlerde.
+- **Arka plan eşitlemesi simülatörde çalışmaz:** iOS simülatörü arka plan görevini çalıştırmaz; gerçek telefonda denenmeli.
+- **Eski yerel fotoğraf dosyası:** Aile fotoğrafı değiştirince yaşlının telefonundaki eski dosya kullanılmaz ama silinmez.
 - **"Hesabımı sil" "Yakında":** Silme işi sunucu tarafında (Edge Function) yapılmalı; sonraki parçada.
 - **Kaçırılan doz uyarısı yalnızca panel açıkken (3. parçaya):** Aile Paneli'ndeki kırmızı kart, panel açıldığında mevcut doz kurallarıyla (`DoseCalculator`, 30 dakika) hesaplanıyor (`FamilyDashboardService`). Uygulama kapalıyken sunucu taraflı tespit ve aileye e-posta 3. parçada gelecek; kodda `services/family.ts` ve `app/aile.tsx` bu notu taşıyor.
 - **Aile tarafında ilaç fotoğrafı:** Aile bir ilaç eklerken çektiği fotoğraf şimdilik yalnızca aile telefonunda kalıyor; sunucuya yükleme 5. grupta.
@@ -117,15 +135,17 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
 
 9. **Hesap (2. tur, 1. parça):** Üç rolle birer kayıt; çıkış; yeniden giriş; yanlış şifre; internet kapalıyken giriş ("İnternet bağlantısı yok") ve internet kapalıyken uygulamayı açma (doğru ana ekran açılmalı).
 10. **Sade mod:** Doz saati gelmeden, geçince ("Saati geçti") ve hepsi alınınca (14) ekranları; büyük onay düğmesi stoğu düşürüyor mu?
+11. **Aile (2. tur, 2. parça):** Sade ve aile hesabıyla simülatör adımları (son mesajdaki liste); gerçek telefonda arka plan eşitlemesi ve fotoğraf.
 
 ## Yarın Yapılacaklar
 
 1. **Simülatörde hesap testi** (yukarıdaki 9 ve 10).
 2. **Elle test** (1-8) telefonda. Kurarken Xcode'da imza takımını yeniden seç; `prebuild --clean` sildi.
-3. **2. tur, 2. parça:** İlaç verisini Supabase'e taşıma, davet koduyla aile bağlantısı, Aile paneli.
+3. **2. tur, 2. parça'yı simülatörde dene** (11), sonra `feature/tur2-aile` için PR.
+4. **3. parça:** Kaçırılan dozun sunucu taraflı tespiti ve aileye e-posta; "Bu dozu atla".
 
 ## Sonraki İşler
 
 - Kalan 6 ekranın tasarımı; Aile paneli ve mod seçimi ekranları eklenecek.
-- 2. tur (Supabase): ~~hesap, roller~~ (1. parça), davet koduyla eşleşme, verinin sunucuya taşınması.
+- 2. tur (Supabase): ~~hesap, roller~~ (1. parça), ~~davet koduyla eşleşme, verinin sunucuya taşınması, aile paneli~~ (2. parça); kaçırılan doz e-postası (3. parça).
 - 3. tur: İlaç bilgisi.
