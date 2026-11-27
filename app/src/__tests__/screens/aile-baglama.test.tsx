@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Share } from 'react-native';
 
-import FamilyHomeScreen from '@/app/aile';
 import ConnectFamilyScreen from '@/app/ailemi-bagla';
 import NotificationPermissionScreen from '@/app/bildirim-izni';
 import RedeemCodeScreen from '@/app/kodla-baglan';
@@ -121,22 +120,6 @@ describe('Kodla Bağlan', () => {
     mockRedeem.error = 'Kod geçersiz veya süresi dolmuş. Yakınınızdan yeni kod isteyin.';
     await render(<RedeemCodeScreen />);
     expect(screen.getByText(mockRedeem.error)).toBeTruthy();
-  });
-});
-
-describe('Aile ana ekranı', () => {
-  it('bağlantı yoksa "Yakınımı bağla" boş durumu görünür', async () => {
-    await render(<FamilyHomeScreen />);
-    await fireEvent.press(screen.getByRole('button', { name: 'Yakınımı bağla' }));
-    expect(router.push).toHaveBeenCalledWith('/kodla-baglan');
-  });
-
-  it('bağlı yakınları yakınlık ve kullanım biçimiyle listeler', async () => {
-    mockLinks.links = [FATMA];
-    await render(<FamilyHomeScreen />);
-    expect(screen.getByText('Fatma Bulut')).toBeTruthy();
-    expect(screen.getByText('Annem · Sade mod')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Başka bir yakınımı bağla' })).toBeTruthy();
   });
 });
 

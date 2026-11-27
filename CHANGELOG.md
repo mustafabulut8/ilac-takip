@@ -4,6 +4,12 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimini izle
 
 ## [Yayımlanmadı]
 
+### 2. tur, 2. parça: aile paneli (`feature/tur2-aile`)
+
+- **Eklendi:** Aile Paneli. Her bağlı yakın ayrı kartta; bugünün dozları (Alındı, Kaçırıldı, Bekliyor) ve "Bugün 1 / 3 ilaç alındı". Kaçırılan doz için kırmızı uyarı kartı (panel açıldığında hesaplanır).
+- **Eklendi:** Aile üyesi yakını için ilaç ekleyip düzenleyebiliyor; aynı sihirbaz, başlıkta "<ad> için". Yakının telefonu henüz almadıysa ilaçta "Henüz telefona ulaşmadı" yazıyor.
+- **Eklendi:** İnternet yokken aile tarafında ekleme, düzenleme ve silme kapalı; "İnternet bağlantısı gerekiyor" yazıyor.
+
 ### Mimari iyileştirmeler (`feature/mimari`)
 
 - **Değişti:** Depolama `MedicationRepository` ve `DoseLogRepository` arayüzlerinin arkasına alındı (`LocalMedicationRepository`, `LocalDoseLogRepository`).

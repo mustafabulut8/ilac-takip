@@ -68,6 +68,7 @@ function AppStack() {
         </Stack.Protected>
         <Stack.Protected guard={isHome(HOME_ROUTES.aile)} redirectTo={homeRoute}>
           <Stack.Screen name="aile" />
+          <Stack.Screen name="yakin/[kisiId]" />
         </Stack.Protected>
         <Stack.Protected
           guard={signedIn && homeRoute !== HOME_ROUTES.onboarding}

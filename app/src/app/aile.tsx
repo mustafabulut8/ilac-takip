@@ -3,24 +3,22 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
+import { Banner } from '@/components/banner';
 import { Card } from '@/components/card';
+import { MissedAlert } from '@/components/family/missed-alert';
+import { PersonCard } from '@/components/family/person-card';
 import { FieldError } from '@/components/form/field-error';
 import { Icon } from '@/components/icon';
+import { OFFLINE_MESSAGE } from '@/components/needs-internet';
 import { PrimaryButton } from '@/components/primary-button';
 import { SecondaryButton } from '@/components/secondary-button';
 import { SettingsButton } from '@/components/settings-button';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { useCareLinks } from '@/hooks/useCareLinks';
+import { useFamilyDashboard, type FamilyPerson } from '@/hooks/useFamilyDashboard';
 import { useNow } from '@/hooks/useNow';
-import type { UserRole } from '@/models';
+import { useOnline } from '@/hooks/useOnline';
 import { greetingFor } from '@/utils/time';
-
-const MODE_LABEL: Record<UserRole, string> = {
-  sade: 'Sade mod',
-  standart: 'Standart mod',
-  aile: 'Aile',
-};
 
 /** Hiç bağlantı yokken: yakınını bağlamaya çağıran boş durum. */
 function EmptyState() {
@@ -44,15 +42,54 @@ function EmptyState() {
   );
 }
 
+/** Her yakının kaçırılan dozları; panel her açıldığında yeniden hesaplanır. */
+function MissedAlerts({ people, now }: { people: FamilyPerson[]; now: Date }) {
+  return people.flatMap(({ link, summary }) =>
+    summary && summary !== 'error'
+      ? summary.missed.map((dose) => (
+          <MissedAlert
+            key={`${link.id}-${dose.medication.id}-${dose.date}-${dose.time}`}
+            dose={dose}
+            relation={link.relationLabel}
+            now={now}
+          />
+        ))
+      : [],
+  );
+}
+
+/** Bağlı yakınların kartları; hiç yoksa boş durum. */
+function People({ people, online }: { people: FamilyPerson[]; online: boolean }) {
+  if (people.length === 0) return <EmptyState />;
+  return (
+    <>
+      <AppText size="subtitle" weight="bold" accessibilityRole="header">
+        {people.length === 1 ? 'Takip ettiğiniz kişi' : 'Takip ettiğiniz kişiler'}
+      </AppText>
+      {people.map((person) => (
+        <PersonCard key={person.link.id} person={person} online={online} />
+      ))}
+      <SecondaryButton
+        label="Başka bir yakınımı bağla"
+        icon="link"
+        onPress={() => router.push('/kodla-baglan')}
+      />
+    </>
+  );
+}
+
 /**
- * Aile ana ekranı. Bu adımda bağlı yakınların listesi; günün dozları, uyarılar ve
- * "İlaç ekle" kişi kartlarına 4. grupta (Aile Paneli) eklenir.
+ * Aile Paneli: kaçırılan doz uyarıları ve her yakın için ayrı kişi kartı.
+ *
+ * Kaçırılan dozlar şimdilik yalnızca panel açıldığında hesaplanır. Uygulama kapalıyken
+ * sunucu taraflı tespit ve e-posta bildirimi 3. parçada gelecek (docs/ilerleme.md).
  */
 export default function FamilyHomeScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const now = useNow();
-  const care = useCareLinks();
+  const online = useOnline();
+  const { people, error } = useFamilyDashboard();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing.two }]}>
@@ -64,25 +101,10 @@ export default function FamilyHomeScreen() {
       </View>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.five }]}>
-        <FieldError message={care.error} />
-        {care.links?.length === 0 && <EmptyState />}
-        {care.links?.map((link) => (
-          <Card key={link.id} style={styles.person}>
-            <AppText size="subtitle" weight="bold">
-              {link.name}
-            </AppText>
-            <AppText color={Colors.textSecondary}>
-              {link.relationLabel} · {MODE_LABEL[link.role]}
-            </AppText>
-          </Card>
-        ))}
-        {!!care.links?.length && (
-          <SecondaryButton
-            label="Başka bir yakınımı bağla"
-            icon="link"
-            onPress={() => router.push('/kodla-baglan')}
-          />
-        )}
+        <FieldError message={error} />
+        {!online && <Banner tone="warning" icon="warning" title={OFFLINE_MESSAGE} />}
+        {people && <MissedAlerts people={people} now={now} />}
+        {people && <People people={people} online={online} />}
       </ScrollView>
     </View>
   );
@@ -110,9 +132,6 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     gap: Spacing.three,
-  },
-  person: {
-    gap: Spacing.one,
   },
   circle: {
     width: 80,

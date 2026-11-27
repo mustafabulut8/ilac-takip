@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { Colors, Spacing } from '@/constants/theme';
+import { useCareSubject } from '@/hooks/useCareSubject';
 import { getMedicationForm, type Medication } from '@/models';
 import { describeDuration, describeSchedule, isCourseFinished } from '@/utils/schedule';
 
@@ -19,6 +20,10 @@ type MedicationCardProps = {
   now: Date;
   onToggleMarkedLow: () => void;
   onRemove: () => void;
+  /** Çevrimdışı aile ekranında: değiştiren butonlar kapalı. */
+  disabled?: boolean;
+  /** Ad altında gösterilen kısa durum, örn. "Henüz telefona ulaşmadı". */
+  note?: string;
 };
 
 function InfoRow({ icon, text, color }: { icon: IconName; text: string; color?: string }) {
@@ -38,8 +43,12 @@ export function MedicationCard({
   now,
   onToggleMarkedLow,
   onRemove,
+  disabled,
+  note,
 }: MedicationCardProps) {
   const form = getMedicationForm(medication.form);
+  // Aile yakının ilacını düzenliyorsa düzenleme o kişinin altında açılır.
+  const subject = useCareSubject();
   const isLow = form.isRunningLow(medication);
   const stockLabel = form.stockLabel(medication.stock);
   const isFinished = isCourseFinished(medication, now);
@@ -71,6 +80,14 @@ export function MedicationCard({
           <AppText color={Colors.textSecondary}>
             {[form.label, medication.dose].filter(Boolean).join(' · ')}
           </AppText>
+          {!!note && (
+            <Pill
+              label={note}
+              icon="clock"
+              color={Colors.pending}
+              background={Colors.warningSoft}
+            />
+          )}
           {isFinished && <Pill label="Süresi tamamlandı" icon="check" />}
           {isLow && (
             <Pill
@@ -98,6 +115,7 @@ export function MedicationCard({
           }
           variant="neutral"
           compact
+          disabled={disabled}
           onPress={onToggleMarkedLow}
         />
       )}
@@ -115,8 +133,14 @@ export function MedicationCard({
           icon="edit"
           compact
           accessibilityLabel={`${medication.name}: düzenle`}
+          disabled={disabled}
           onPress={() =>
-            router.push({ pathname: '/ilac-duzenle/[id]', params: { id: medication.id } })
+            subject
+              ? router.push({
+                  pathname: '/yakin/[kisiId]/ilac-duzenle/[id]',
+                  params: { kisiId: subject.patientId, id: medication.id },
+                })
+              : router.push({ pathname: '/ilac-duzenle/[id]', params: { id: medication.id } })
           }
           style={styles.action}
         />
@@ -125,6 +149,7 @@ export function MedicationCard({
           accessibilityLabel={`${medication.name}: sil`}
           color={Colors.danger}
           background={Colors.dangerSoft}
+          disabled={disabled}
           onPress={confirmRemove}
         />
       </View>

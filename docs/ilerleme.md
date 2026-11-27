@@ -99,6 +99,8 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
 - **Şifre sıfırlama yarım:** Bağlantı e-postayla gidiyor ama yeni şifre Supabase'in varsayılan sayfasında belirleniyor; uygulama içi "yeni şifre" ekranı sonra yapılacak.
 - **İlaçlar hesaba bağlı değil:** İlaçlar telefonda tutuluyor; aynı telefonda başka hesapla girilirse aynı ilaçlar görünür. Veriler Supabase'e taşınınca çözülecek (2. parça).
 - **"Hesabımı sil" "Yakında":** Silme işi sunucu tarafında (Edge Function) yapılmalı; sonraki parçada.
+- **Kaçırılan doz uyarısı yalnızca panel açıkken (3. parçaya):** Aile Paneli'ndeki kırmızı kart, panel açıldığında mevcut doz kurallarıyla (`DoseCalculator`, 30 dakika) hesaplanıyor (`FamilyDashboardService`). Uygulama kapalıyken sunucu taraflı tespit ve aileye e-posta 3. parçada gelecek; kodda `services/family.ts` ve `app/aile.tsx` bu notu taşıyor.
+- **Aile tarafında ilaç fotoğrafı:** Aile bir ilaç eklerken çektiği fotoğraf şimdilik yalnızca aile telefonunda kalıyor; sunucuya yükleme 5. grupta.
 - **Sade modda yapılmayanlar:** "Bu dozu atla" onayı ve profil düzenleme (kalem) bu parçada yok.
 - **Bildirim izni artık kendiliğinden sorulmuyor:** Kayıttan sonraki Bildirim İzni ekranında veya ana ekrandaki "İzin ver" düğmesiyle soruluyor. 1. turdan kalan, oturumu olmayan kullanıcı da önce hesap açacak.
 
