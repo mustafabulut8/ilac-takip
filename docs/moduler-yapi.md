@@ -76,7 +76,9 @@ app/src/
 │                             #   medications, auth, consent, care-subject, family-member
 ├── services/                 # İş mantığı sınıfları
 │   ├── repositories.ts       # MedicationRepository, DoseLogRepository arayüzleri
+│   ├── AccountSession.ts     # Hesap değişimi: eşitleme, hatırlatmalar, yerel depo (ADR-027)
 │   ├── local/                # Cihaz uygulamaları: LocalDeviceStore (AsyncStorage adaptörü),
+│   │                         #   UserScopedStore (anahtarlar kullanıcıya özel),
 │   │                         #   LocalMedicationRepository, LocalDoseLogRepository
 │   ├── migrations.ts         # Kayıtlı veri sürüm göçleri
 │   ├── MedicationService.ts, DoseService.ts, DoseCalculator.ts, HistoryService.ts

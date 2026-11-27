@@ -37,6 +37,7 @@ Numaralar eski numaralarla aynıdır: "N. karar", ADR-0NN demektir. Yeni karar e
 | ADR-024 | İlaç fotoğrafı deposu                                               | Kabul edildi                                            |
 | ADR-025 | Aile paneli ve telefonun durumu (`reminders_until`)                 | Kabul edildi                                            |
 | ADR-026 | Bildirim bütçesi (64 sınırı)                                        | Kabul edildi                                            |
+| ADR-027 | Hesaba özel yerel veri                                              | Kabul edildi                                            |
 
 ## ADR-001: iOS Push Notifications yetkisi kaldırıldı
 
@@ -709,3 +710,26 @@ Bitirme projesinin savunmasında tasarım ilkelerinin yalnızca anlatılmaması,
 
 - Önce kırmızı test yazıldı (`ReminderPlanner.budget.test.ts`).
 - Yaşlı haftalarca uygulamayı hiç açmazsa hatırlatmalar biter; aile bunu 48 saat önceden görür.
+
+## ADR-027: Hesaba özel yerel veri
+
+**Tarih:** 27 Kasım 2026 · **Durum:** Kabul edildi; ADR-012 ve ADR-020'deki "anahtarlar değişmez" kuralını günceller
+
+### Bağlam
+
+- Hesaplar 2. turda geldi ama ilaçlar, doz geçmişi ve hatırlatmalar telefonda tek bir yerde duruyordu. Aynı telefonda çıkış yapıp başka hesapla girilince önceki kullanıcının ilaçları görünüyor, hatırlatmaları çalıyordu. Bu hem hata hem gizlilik sorunudur (sağlık verisi, ADR-021).
+- Rıza vermeyen kullanıcının verisi yalnızca telefondadır; çıkışta silinirse kaybolur.
+
+### Karar
+
+- **Anahtarlar kullanıcıya özel:** `UserScopedStore` (Decorator) her anahtarın önüne `u:<kullanıcı>:` ekler: `medications`, `doseLogs`, `schemaVersion`, `outbox`, `syncState`, `healthConsent`. Oturum yokken okuma boş döner, yazma reddedilir. Önekten sonraki adlar ve JSON alanları değişmez.
+- **Hesap değişimi (`AccountSession`):** Oturum açılınca, kapanınca veya hesap değişince eşitleme durur, telefonda başka birinin hatırlatmaları varsa hepsi kaldırılır, depo yeni kullanıcıya geçer ve bellekteki kopya bırakılır. Yerel veri silinmez.
+- **Yeni kullanıcının hatırlatmaları** listesi yüklenince kurulur. Kök düzen, hesap etkinleşmeden ilaç listesini yüklemez ve hesap değişince sağlayıcıyı yeniden kurar (`useActiveAccount`).
+- Aynı kişi uygulamayı yeniden açınca hiçbir şey kaldırılmaz; en son kimin girdiği kullanıcıya özel olmayan `activeUser` anahtarında tutulur.
+- **schemaVersion 4:** Oturum öncesinden kalan veri ilk giren kullanıcıya bir kez taşınır (önce kopyalanır, sonra eski anahtarlar silinir). Kullanıcının kendi verisi varsa eski veri üzerine yazılmaz.
+
+### Sonuçlar
+
+- Önce iki kullanıcının çıkış/giriş senaryosunu gösteren başarısız test yazıldı (`accounts.integration.test.ts`), sonra düzeltildi.
+- Arka plan eşitleme görevi de önce oturumdaki hesaba geçer.
+- Profil önbelleği (`profile`) ve fotoğraf dosyaları kullanıcıya özel değildir; profil önbelleği yalnızca oturumdaki kullanıcınınkini kabul eder, fotoğraf adları ilaç kimliğiyle benzersizdir.

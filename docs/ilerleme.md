@@ -15,6 +15,7 @@ Dal: `feature/tur2-aile` (main'e birleştirilmedi). Plan: `docs/tur2-parca2-plan
 - **Aile Paneli (ADR-025):** Her yakın ayrı kart; bugünün dozları (mevcut doz kurallarıyla), "1 / 3 ilaç alındı", kaçırılan doz için kırmızı uyarı, "Henüz telefona ulaşmadı", yakın için ilaç ekleme ve yönetme (aynı sihirbaz, "<ad> için"). Aile telefonu yakının hatırlatmalarını kurmaz. Çevrimdışıyken değiştirme kapalı.
 - **Fotoğraf (ADR-024):** 1080 piksel, JPEG %70; sunucuya yükleme, imzalı adres, önbellek.
 - **Bildirim bütçesi (ADR-026):** 60 bildirim, en yakın önce; sığmazsa son bildirim "Uygulamayı açın" der. `reminders_until` sunucuya yazılır, 48 saatten az kalınca panelde uyarı.
+- **Hesaba özel yerel veri (ADR-027):** Önce iki kullanıcıyla başarısız test, sonra düzeltme. İlaçlar, dozlar, kuyruk, eşitleme imleci ve rıza kullanıcıya özel anahtarlarda; çıkışta hatırlatmalar kaldırılıyor, eşitleme duruyor, veri silinmiyor. Oturum öncesi veri ilk giren kullanıcıya bir kez taşınıyor (schemaVersion 4).
 - **Bağımlılıklar:** Expo paketleri SDK 58.1 ile uyumlu (`npx expo install --check` temiz). Yeni yerel paketler: `expo-network`, `expo-background-task`, `expo-task-manager`, `expo-image-manipulator` (yeniden derleme gerekir).
 - **Test:** 684 birim testi; RLS ve adaptör paketi gerçek projeye karşı 36 test (`npm run test:rls`, art arda çalıştırılabilir).
 
@@ -113,7 +114,6 @@ Dal: `feature/kalite` (`feature/tur2-hesap`'tan açıldı; main'e birleştirilme
 - #3 uçak modu testi yapılmadı. Issue açık ve panoda Yapılıyor sütununda.
 - Kullanılmayan paketler henüz kaldırılmadı (`moduler-yapi.md` → Temizlenecek paketler).
 - **Şifre sıfırlama yarım:** Bağlantı e-postayla gidiyor ama yeni şifre Supabase'in varsayılan sayfasında belirleniyor; uygulama içi "yeni şifre" ekranı sonra yapılacak.
-- **Aynı telefonda iki hesap:** İlaçlar hâlâ telefonda tutuluyor (sunucu kopyadır). Aynı telefonda çıkış yapıp başka sade/standart hesapla girilirse önceki hesabın ilaçları görünür. Aile hesabı etkilenmez (yakının verisi sunucudan okunur). Hesaba göre ayrı yerel depo sonraki işlerde.
 - **Arka plan eşitlemesi simülatörde çalışmaz:** iOS simülatörü arka plan görevini çalıştırmaz; gerçek telefonda denenmeli.
 - **Eski yerel fotoğraf dosyası:** Aile fotoğrafı değiştirince yaşlının telefonundaki eski dosya kullanılmaz ama silinmez.
 - **"Hesabımı sil" "Yakında":** Silme işi sunucu tarafında (Edge Function) yapılmalı; sonraki parçada.

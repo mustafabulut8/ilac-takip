@@ -14,6 +14,7 @@ Bu dosya [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/) biçimini izle
 - **Eklendi:** İlaç fotoğrafı küçültülüp hesaba yükleniyor; aile eklediği fotoğraf yaşlının telefonunda da görünüyor.
 - **Değişti:** Uzun kürlerde en yakın 60 hatırlatma kuruluyor; sonuncusu "Uygulamayı açın" diyor. Hatırlatmalar 48 saat içinde bitecekse Aile Paneli uyarıyor.
 - **Değişti:** Expo paketleri SDK 58.1 ile uyumlu sürümlere yükseltildi.
+- **Düzeltildi:** Aynı telefonda başka hesapla girilince önceki kullanıcının ilaçları, doz geçmişi ve hatırlatmaları görünüyor ve çalıyordu. Yerel veri artık hesaba özel; çıkışta hatırlatmalar kaldırılıyor, aynı kişi geri gelince ilaçları ve hatırlatmaları dönüyor.
 
 ### Mimari iyileştirmeler (`feature/mimari`)
 
