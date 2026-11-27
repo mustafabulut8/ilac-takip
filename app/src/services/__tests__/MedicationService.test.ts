@@ -206,6 +206,19 @@ describe('MedicationService.update / remove', () => {
     expect(photos.deletePhoto).toHaveBeenCalledWith('ilac1.jpg');
   });
 
+  it('fotoğraf değişince ya da kaldırılınca sunucudaki yolu sıfırlanır (yeniden yüklenir)', async () => {
+    const { service } = setup();
+    const uploaded = makeMedication({ photoPath: 'sahip/ilac1-1.jpg' });
+    const changed = await service.update([uploaded], 'ilac1', {
+      photoSourceUri: 'file:///yeni.jpg',
+    });
+    expect(changed.medications[0]?.photoPath).toBe('');
+    const removed = await service.update([uploaded], 'ilac1', { photoSourceUri: null });
+    expect(removed.medications[0]?.photoPath).toBe('');
+    const untouched = await service.update([uploaded], 'ilac1', { name: 'Yeni ad' });
+    expect(untouched.medications[0]?.photoPath).toBe('sahip/ilac1-1.jpg');
+  });
+
   it('kayıt başarısız olursa eski fotoğraf silinmez', async () => {
     const { storage, photos, service } = setup();
     storage.failWrites = true;

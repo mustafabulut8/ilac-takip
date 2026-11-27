@@ -17,6 +17,8 @@ export type MedicationDraft = {
   photo: string | null;
   /** Düzenlemede ilacın mevcut fotoğraf dosyası. */
   photoFile: string;
+  /** Düzenlemede sunucudaki fotoğrafın yolu (telefonda dosyası olmayabilir). */
+  photoPath: string;
   name: string;
   form: MedicationFormKind | null;
   dose: DoseInput;
@@ -34,6 +36,7 @@ export type MedicationDraft = {
 export const EMPTY_MEDICATION_DRAFT: MedicationDraft = {
   photo: null,
   photoFile: '',
+  photoPath: '',
   name: '',
   form: null,
   dose: { amount: 1, unit: '', location: '', text: '' },
@@ -56,6 +59,7 @@ export function draftFromMedication(medication: Medication): MedicationDraft {
   return {
     photo: null,
     photoFile: medication.photoFile,
+    photoPath: medication.photoPath,
     name: medication.name,
     form: form.kind,
     dose: isReadable ? dose : form.defaultDose(),

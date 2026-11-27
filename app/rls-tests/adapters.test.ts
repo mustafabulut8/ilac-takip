@@ -6,9 +6,14 @@ import { createFamilyServices, FamilyDashboardService } from '../src/services/fa
 import { SupabaseCareApi } from '../src/services/remote/SupabaseCareApi';
 import { SupabaseConsentApi } from '../src/services/remote/SupabaseConsentApi';
 import { SupabaseDoseLogRows } from '../src/services/remote/SupabaseDoseLogRows';
+import { SupabasePhotoStorage } from '../src/services/remote/SupabasePhotoStorage';
+import { PhotoSync, PhotoUrls } from '../src/services/PhotoSync';
 import { SupabaseMedicationRows } from '../src/services/remote/SupabaseMedicationRows';
 import { parseMedicationRow } from '../src/validation/medication-rows';
-import { signInAs, testMedication, type TestUser } from './clients';
+import { makeMedication as makeTestMedicationBase } from '../src/test-utils/fakes';
+import { signInAs, testMedication, TINY_JPEG, type TestUser } from './clients';
+
+const makeTestMedication = (id: string) => makeTestMedicationBase({ id });
 
 /**
  * Uygulamanın Supabase adaptörleri gerçek projeye karşı. Yalnızca A (sade) kullanılır;
@@ -193,5 +198,51 @@ describe('Aile Paneli (SupabaseDoseLogRows + FamilyDashboardService + createFami
       const link = (await patient.links(a.id)).find((item) => item.personId === b.id);
       if (link) await patient.removeLink(link.id);
     }
+  });
+});
+
+describe('ilaç fotoğrafı (SupabasePhotoStorage + PhotoSync)', () => {
+  const online = { isOnline: async () => true };
+  const readBytes = async () => TINY_JPEG.buffer.slice(0) as ArrayBuffer;
+
+  it('A yükler, yeni fotoğrafta eskisi silinir; bağlı aile imzalı adresle görür', async () => {
+    const storage = new SupabasePhotoStorage(a.db, readBytes);
+    let clock = new Date(Date.UTC(2026, 10, 27, 9));
+    const sync = new PhotoSync(storage, { photoUri: (file) => `file:///${file}` }, () => clock);
+    const medId = `rls-test-foto-${Date.now().toString(36)}`;
+    const medication = { ...makeTestMedication(medId), photoFile: 'a.jpg', photoPath: '' };
+
+    const first = await sync.ensureUploaded(medication, a.id);
+    clock = new Date(clock.getTime() + 1000);
+    const second = await sync.ensureUploaded({ ...first, photoPath: '' }, a.id);
+    await sync.cleanUp(a.id, medId, second.photoPath);
+
+    const listed = await a.db.storage.from('medication-photos').list(a.id, { search: medId });
+    expect(listed.data?.map((item) => `${a.id}/${item.name}`)).toEqual([second.photoPath]);
+
+    const b = await signInAs('B', 'Test Aile', 'aile');
+    const { code } = await new CareService(new SupabaseCareApi(a.db), online).createInviteCode();
+    await new CareService(new SupabaseCareApi(b.db), online).redeem({
+      code,
+      relationLabel: 'Annem',
+    });
+    try {
+      const url = await new PhotoUrls(
+        new SupabasePhotoStorage(b.db, readBytes),
+        () => clock,
+      ).urlFor(second.photoPath);
+      expect((await fetch(url)).status).toBe(200);
+    } finally {
+      const patient = new CareService(new SupabaseCareApi(a.db), online);
+      const link = (await patient.links(a.id)).find((item) => item.personId === b.id);
+      if (link) await patient.removeLink(link.id);
+    }
+    await expect(
+      new SupabasePhotoStorage(b.db, readBytes).signedUrl(second.photoPath, 60),
+    ).rejects.toThrow();
+
+    await sync.cleanUp(a.id, medId, null);
+    const after = await a.db.storage.from('medication-photos').list(a.id, { search: medId });
+    expect(after.data).toEqual([]);
   });
 });

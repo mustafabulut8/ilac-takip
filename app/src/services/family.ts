@@ -5,6 +5,7 @@ import { parseMedicationRow } from '@/validation/medication-rows';
 
 import type { DoseCalculator } from './DoseCalculator';
 import { MedicationService } from './MedicationService';
+import type { PhotoSync } from './PhotoSync';
 import type { Clock, PhotoStore, ReminderScheduler } from './ports';
 import { readDoseLogs, RemoteDoseLogRepository } from './RemoteDoseLogRepository';
 import { RemoteMedicationRepository } from './RemoteMedicationRepository';
@@ -23,6 +24,8 @@ type FamilyDependencies = {
   rows: MedicationRowsApi;
   doseRows: DoseLogRowsApi;
   photos: PhotoStore;
+  /** Fotoğrafı ilaç satırından önce sunucuya yükler. */
+  photoSync?: Pick<PhotoSync, 'ensureUploaded' | 'cleanUp'>;
   /** Sunucudaki değişiklikleri haber veren kanal (gerçeği: Supabase Realtime). */
   realtime?: { subscribe(ownerId: string, onChange: () => void): () => void };
   now: Clock;
@@ -35,7 +38,7 @@ type FamilyDependencies = {
  */
 export function createFamilyServices(deps: FamilyDependencies, patientId: string) {
   const repositories = {
-    medications: new RemoteMedicationRepository(deps.rows, patientId, deps.now),
+    medications: new RemoteMedicationRepository(deps.rows, patientId, deps.now, deps.photoSync),
     doseLogs: new RemoteDoseLogRepository(deps.doseRows, patientId, deps.now),
   };
   const medications = new MedicationService(repositories, deps.photos, NO_REMINDERS, deps.now);

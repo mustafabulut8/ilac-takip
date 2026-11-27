@@ -103,7 +103,7 @@ export function useMedicationWizard(original?: Medication) {
   };
 
   const skipPhoto = () => {
-    update({ photo: null, photoFile: '' });
+    update({ photo: null, photoFile: '', photoPath: '' });
     next();
   };
 

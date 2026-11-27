@@ -124,10 +124,12 @@ export class MedicationService {
       ...this.planAfter(existing, fields, now),
       updatedAt: now.toISOString(),
       // Dosya adı değişir; aynı ad kullanılsaydı ekranda eski fotoğraf önbellekten gelirdi.
+      // Fotoğraf değişince sunucudaki yolu da sıfırlanır; eşitleme yenisini yükler.
       ...(photoSourceUri !== undefined && {
         photoFile: photoSourceUri
           ? await this.copyPhoto(photoSourceUri, `${id}-${now.getTime()}`)
           : '',
+        photoPath: '',
       }),
     };
     const medications = current.map((item) => (item.id === id ? updated : item));

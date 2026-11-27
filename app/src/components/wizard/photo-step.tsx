@@ -17,7 +17,11 @@ export function PhotoStep({ wizard }: { wizard: MedicationWizard }) {
       <PrimaryButton label="Fotoğraf çek" icon="camera" onPress={takePhoto} />
       <SecondaryButton label="Galeriden seç" icon="gallery" onPress={pickPhoto} />
       <SecondaryButton
-        label={draft.photo || draft.photoFile ? 'Fotoğrafı kaldır' : 'Fotoğrafsız devam et'}
+        label={
+          draft.photo || draft.photoFile || draft.photoPath
+            ? 'Fotoğrafı kaldır'
+            : 'Fotoğrafsız devam et'
+        }
         variant="neutral"
         compact
         onPress={skipPhoto}

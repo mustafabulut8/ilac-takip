@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -18,6 +19,7 @@ import { MedicationService } from './MedicationService';
 import { NotificationService } from './NotificationService';
 import { OfflineFirstDoseLogRepository, OfflineFirstMedicationRepository, Outbox } from './Outbox';
 import { PhotoService } from './PhotoService';
+import { PhotoSync, PhotoUrls } from './PhotoSync';
 import { systemClock } from './ports';
 import { LocalDeviceStore } from './local/LocalDeviceStore';
 import { LocalDoseLogRepository } from './local/LocalDoseLogRepository';
@@ -29,6 +31,7 @@ import { RealtimeMedicationChanges } from './remote/RealtimeMedicationChanges';
 import { SupabaseCareApi } from './remote/SupabaseCareApi';
 import { SupabaseConsentApi } from './remote/SupabaseConsentApi';
 import { SupabaseDoseLogRows } from './remote/SupabaseDoseLogRows';
+import { SupabasePhotoStorage } from './remote/SupabasePhotoStorage';
 import { SupabaseMedicationRows } from './remote/SupabaseMedicationRows';
 import type { DoseLogRepository, MedicationRepository } from './repositories';
 import { SyncService } from './SyncService';
@@ -61,11 +64,16 @@ const local = {
 const outbox = new Outbox(AsyncStorage);
 const medicationRows = new SupabaseMedicationRows(supabase);
 export const photoService = new PhotoService();
+const photoStorage = new SupabasePhotoStorage(supabase, (uri) => new File(uri).arrayBuffer());
+const photoSync = new PhotoSync(photoStorage, photoService, systemClock);
+/** Sunucudaki fotoğrafların imzalı adresleri (önbellekli). */
+export const photoUrls = new PhotoUrls(photoStorage, systemClock);
 export const notificationService = new NotificationService(Notifications, Platform.OS, systemClock);
 export const syncService = new SyncService({
   local: local.medications,
   localDoseLogs: local.doseLogs,
-  remoteFor: (ownerId) => new RemoteMedicationRepository(medicationRows, ownerId, systemClock),
+  remoteFor: (ownerId) =>
+    new RemoteMedicationRepository(medicationRows, ownerId, systemClock, photoSync),
   api: medicationRows,
   outbox,
   store: AsyncStorage,
@@ -103,6 +111,7 @@ export const familyServicesFor = (patientId: string) =>
       rows: medicationRows,
       doseRows: doseLogRows,
       photos: photoService,
+      photoSync,
       realtime: realtimeMedicationChanges,
       now: systemClock,
     },

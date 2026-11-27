@@ -12,7 +12,7 @@ const QUICK_NAMES = ['Tansiyon ilacı', 'Şeker ilacı', 'Mide koruyucu', 'Koles
 
 export function NameStep({ wizard }: { wizard: MedicationWizard }) {
   const { draft, update } = wizard;
-  const savedUri = useMedicationPhoto(draft.photoFile);
+  const savedUri = useMedicationPhoto(draft.photoFile, draft.photoPath);
 
   return (
     <>

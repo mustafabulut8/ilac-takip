@@ -42,3 +42,13 @@ export interface DoseLogRowsApi {
   /** Kişinin `fromDate` (YYYY-MM-DD) gününden bu yana doz kayıtları. */
   list(ownerId: string, fromDate: string): Promise<unknown[]>;
 }
+
+/** Sunucudaki `medication-photos` kovası (gerçeği: `remote/SupabasePhotoStorage`). */
+export interface PhotoStorageApi {
+  /** Telefondaki dosyayı (`localUri`) verilen yola yükler. */
+  upload(path: string, localUri: string): Promise<void>;
+  /** İlacın `keepPath` dışındaki bütün fotoğraflarını siler (`null`: hepsini). */
+  removeExcept(ownerId: string, medicationId: string, keepPath: string | null): Promise<void>;
+  /** Özel kovadaki fotoğraf için süreli imzalı adres. */
+  signedUrl(path: string, expiresInSeconds: number): Promise<string>;
+}

@@ -4,6 +4,7 @@ import { isRecord } from '@/utils/json';
 import { parseMedicationRow, toMedicationRow } from '@/validation/medication-rows';
 
 import type { Clock } from './ports';
+import type { PhotoSync } from './PhotoSync';
 import type { MedicationRowsApi } from './remote-ports';
 import type { Loaded, MedicationRepository } from './repositories';
 
@@ -19,11 +20,19 @@ export class RemoteMedicationRepository implements MedicationRepository {
   private readonly rows: MedicationRowsApi;
   private readonly ownerId: string;
   private readonly now: Clock;
+  private readonly photos?: Pick<PhotoSync, 'ensureUploaded' | 'cleanUp'>;
 
-  constructor(rows: MedicationRowsApi, ownerId: string, now: Clock) {
+  /** `photos` verilirse fotoğraf satırdan önce yüklenir, eskileri sonra temizlenir. */
+  constructor(
+    rows: MedicationRowsApi,
+    ownerId: string,
+    now: Clock,
+    photos?: Pick<PhotoSync, 'ensureUploaded' | 'cleanUp'>,
+  ) {
     this.rows = rows;
     this.ownerId = ownerId;
     this.now = now;
+    this.photos = photos;
   }
 
   async load(): Promise<Loaded<Medication>> {
@@ -45,11 +54,20 @@ export class RemoteMedicationRepository implements MedicationRepository {
   async remove(id: string, at = this.now().toISOString()) {
     const written = await this.rows.softDelete(id, at);
     if (!written) await this.throwStale(id);
+    await this.photos?.cleanUp(this.ownerId, id, null);
   }
 
   private async write(medication: Medication) {
-    const written = await this.rows.write(toMedicationRow(medication, this.ownerId));
+    const toSend = this.photos
+      ? await this.photos.ensureUploaded(medication, this.ownerId)
+      : medication;
+    const written = await this.rows.write(toMedicationRow(toSend, this.ownerId));
     if (!written) await this.throwStale(medication.id);
+    // Yeni fotoğraf yüklendiyse veya fotoğraf yoksa eskileri silinir; aynı fotoğrafla
+    // yapılan düzenlemede sunucuya fazladan istek gitmez.
+    if (toSend !== medication || !toSend.photoPath) {
+      await this.photos?.cleanUp(this.ownerId, medication.id, toSend.photoPath || null);
+    }
   }
 
   private async throwStale(id: string): Promise<never> {

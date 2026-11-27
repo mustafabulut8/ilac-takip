@@ -1,4 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+
+import { PHOTO_QUALITY, resizeFor } from '@/utils/photo';
 
 import type { PhotoStore } from './ports';
 
@@ -13,15 +16,29 @@ export class PhotoService implements PhotoStore {
     this.directoryName = directoryName;
   }
 
-  /** Seçilen fotoğraf geçici olabileceği için kalıcı klasöre kopyalanır; dosya adı döner. */
+  /**
+   * Seçilen fotoğraf küçültülüp (uzun kenar 1080 px) JPEG %70 ile sıkıştırılır ve kalıcı
+   * klasöre yazılır; dosya adı döner. Sunucuya da bu küçük dosya yüklenir.
+   */
   async savePhoto(sourceUri: string, baseName: string): Promise<string> {
     const directory = this.directory();
     directory.create({ intermediates: true, idempotent: true });
 
-    const source = new File(sourceUri);
-    const fileName = `${baseName}${source.extension || '.jpg'}`;
-    await source.copy(new File(directory, fileName), { overwrite: true });
+    const compressed = new File(await this.compress(sourceUri));
+    const fileName = `${baseName}.jpg`;
+    compressed.move(new File(directory, fileName), { overwrite: true });
     return fileName;
+  }
+
+  /** Küçültülmüş JPEG'in geçici adresi. */
+  private async compress(sourceUri: string): Promise<string> {
+    const original = await ImageManipulator.manipulate(sourceUri).renderAsync();
+    const resize = resizeFor(original);
+    const image = resize
+      ? await ImageManipulator.manipulate(sourceUri).resize(resize).renderAsync()
+      : original;
+    const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: PHOTO_QUALITY });
+    return saved.uri;
   }
 
   /** Kayıtlı dosya adından ekranda gösterilebilecek tam adres. */

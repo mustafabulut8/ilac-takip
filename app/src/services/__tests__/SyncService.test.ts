@@ -175,6 +175,34 @@ describe('SyncService: alma (pull) ve hatırlatmalar', () => {
     expect((await localItems())[0]).toMatchObject({ name: 'Yeni', photoFile: 'yerel.jpg' });
   });
 
+  it('aile fotoğrafı değiştirince eski yerel dosya bırakılır, sunucudaki yenisi gösterilir', async () => {
+    const mine = makeMedication({
+      photoFile: 'yerel.jpg',
+      photoPath: 'sahip/ilac1-1.jpg',
+      updatedAt: at(0),
+    });
+    const { rows, sync, localItems } = await setup([mine]);
+    rows.familyWrite(
+      toMedicationRow({ ...mine, photoPath: 'sahip/ilac1-2.jpg', updatedAt: at(10) }, OWNER),
+    );
+    await sync.run();
+    expect((await localItems())[0]).toMatchObject({
+      photoFile: '',
+      photoPath: 'sahip/ilac1-2.jpg',
+    });
+  });
+
+  it('telefonun kendi yüklediği fotoğrafın yolu geri gelince yerel dosya korunur', async () => {
+    const mine = makeMedication({ photoFile: 'yerel.jpg', photoPath: '', updatedAt: at(0) });
+    const { rows, sync, localItems } = await setup([mine]);
+    rows.familyWrite(toMedicationRow({ ...mine, photoPath: 'sahip/ilac1-3.jpg' }, OWNER));
+    await sync.run();
+    expect((await localItems())[0]).toMatchObject({
+      photoFile: 'yerel.jpg',
+      photoPath: 'sahip/ilac1-3.jpg',
+    });
+  });
+
   it('imleç metin olarak saklanır; sonraki eşitleme yalnızca yenileri ister', async () => {
     const { rows, sync, store } = await setup();
     rows.familyWrite(toMedicationRow(makeMedication({ updatedAt: at(5) }), OWNER));

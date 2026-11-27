@@ -29,6 +29,17 @@ export type SyncDependencies = {
 type Listener = (medications: Medication[]) => void;
 
 const STATE_KEY = 'syncState';
+
+/**
+ * Fotoğraf dosyası her telefonun kendisinindir; sunucu satırında yalnızca yolu vardır.
+ * Yerel dosya, sunucudaki fotoğrafla aynıysa (ya da onu bu telefon yüklediyse) korunur.
+ * Fotoğraf başka yerde değiştiyse bırakılır; yenisi imzalı adresle gösterilir.
+ */
+function localPhotoFor(local: Medication | null, current: Medication) {
+  if (!local?.photoFile) return '';
+  const sameOrOwnUpload = !local.photoPath || local.photoPath === current.photoPath;
+  return sameOrOwnUpload ? local.photoFile : '';
+}
 const stateSchema = z.object({ ownerId: z.string(), cursor: z.string().nullable() });
 
 /**
@@ -186,8 +197,7 @@ export class SyncService {
       if (local) await this.deps.local.remove(id);
       return local;
     }
-    // Fotoğraf dosyası her telefonun kendisinindir; sunucu satırında yoktur.
-    const next = { ...current, photoFile: local?.photoFile ?? '' };
+    const next = { ...current, photoFile: localPhotoFor(local, current) };
     if (local && JSON.stringify(local) === JSON.stringify(next)) return null;
     if (local) await this.deps.local.update(next);
     else await this.deps.local.add(next);

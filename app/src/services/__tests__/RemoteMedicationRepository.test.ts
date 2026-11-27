@@ -1,4 +1,5 @@
 import { StaleWriteError } from '@/errors';
+import type { Medication } from '@/models';
 import { FakeMedicationRows, makeMedication } from '@/test-utils/fakes';
 import { toMedicationRow } from '@/validation/medication-rows';
 
@@ -91,6 +92,47 @@ describe('RemoteMedicationRepository', () => {
     expect(rows.get('ilac1')).toMatchObject({
       deleted_at: NOW.toISOString(),
       updated_at: NOW.toISOString(),
+    });
+  });
+
+  describe('fotoğraf (PhotoSync verilirse)', () => {
+    function withPhotos() {
+      const rows = new FakeMedicationRows();
+      const photos = {
+        ensureUploaded: jest.fn(async (medication: Medication) => ({
+          ...medication,
+          photoPath: medication.photoFile ? `${OWNER}/yuklendi.jpg` : medication.photoPath,
+        })),
+        cleanUp: jest.fn().mockResolvedValue(undefined),
+      };
+      const repository = new RemoteMedicationRepository(rows, OWNER, () => NOW, photos);
+      return { rows, photos, repository };
+    }
+
+    it('satırdan önce fotoğraf yüklenir; satır yeni yolla yazılır, eski fotoğraflar temizlenir', async () => {
+      const { rows, photos, repository } = withPhotos();
+      await repository.add(makeMedication({ photoFile: 'ilac1.jpg', photoPath: '' }));
+      expect(rows.get('ilac1')).toMatchObject({ photo_path: `${OWNER}/yuklendi.jpg` });
+      expect(photos.cleanUp).toHaveBeenCalledWith(OWNER, 'ilac1', `${OWNER}/yuklendi.jpg`);
+    });
+
+    it('fotoğraf kaldırılınca hepsi temizlenir; ilaç silinince de', async () => {
+      const { photos, repository } = withPhotos();
+      await repository.update(makeMedication({ photoFile: '', photoPath: '' }));
+      expect(photos.cleanUp).toHaveBeenLastCalledWith(OWNER, 'ilac1', null);
+      await repository.remove('ilac1');
+      expect(photos.cleanUp).toHaveBeenLastCalledWith(OWNER, 'ilac1', null);
+    });
+
+    it('bayat yazmada yüklenen fotoğraf temizlenmez, sunucudaki hâl korunur', async () => {
+      const { rows, photos, repository } = withPhotos();
+      rows.put(toMedicationRow(makeMedication({ updatedAt: NOW.toISOString() }), OWNER));
+      await expect(
+        repository.update(
+          makeMedication({ photoFile: 'a.jpg', updatedAt: '2020-01-01T00:00:00.000Z' }),
+        ),
+      ).rejects.toBeInstanceOf(StaleWriteError);
+      expect(photos.cleanUp).not.toHaveBeenCalled();
     });
   });
 });
