@@ -41,6 +41,28 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** Kullanım biçimi; aile rolünde "Yakınımı bağla". */
+function AccountGroup() {
+  const { profile } = useAuth();
+  return (
+    <Group title="HESAP">
+      <SettingsRow
+        icon="mode"
+        label="Kullanım biçimi"
+        value={profile ? ROLE_OPTIONS[profile.role].label : undefined}
+        onPress={() => router.push('/kullanim-bicimi')}
+      />
+      {profile?.role === 'aile' && (
+        <SettingsRow
+          icon="link"
+          label="Yakınımı bağla"
+          onPress={() => router.push('/kodla-baglan')}
+        />
+      )}
+    </Group>
+  );
+}
+
 /**
  * Sağlık verisi rızası ve aile bağlama. Rıza varsa satır geri alma onayını açar; geri
  * almada telefondaki ilaçlar ve hatırlatmalar kalır (ADR-021).
@@ -67,7 +89,8 @@ function HealthDataGroup() {
         icon="family"
         label="Ailemi bağla"
         value={granted ? undefined : 'Bunun için rıza gerekir'}
-        soon
+        disabled={!granted}
+        onPress={() => router.push('/ailemi-bagla')}
       />
       <ConfirmDialog
         visible={confirming}
@@ -106,14 +129,7 @@ export default function SettingsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.five }]}>
         <ProfileCard name={profile?.name} email={session?.user.email} />
 
-        <Group title="HESAP">
-          <SettingsRow
-            icon="mode"
-            label="Kullanım biçimi"
-            value={profile ? ROLE_OPTIONS[profile.role].label : undefined}
-            onPress={() => router.push('/kullanim-bicimi')}
-          />
-        </Group>
+        <AccountGroup />
         {ownsMedications && <HealthDataGroup />}
         <Group title="UYGULAMA">
           <SettingsRow

@@ -77,6 +77,11 @@ function AppStack() {
           <Stack.Screen name="kullanim-bicimi" />
           {/* İlk kez sorulurken geri kaydırma kapalı; Ayarlar'dan açılınca da aynı ekran. */}
           <Stack.Screen name="saglik-verisi-rizasi" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="ailemi-bagla" />
+        </Stack.Protected>
+        {/* Aile kaydının bildirim izni adımından doğrudan açılır; onboarding bitmeden de erişilir. */}
+        <Stack.Protected guard={signedIn} redirectTo={homeRoute}>
+          <Stack.Screen name="kodla-baglan" />
         </Stack.Protected>
         <Stack.Protected guard={isHome(HOME_ROUTES.onboarding)} redirectTo={homeRoute}>
           <Stack.Screen name="bildirim-izni" options={{ gestureEnabled: false }} />

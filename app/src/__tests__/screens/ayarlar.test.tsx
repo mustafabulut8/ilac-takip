@@ -101,15 +101,25 @@ describe('Ayarlar: sağlık verisi ve aile', () => {
     mockConsent.status = 'declined';
     await render(<SettingsScreen />);
     expect(
-      screen.getByRole('button', { name: 'Ailemi bağla, Bunun için rıza gerekir, Yakında' }),
+      screen.getByRole('button', { name: 'Ailemi bağla, Bunun için rıza gerekir' }),
     ).toBeDisabled();
     await fireEvent.press(screen.getByRole('button', { name: 'Sağlık verisi rızası, Verilmedi' }));
     expect(router.push).toHaveBeenCalledWith('/saglik-verisi-rizasi');
   });
 
-  it('aile rolünde bu bölüm görünmez', async () => {
+  it('rıza varsa "Ailemi bağla" davet kodu ekranını açar', async () => {
+    const { router } = jest.requireMock('expo-router');
+    await render(<SettingsScreen />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Ailemi bağla' }));
+    expect(router.push).toHaveBeenCalledWith('/ailemi-bagla');
+  });
+
+  it('aile rolünde bu bölüm görünmez; yerine "Yakınımı bağla" kodla bağlanmayı açar', async () => {
+    const { router } = jest.requireMock('expo-router');
     mockAuth.profile = { id: 'u1', name: 'ayşe', role: 'aile', createdAt: '' };
     await render(<SettingsScreen />);
     expect(screen.queryByText('Sağlık verisi rızası')).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Yakınımı bağla' }));
+    expect(router.push).toHaveBeenCalledWith('/kodla-baglan');
   });
 });
